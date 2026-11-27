@@ -185,6 +185,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "resources": {
       "target/plugins-v3/host": "plugins-v3/host",
       "target/plugins-v3/builtins": "plugins-v3/builtins"

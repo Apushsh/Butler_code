@@ -1,0 +1,11 @@
+{
+  "version": "0.3.14",
+  "notes": "MyFuyu 个人版首个安装包：自持插件市场、独立数据目录 .myfuyu、插件宿主修复。",
+  "pub_date": "2026-11-27T10:54:09Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTcFplZkl6Qm5reFl1c05uYUU5WFZwRFd6aXN4dUVUUTRxVmdmVUx0ZVFOc2tkY2ZHNVNQMkJEcURUd0U4UGRiMmRCVTl2WDU3WXNnVVdZaFNzMitFaDVmOUcvUHBvRXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1Nzc2Nzk5CWZpbGU6TXlGdXl1XzAuMy4xNF94NjQtc2V0dXAuZXhlCXZlcnNpb246MC4zLjE0CmUxdjlFMVdQWUh4M1VWRnVweXVKZkhUNXNyaWlXUkVRVkJaS2Fsd0MrenNBWHB4aEJtb3I3cjdVbHdRMUlteXVhV0R3OFJIVEFWNUFCSlZhQXM3ZkRRPT0K",
+      "url": "https://github.com/Apushsh/Butler_code/releases/download/v0.3.14/MyFuyu_0.3.14_x64-setup.exe"
+    }
+  }
+}
