@@ -4,8 +4,9 @@ import { validateRevoked } from "./revoked.mjs";
 import { timeOf } from "./fields.mjs";
 
 const DAY = 24 * 60 * 60 * 1000;
-export const INDEX_LIFETIME_DAYS = 7;
-export const REVOKED_LIFETIME_DAYS = 90;
+// 个人市场：索引由本机手动发布，不设 7 天有效期，靠 serial 递增与签名保证可信。
+export const INDEX_LIFETIME_DAYS = 3650;
+export const REVOKED_LIFETIME_DAYS = 3650;
 
 const toTime = (now) => (now instanceof Date ? now.getTime() : (now ?? Date.now()));
 
