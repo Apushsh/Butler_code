@@ -1,0 +1,217 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MyFuyu",
+  "version": "0.3.14",
+  "identifier": "com.apus.myfuyu",
+  "build": {
+    "beforeDevCommand": "node scripts/stop-running-island.mjs && pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Fuyu",
+        "width": 820,
+        "height": 460,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "acceptFirstMouse": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "shadow": false
+      },
+      {
+        "label": "translation",
+        "create": false,
+        "title": "浮屿 翻译",
+        "url": "index.html?window=translation",
+        "width": 480,
+        "height": 640,
+        "minWidth": 480,
+        "minHeight": 380,
+        "acceptFirstMouse": true,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "shadow": false
+      },
+      {
+        "label": "clipboard",
+        "create": false,
+        "title": "浮屿 - 剪贴板",
+        "url": "index.html?window=clipboard",
+        "width": 380,
+        "height": 559,
+        "acceptFirstMouse": true,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "shadow": false
+      },
+      {
+        "label": "clipboard-preview",
+        "acceptFirstMouse": true,
+        "create": false,
+        "title": "浮屿 - 剪贴板预览",
+        "url": "index.html?window=clipboard-preview",
+        "width": 420,
+        "height": 559,
+        "decorations": false,
+        "transparent": true,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": false,
+        "focusable": false,
+        "shadow": false
+      },
+      {
+        "label": "settings",
+        "create": false,
+        "title": "Fuyu",
+        "url": "index.html?window=settings",
+        "width": 1080,
+        "height": 860,
+        "minWidth": 580,
+        "minHeight": 420,
+        "center": true,
+        "resizable": true,
+        "decorations": false,
+        "shadow": true,
+        "theme": "Dark",
+        "backgroundColor": "#131417",
+        "dragDropEnabled": false
+      },
+      {
+        "label": "onboarding",
+        "acceptFirstMouse": true,
+        "create": false,
+        "title": "Fuyu",
+        "url": "index.html?window=onboarding",
+        "width": 1280,
+        "height": 720,
+        "resizable": false,
+        "maximizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true
+      },
+      {
+        "label": "tray-menu",
+        "create": false,
+        "title": "Fuyu",
+        "url": "index.html?window=tray-menu",
+        "width": 320,
+        "height": 420,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "acceptFirstMouse": true,
+        "visible": false
+      },
+      {
+        "label": "drag-grid",
+        "create": false,
+        "title": "Fuyu",
+        "url": "index.html?window=drag-grid",
+        "width": 800,
+        "height": 600,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "focusable": false,
+        "visible": false
+      },
+      {
+        "label": "taskbar-lyrics",
+        "create": false,
+        "title": "Fuyu",
+        "url": "index.html?window=taskbar-lyrics",
+        "width": 280,
+        "height": 48,
+        "resizable": false,
+        "maximizable": false,
+        "minimizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "focus": false,
+        "focusable": false,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost tauri: http://tauri.localhost https://tauri.localhost asset: http://asset.localhost fuyu-plugin: http://fuyu-plugin.localhost fuyu-clip: http://fuyu-clip.localhost data: blob:; script-src 'self' fuyu-plugin: http://fuyu-plugin.localhost blob:; style-src 'self' 'unsafe-inline' fuyu-plugin: http://fuyu-plugin.localhost; img-src 'self' asset: http://asset.localhost fuyu-plugin: http://fuyu-plugin.localhost fuyu-clip: http://fuyu-clip.localhost data: blob: https: http:; media-src 'self' asset: http://asset.localhost fuyu-plugin: http://fuyu-plugin.localhost data: blob:; font-src 'self' fuyu-plugin: http://fuyu-plugin.localhost data:; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:* http://127.0.0.1:* ws://localhost:* http://localhost:* fuyu-plugin: http://fuyu-plugin.localhost fuyu-clip: http://fuyu-clip.localhost https: http:; object-src 'none'; base-uri 'self'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM1RTQxOUNDQzhFNzY1QTkKUldTcFplZkl6Qm5reFRhUS9GY1M0aFlESjcwc2o0b1VuUFBQaWV5cUdwQ3pHczd4SkMya3hiTnoK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/Apushsh/Butler_code/main/update/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": {
+      "target/plugins-v3/host": "plugins-v3/host",
+      "target/plugins-v3/builtins": "plugins-v3/builtins"
+    },
+    "homepage": "https://fuyu.ing",
+    "fileAssociations": [
+      {
+        "ext": ["fuyu"],
+        "name": "Fuyu Plugin Package",
+        "description": "Fuyu Plugin Package",
+        "role": "Viewer",
+        "mimeType": "application/vnd.fuyu.plugin+zip"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "template": "windows/installer.nsi",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,731 @@
+<body>
+  <div id="panel">
+    <section aria-label="日历" class="calendar-panel">
+      <div class="calendar-panel__list">
+        <div class="calendar-panel__head">
+          <span class="calendar-panel__status">
+            10:05 更新
+          </span>
+          <button aria-label="切换到未来 7 天视图" aria-pressed="false" class="calendar-panel__range" type="button">
+            近两日
+          </button>
+          <button aria-label="重新读取日历" class="calendar-panel__icon" type="button">
+            <svg aria-hidden="true" class="lucide lucide-refresh-ccw" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <button aria-label="日历设置" class="calendar-panel__icon" type="button">
+            <svg aria-hidden="true" class="lucide lucide-settings" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+        </div>
+        <div class="calendar-empty">
+          <svg aria-hidden="true" class="lucide lucide-calendar-plus calendar-empty__icon" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+          <strong>
+            还没有日历
+          </strong>
+          <span class="calendar-empty__hint">
+            订阅中国节假日不用账号，点一下就有；飞书、钉钉、企业微信等工作日历在设置里添加。也可以直接写以时间开头的待办，例如「15:00 周会」。
+          </span>
+          <div class="calendar-empty__actions">
+            <button class="calendar-empty__primary" type="button">
+              订阅中国节假日
+            </button>
+            <button class="calendar-empty__secondary" type="button">
+              添加工作日历
+            </button>
+          </div>
+        </div>
+        <div class="calendar-panel__days">
+          <div class="calendar-day">
+            <h3 class="calendar-day__label">
+              今天 · 11月15日 周日
+            </h3>
+            <p class="calendar-day__lunar">
+              十月初七 · 7 天后小雪
+            </p>
+          </div>
+          <div class="calendar-day">
+            <h3 class="calendar-day__label">
+              明天 · 11月16日 周一
+            </h3>
+            <p class="calendar-day__lunar">
+              十月初八
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="calendar-month">
+        <div class="calendar-month__head">
+          <h3 class="calendar-month__title">
+            2026年11月
+          </h3>
+          <button aria-label="上个月" class="calendar-month__turn" type="button">
+            <svg aria-hidden="true" class="lucide lucide-chevron-left" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <button aria-label="下个月" class="calendar-month__turn" type="button">
+            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+        </div>
+        <div aria-hidden="true" class="calendar-month__weekdays">
+          <span>
+            一
+          </span>
+          <span>
+            二
+          </span>
+          <span>
+            三
+          </span>
+          <span>
+            四
+          </span>
+          <span>
+            五
+          </span>
+          <span>
+            六
+          </span>
+          <span>
+            日
+          </span>
+        </div>
+        <div class="calendar-month__grid">
+          <button aria-label="10月26日 周一 九月十七" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              26
+            </span>
+            <span class="calendar-month__lunar">
+              十七
+            </span>
+          </button>
+          <button aria-label="10月27日 周二 九月十八" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              27
+            </span>
+            <span class="calendar-month__lunar">
+              十八
+            </span>
+          </button>
+          <button aria-label="10月28日 周三 九月十九" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              28
+            </span>
+            <span class="calendar-month__lunar">
+              十九
+            </span>
+          </button>
+          <button aria-label="10月29日 周四 九月二十" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              29
+            </span>
+            <span class="calendar-month__lunar">
+              二十
+            </span>
+          </button>
+          <button aria-label="10月30日 周五 九月廿一" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              30
+            </span>
+            <span class="calendar-month__lunar">
+              廿一
+            </span>
+          </button>
+          <button aria-label="10月31日 周六 九月廿二 万圣夜" aria-pressed="false" class="calendar-month__day calendar-month__day--outside calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              31
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              万圣夜
+            </span>
+          </button>
+          <button aria-label="11月1日 周日 九月廿三 万圣节" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              1
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              万圣节
+            </span>
+          </button>
+          <button aria-label="11月2日 周一 九月廿四" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              2
+            </span>
+            <span class="calendar-month__lunar">
+              廿四
+            </span>
+          </button>
+          <button aria-label="11月3日 周二 九月廿五" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              3
+            </span>
+            <span class="calendar-month__lunar">
+              廿五
+            </span>
+          </button>
+          <button aria-label="11月4日 周三 九月廿六" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              4
+            </span>
+            <span class="calendar-month__lunar">
+              廿六
+            </span>
+          </button>
+          <button aria-label="11月5日 周四 九月廿七" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              5
+            </span>
+            <span class="calendar-month__lunar">
+              廿七
+            </span>
+          </button>
+          <button aria-label="11月6日 周五 九月廿八" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              6
+            </span>
+            <span class="calendar-month__lunar">
+              廿八
+            </span>
+          </button>
+          <button aria-label="11月7日 周六 九月廿九 立冬" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              7
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              立冬
+            </span>
+          </button>
+          <button aria-label="11月8日 周日 九月三十 记者节" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              8
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              记者节
+            </span>
+          </button>
+          <button aria-label="11月9日 周一 十月初一" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              9
+            </span>
+            <span class="calendar-month__lunar">
+              十月
+            </span>
+          </button>
+          <button aria-label="11月10日 周二 十月初二" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              10
+            </span>
+            <span class="calendar-month__lunar">
+              初二
+            </span>
+          </button>
+          <button aria-label="11月11日 周三 十月初三" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              11
+            </span>
+            <span class="calendar-month__lunar">
+              初三
+            </span>
+          </button>
+          <button aria-label="11月12日 周四 十月初四" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              12
+            </span>
+            <span class="calendar-month__lunar">
+              初四
+            </span>
+          </button>
+          <button aria-label="11月13日 周五 十月初五" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              13
+            </span>
+            <span class="calendar-month__lunar">
+              初五
+            </span>
+          </button>
+          <button aria-label="11月14日 周六 十月初六" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              14
+            </span>
+            <span class="calendar-month__lunar">
+              初六
+            </span>
+          </button>
+          <button aria-current="date" aria-label="11月15日 周日 十月初七" aria-pressed="true" class="calendar-month__day calendar-month__day--weekend calendar-month__day--today calendar-month__day--selected" tabindex="0" type="button">
+            <span class="calendar-month__date">
+              15
+            </span>
+            <span class="calendar-month__lunar">
+              初七
+            </span>
+          </button>
+          <button aria-label="11月16日 周一 十月初八" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              16
+            </span>
+            <span class="calendar-month__lunar">
+              初八
+            </span>
+          </button>
+          <button aria-label="11月17日 周二 十月初九" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              17
+            </span>
+            <span class="calendar-month__lunar">
+              初九
+            </span>
+          </button>
+          <button aria-label="11月18日 周三 十月初十" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              18
+            </span>
+            <span class="calendar-month__lunar">
+              初十
+            </span>
+          </button>
+          <button aria-label="11月19日 周四 十月十一" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              19
+            </span>
+            <span class="calendar-month__lunar">
+              十一
+            </span>
+          </button>
+          <button aria-label="11月20日 周五 十月十二" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              20
+            </span>
+            <span class="calendar-month__lunar">
+              十二
+            </span>
+          </button>
+          <button aria-label="11月21日 周六 十月十三" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              21
+            </span>
+            <span class="calendar-month__lunar">
+              十三
+            </span>
+          </button>
+          <button aria-label="11月22日 周日 十月十四 小雪" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              22
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              小雪
+            </span>
+          </button>
+          <button aria-label="11月23日 周一 十月十五" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              23
+            </span>
+            <span class="calendar-month__lunar">
+              十五
+            </span>
+          </button>
+          <button aria-label="11月24日 周二 十月十六" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              24
+            </span>
+            <span class="calendar-month__lunar">
+              十六
+            </span>
+          </button>
+          <button aria-label="11月25日 周三 十月十七" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              25
+            </span>
+            <span class="calendar-month__lunar">
+              十七
+            </span>
+          </button>
+          <button aria-label="11月26日 周四 十月十八 感恩节" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              26
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              感恩节
+            </span>
+          </button>
+          <button aria-label="11月27日 周五 十月十九" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              27
+            </span>
+            <span class="calendar-month__lunar">
+              十九
+            </span>
+          </button>
+          <button aria-label="11月28日 周六 十月二十" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              28
+            </span>
+            <span class="calendar-month__lunar">
+              二十
+            </span>
+          </button>
+          <button aria-label="11月29日 周日 十月廿一" aria-pressed="false" class="calendar-month__day calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              29
+            </span>
+            <span class="calendar-month__lunar">
+              廿一
+            </span>
+          </button>
+          <button aria-label="11月30日 周一 十月廿二" aria-pressed="false" class="calendar-month__day" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              30
+            </span>
+            <span class="calendar-month__lunar">
+              廿二
+            </span>
+          </button>
+          <button aria-label="12月1日 周二 十月廿三 艾滋病日" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              1
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              艾滋病日
+            </span>
+          </button>
+          <button aria-label="12月2日 周三 十月廿四" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              2
+            </span>
+            <span class="calendar-month__lunar">
+              廿四
+            </span>
+          </button>
+          <button aria-label="12月3日 周四 十月廿五 残疾人日" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              3
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              残疾人日
+            </span>
+          </button>
+          <button aria-label="12月4日 周五 十月廿六 宪法日" aria-pressed="false" class="calendar-month__day calendar-month__day--outside" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              4
+            </span>
+            <span class="calendar-month__lunar calendar-month__lunar--special">
+              宪法日
+            </span>
+          </button>
+          <button aria-label="12月5日 周六 十月廿七" aria-pressed="false" class="calendar-month__day calendar-month__day--outside calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              5
+            </span>
+            <span class="calendar-month__lunar">
+              廿七
+            </span>
+          </button>
+          <button aria-label="12月6日 周日 十月廿八" aria-pressed="false" class="calendar-month__day calendar-month__day--outside calendar-month__day--weekend" tabindex="-1" type="button">
+            <span class="calendar-month__date">
+              6
+            </span>
+            <span class="calendar-month__lunar">
+              廿八
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div id="line">
+    <span class="island-meeting island-meeting--started">
+      <svg aria-hidden="true" class="lucide lucide-calendar-clock island-meeting__icon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+      <span class="island-meeting__title">
+        会议
+      </span>
+      <span class="island-meeting__when">
+        ·
+        已开始
+      </span>
+    </span>
+  </div>
+  <div id="settings">
+    <section class="settings-group">
+      <div class="settings-group__header">
+        <h2 class="settings-group__title">
+          已添加的日历
+        </h2>
+        <span class="calendar-source__header-actions">
+          <button class="settings-link-button" type="button">
+            立即刷新
+          </button>
+          <button class="settings-link-button" disabled="" type="button">
+            已订阅节假日
+          </button>
+        </span>
+      </div>
+      <div class="settings-group__card">
+        <div class="calendar-source__block">
+          <div class="settings-row" data-search="off">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <span class="settings-row__title">
+                  飞书
+                </span>
+                <span class="settings-row__description">
+                  u_new · caldav.feishu.cn
+                </span>
+              </div>
+              <div class="settings-row__control">
+                <span class="calendar-source__row-controls">
+                  <button aria-label="删除日历「飞书」" class="calendar-source__remove" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-trash2 lucide-trash-2" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="calendar-source__block">
+          <div class="settings-row" data-search="off">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <span class="settings-row__title">
+                  Google 日历
+                </span>
+                <span class="settings-row__description">
+                  订阅 · calendar.google.com
+                </span>
+              </div>
+              <div class="settings-row__control">
+                <span class="calendar-source__row-controls">
+                  <button aria-label="删除日历「Google 日历」" class="calendar-source__remove" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-trash2 lucide-trash-2" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="calendar-source__block">
+          <div class="settings-row" data-search="off">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <span class="settings-row__title">
+                  中国节假日
+                </span>
+                <span class="settings-row__description">
+                  订阅 · calendars.icloud.com
+                </span>
+              </div>
+              <div class="settings-row__control">
+                <span class="calendar-source__row-controls">
+                  <button aria-label="删除日历「中国节假日」" class="calendar-source__remove" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-trash2 lucide-trash-2" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                用的是
+              </span>
+            </div>
+            <div class="settings-row__control">
+              <div class="settings-select">
+                <div class="select-control">
+                  <button aria-controls="_id1_" aria-expanded="false" aria-haspopup="listbox" aria-label="用的是" class="select-control__trigger" role="combobox" type="button">
+                    <span>
+                      其他
+                    </span>
+                    <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="calendar-form">
+          <ol class="calendar-form__steps">
+            <li>
+              粘贴日历服务器地址（CalDAV）或 .ics 订阅链接。
+            </li>
+            <li>
+              是服务器地址时，再填账号和密码。
+            </li>
+          </ol>
+          <label class="calendar-form__field">
+            <span>
+              地址或链接
+            </span>
+            <input autocomplete="off" placeholder="https://… 或 webcal://…" spellcheck="false" type="text" value="https://example.com/team.ics">
+          </label>
+          <label class="calendar-form__field">
+            <span>
+              名称（可不填）
+            </span>
+            <input autocomplete="off" placeholder="其他" spellcheck="false" type="text" value="">
+          </label>
+          <div class="calendar-form__actions">
+            <button class="calendar-form__add" type="button">
+              读取并添加
+            </button>
+            <button class="settings-link-button" type="button">
+              取消
+            </button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                国家/地区节假日订阅
+              </span>
+              <span class="settings-row__description">
+                按需订阅各国家/地区官方 iCloud 公共假期日历，可同时订阅多个地区，无需账号。
+              </span>
+            </div>
+            <div class="settings-row__control">
+              <span class="calendar-source__region-controls">
+                <div class="settings-select">
+                  <div class="select-control">
+                    <button aria-controls="_id2_" aria-expanded="false" aria-haspopup="listbox" aria-label="国家/地区节假日订阅" class="select-control__trigger" role="combobox" type="button">
+                      <span>
+                        美国
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                  </div>
+                </div>
+                <button class="settings-link-button" type="button">
+                  订阅
+                </button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div id="alerts">
+    <section class="settings-group">
+      <div class="settings-group__card">
+        <div class="calendar-stage" data-search="off">
+          <div aria-label="会议提醒演示: 示例：14:00 的「产品周会」，还有 10 分钟。有会议链接时旁边带「加入」。" class="calendar-stage__scene" role="img">
+            <span class="calendar-stage__bar calendar-stage__bar--line calendar-stage__bar--played">
+              <span class="island-meeting island-meeting--compact">
+                <svg aria-hidden="true" class="lucide lucide-calendar-clock island-meeting__icon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span class="island-meeting__when">
+                  10m
+                </span>
+              </span>
+              <span class="island-meeting-join">
+                加入
+              </span>
+            </span>
+          </div>
+          <p class="calendar-stage__caption">
+            示例：14:00 的「产品周会」，还有 10 分钟。有会议链接时旁边带「加入」。
+          </p>
+          <div class="calendar-stage__controls">
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-play" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+              演示强提醒
+            </button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                收起条显示格式
+              </span>
+              <span class="settings-row__description">
+                选择收起条上怎么写会议的开始时间、标题和剩余分钟数。
+              </span>
+            </div>
+          </div>
+          <div class="settings-thumbs">
+            <div aria-label="收起条显示格式" class="settings-thumbs__strip" role="group">
+              <button aria-pressed="false" class="settings-thumbs__item settings-thumbs__item--wide" data-thumb="titleMinutes" title="写会议标题和「10 分钟后」。" type="button">
+                <span aria-hidden="true" class="settings-thumbs__art">
+                  <span class="calendar-format-art">
+                    <span class="calendar-format-art__bar">
+                      <span class="island-meeting">
+                        <svg aria-hidden="true" class="lucide lucide-calendar-clock island-meeting__icon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span class="island-meeting__title">
+                          会议
+                        </span>
+                        <span class="island-meeting__when">
+                          ·
+                          10 分钟后
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </span>
+                <span class="settings-thumbs__label">
+                  标题和倒计时
+                </span>
+              </button>
+              <button aria-pressed="false" class="settings-thumbs__item settings-thumbs__item--wide" data-thumb="timeTitle" title="先写开始时间，再写标题和剩余分钟，例如「14:00 周会 · 10m」。" type="button">
+                <span aria-hidden="true" class="settings-thumbs__art">
+                  <span class="calendar-format-art">
+                    <span class="calendar-format-art__bar">
+                      <span class="island-meeting">
+                        <svg aria-hidden="true" class="lucide lucide-calendar-clock island-meeting__icon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span class="island-meeting__title">
+                          14:00 会议
+                        </span>
+                        <span class="island-meeting__when">
+                          ·
+                          10m
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </span>
+                <span class="settings-thumbs__label">
+                  时间和标题
+                </span>
+              </button>
+              <button aria-pressed="true" class="settings-thumbs__item settings-thumbs__item--active settings-thumbs__item--wide" data-thumb="compact" title="只有图标和剩余分钟，最省地方。" type="button">
+                <span aria-hidden="true" class="settings-thumbs__art">
+                  <span class="calendar-format-art">
+                    <span class="calendar-format-art__bar">
+                      <span class="island-meeting island-meeting--compact">
+                        <svg aria-hidden="true" class="lucide lucide-calendar-clock island-meeting__icon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span class="island-meeting__when">
+                          10m
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                </span>
+                <span class="settings-thumbs__label">
+                  紧凑
+                </span>
+              </button>
+            </div>
+            <p class="settings-thumbs__hint">
+              只有图标和剩余分钟，最省地方。
+            </p>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <label class="settings-row__title" for="_id3_">
+                显示会议标题
+              </label>
+              <span class="settings-row__description">
+                关掉后收起条与横幅提醒只写「会议」，共享屏幕时不会露出会议内容。
+              </span>
+            </div>
+            <div class="settings-row__control">
+              <span class="settings-switch">
+                <input id="_id3_" role="switch" type="checkbox">
+                <span aria-hidden="true" class="settings-switch__track"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>

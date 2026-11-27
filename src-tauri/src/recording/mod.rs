@@ -1,0 +1,60 @@
+#[cfg(windows)]
+mod audio;
+mod control;
+#[cfg_attr(target_os = "macos", path = "exclusion_macos.rs")]
+mod exclusion;
+mod format;
+mod gif;
+mod mixer;
+#[cfg_attr(not(windows), allow(dead_code))]
+mod pacing;
+#[cfg_attr(target_os = "macos", path = "session_macos.rs")]
+mod session;
+mod state;
+#[cfg(any(target_os = "macos", test))]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod stereo;
+#[cfg(test)]
+mod tests;
+#[cfg(any(target_os = "macos", test))]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod timeline;
+
+use tauri::AppHandle;
+
+use crate::user_error::UserError;
+pub(crate) use control::{apply_to_window, begin, hides_own_windows, is_busy, records_own_windows, stop_in_background, Request};
+use session::Summary;
+use state::State;
+
+#[tauri::command]
+pub async fn screen_recording_start(app: AppHandle, request: Request) -> Result<String, UserError> {
+    control::start_now(&app, request)
+}
+
+#[tauri::command]
+pub async fn screen_recording_pause(app: AppHandle, paused: bool) -> Result<(), UserError> {
+    control::pause(&app, paused)
+}
+
+#[tauri::command]
+pub async fn screen_recording_stop(app: AppHandle) -> Result<Option<Summary>, UserError> {
+    control::stop(&app)
+}
+
+#[tauri::command]
+pub fn screen_recording_status() -> State {
+    control::state()
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::recording::screen_recording_start,
+            crate::recording::screen_recording_pause,
+            crate::recording::screen_recording_stop,
+            crate::recording::screen_recording_status,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

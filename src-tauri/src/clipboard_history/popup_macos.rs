@@ -1,0 +1,363 @@
+use std::{
+    sync::{mpsc, Mutex, PoisonError},
+    thread,
+    time::{Duration, Instant},
+};
+use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Monitor, Position, Size, WebviewWindow};
+
+use super::popup_place::{is_terminal_process, place_by_pointer, popup_size, PasteOutcome, OPENED_EVENT, POINTER_GAP};
+pub(super) use super::popup_place::PasteOptions;
+pub(crate) use super::popup_place::WINDOW_LABEL;
+use super::{command_text, service, ClipboardHistoryItemKind, ClipboardHistorySettings, CopyAs, PopupPosition};
+use crate::island::screen;
+use crate::macos::{apps, input};
+
+const FOCUS_SETTLE: Duration = Duration::from_millis(120);
+const BLUR_GRACE: Duration = Duration::from_millis(250);
+const PIN_GRIP: i32 = 24;
+
+static TARGET_APP: Mutex<Option<i32>> = Mutex::new(None);
+static LAST_OPENED: Mutex<Option<Instant>> = Mutex::new(None);
+
+fn mark_opened() {
+    *LAST_OPENED.lock().unwrap_or_else(PoisonError::into_inner) = Some(Instant::now());
+}
+
+fn within_blur_grace() -> bool {
+    LAST_OPENED
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .is_some_and(|opened| opened.elapsed() < BLUR_GRACE)
+}
+
+fn popup_window(app: &AppHandle) -> Result<WebviewWindow, String> {
+    app.get_webview_window(WINDOW_LABEL)
+        .ok_or_else(|| "The clipboard window is missing.".to_string())
+}
+
+fn work_area_in_points(monitor: &Monitor) -> (i32, i32, i32, i32) {
+    let scale = monitor.scale_factor();
+    let work = monitor.work_area();
+    let left = (f64::from(work.position.x) / scale).round() as i32;
+    let top = (f64::from(work.position.y) / scale).round() as i32;
+    let width = (f64::from(work.size.width) / scale).round() as i32;
+    let height = (f64::from(work.size.height) / scale).round() as i32;
+    (left, top, left + width, top + height)
+}
+
+fn screen_bounds(monitor: &Monitor) -> (i32, i32, i32, i32) {
+    let origin = screen::monitor_origin(monitor);
+    let size = screen::monitor_size(monitor);
+    (origin.x, origin.y, origin.x + size.width as i32, origin.y + size.height as i32)
+}
+
+fn contains((left, top, right, bottom): (i32, i32, i32, i32), (x, y): (i32, i32)) -> bool {
+    x >= left && x < right && y >= top && y < bottom
+}
+
+fn monitor_at(app: &AppHandle, point: (i32, i32)) -> Option<Monitor> {
+    app.available_monitors().ok()?.into_iter().find(|monitor| contains(screen_bounds(monitor), point))
+}
+
+fn pinned_origin(settings: &ClipboardHistorySettings, screens: &[(i32, i32, i32, i32)]) -> Option<(i32, i32)> {
+    let (x, y) = (settings.popup_pin_x?, settings.popup_pin_y?);
+    let grip = (x.saturating_add(PIN_GRIP), y.saturating_add(PIN_GRIP));
+    (settings.popup_pinned && screens.iter().any(|bounds| contains(*bounds, grip))).then_some((x, y))
+}
+
+pub(super) fn toggle(app: &AppHandle, settings: &ClipboardHistorySettings) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
+        if window.is_visible().unwrap_or(false) {
+            return hide(app);
+        }
+    }
+    let own = i32::try_from(std::process::id()).ok();
+    let frontmost = apps::frontmost_pid();
+    let window = super::background::ensure_popup_window(app)?;
+    if window.is_visible().unwrap_or(false) {
+        return hide(app);
+    }
+    let _ = window.set_content_protected(super::wanted_capture_protection(settings.hide_from_capture));
+    super::sequence::stop();
+    if frontmost.is_some() && frontmost == own {
+        eprintln!("clipboard paste: Fuyu itself was in front when the window opened, so there is no app to paste into");
+    }
+    *TARGET_APP.lock().unwrap_or_else(PoisonError::into_inner) = frontmost.filter(|pid| Some(*pid) != own);
+
+    let (width, height) = popup_size(settings.popup_layout);
+    let _ = window.set_size(Size::Logical(LogicalSize::new(width, height)));
+    let screens: Vec<_> = app.available_monitors().unwrap_or_default().iter().map(screen_bounds).collect();
+    let pointer = screen::cursor_position().map(|(x, y)| (x.round() as i32, y.round() as i32));
+    let monitor = pointer.and_then(|point| monitor_at(app, point)).or_else(|| window.primary_monitor().ok().flatten());
+    if let Some((x, y)) = pinned_origin(settings, &screens) {
+        let _ = window.set_position(Position::Logical(LogicalPosition::new(f64::from(x), f64::from(y))));
+    } else if let Some(monitor) = monitor {
+        let area = work_area_in_points(&monitor);
+        let size = (width.round() as i32, height.round() as i32);
+        let (x, y) = match (settings.popup_position, pointer) {
+            (PopupPosition::Cursor, Some(pointer)) => place_by_pointer(pointer, size, area, POINTER_GAP),
+            _ => (area.0 + (area.2 - area.0 - size.0) / 2, area.1 + (area.3 - area.1 - size.1) / 3),
+        };
+        let _ = window.set_position(Position::Logical(LogicalPosition::new(f64::from(x), f64::from(y))));
+    }
+    let _ = window.emit_to(WINDOW_LABEL, OPENED_EVENT, ());
+    let _ = window.emit_to(crate::onboarding_window::WINDOW_LABEL, OPENED_EVENT, ());
+    mark_opened();
+    let handle = app.clone();
+    let shown = app.run_on_main_thread(move || {
+        let Ok(window) = popup_window(&handle) else {
+            return;
+        };
+        if !crate::macos::island_panel::make_panel_key(&handle, WINDOW_LABEL) {
+            if let Err(error) = crate::macos::island_panel::make_popup_panel(&window) {
+                eprintln!("failed to make the {WINDOW_LABEL} window a panel: {error}");
+            }
+            if !crate::macos::island_panel::make_panel_key(&handle, WINDOW_LABEL) {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }
+        let webview: &tauri::Webview = window.as_ref();
+        let _ = webview.set_focus();
+        mark_opened();
+    });
+    shown.map_err(|error| error.to_string())
+}
+
+pub(super) fn hide(app: &AppHandle) -> Result<(), String> {
+    super::preview_window::hide(app, false);
+    super::background::schedule_preview_close_after_popup(app);
+    super::background::popup_hidden(app);
+    if app.get_webview_window(WINDOW_LABEL).is_none() {
+        return Ok(());
+    }
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        if !crate::macos::island_panel::hide_panel(&handle, WINDOW_LABEL) {
+            if let Ok(window) = popup_window(&handle) {
+                let _ = window.hide();
+            }
+        }
+    })
+    .map_err(|error| error.to_string())
+}
+
+pub(super) fn hide_on_blur(app: &AppHandle) -> Result<(), String> {
+    if within_blur_grace() || app.get_webview_window(WINDOW_LABEL).is_none() {
+        return Ok(());
+    }
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        if within_blur_grace() || crate::macos::island_panel::is_panel_key(&handle, WINDOW_LABEL) {
+            return;
+        }
+        super::preview_window::hide(&handle, false);
+        super::background::schedule_preview_close_after_popup(&handle);
+        super::background::popup_hidden(&handle);
+        if !crate::macos::island_panel::hide_panel(&handle, WINDOW_LABEL) {
+            if let Ok(window) = popup_window(&handle) {
+                let _ = window.hide();
+            }
+        }
+    })
+    .map_err(|error| error.to_string())
+}
+
+pub(super) fn refocus(app: &AppHandle) -> Result<(), String> {
+    if !popup_window(app)?.is_visible().unwrap_or(false) {
+        return Ok(());
+    }
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        if !crate::macos::island_panel::make_panel_key(&handle, WINDOW_LABEL) {
+            if let Ok(window) = popup_window(&handle) {
+                let _ = window.set_focus();
+            }
+        }
+        if let Ok(window) = popup_window(&handle) {
+            let webview: &tauri::Webview = window.as_ref();
+            let _ = webview.set_focus();
+        }
+    })
+    .map_err(|error| error.to_string())
+}
+
+pub(super) fn outer_position(app: &AppHandle) -> Option<(i32, i32)> {
+    let position = screen::window_position(&popup_window(app).ok()?).ok()?;
+    Some((position.x, position.y))
+}
+
+pub(super) fn sync_taskbar(_app: &AppHandle, _pinned: bool) {}
+
+pub(super) fn note_target(_app: &AppHandle) {
+    let own = i32::try_from(std::process::id()).ok();
+    if let Some(pid) = apps::frontmost_pid().filter(|pid| Some(*pid) != own) {
+        *TARGET_APP.lock().unwrap_or_else(PoisonError::into_inner) = Some(pid);
+    }
+}
+
+fn take_target() -> Option<i32> {
+    TARGET_APP.lock().unwrap_or_else(PoisonError::into_inner).take()
+}
+
+fn target_for_paste(pinned: bool) -> Option<i32> {
+    if pinned {
+        *TARGET_APP.lock().unwrap_or_else(PoisonError::into_inner)
+    } else {
+        take_target()
+    }
+}
+
+pub(super) fn paste(app: &AppHandle, id: &str, options: PasteOptions) -> Result<bool, String> {
+    let service = service()?;
+    let snapshot = service.snapshot()?;
+    let settings = &snapshot.settings;
+    let item = snapshot.items.iter().find(|item| item.id == id);
+    let is_image = item.is_some_and(|item| matches!(item.kind, ClipboardHistoryItemKind::Image | ClipboardHistoryItemKind::Files));
+    let target = target_for_paste(settings.popup_pinned);
+    let into_terminal = target.and_then(apps::path).is_some_and(|path| is_terminal_process(&path));
+    let split_command = item
+        .filter(|_| options.copy_as.is_none() && into_terminal && settings.auto_paste && settings.flatten_terminal_commands)
+        .and_then(|item| item.text.as_deref())
+        .filter(|text| command_text::looks_like_split_command(text));
+    if let Some(text) = split_command {
+        super::suspend_clipboard_capture(Duration::from_millis(800));
+        super::clipboard_io::write_clipboard_text(&command_text::flatten_command(text))?;
+    } else {
+        let copy_as = match options.copy_as {
+            Some(copy_as) => copy_as,
+            None if is_image && settings.auto_paste && settings.terminal_image_path && into_terminal => CopyAs::Path,
+            None if options.plain => CopyAs::Plain,
+            None => CopyAs::Original,
+        };
+        service.copy_item_as(id, copy_as)?;
+    }
+    if !settings.popup_pinned {
+        hide_before_paste(app);
+    }
+    let outcome = paste_into(app, target, settings.auto_paste, options.enter, settings.popup_pinned);
+    super::copy_notice::notify_paste(id, outcome);
+    Ok(outcome == PasteOutcome::Sent)
+}
+
+pub(super) fn paste_text(app: &AppHandle, text: &str, enter: bool) -> Result<(), String> {
+    let settings = service()?.snapshot()?.settings;
+    super::suspend_clipboard_capture(Duration::from_millis(800));
+    super::clipboard_io::write_clipboard_text(text)?;
+    if !settings.popup_pinned {
+        hide_before_paste(app);
+    }
+    paste_into(app, target_for_paste(settings.popup_pinned), settings.auto_paste, enter, settings.popup_pinned);
+    Ok(())
+}
+
+fn hide_before_paste(app: &AppHandle) {
+    if let Err(error) = hide(app) {
+        eprintln!("clipboard paste: could not hide the clipboard window: {error}");
+    }
+}
+
+fn outcome(target: Option<i32>, auto_paste: bool, can_post_keys: impl FnOnce() -> bool) -> PasteOutcome {
+    match (auto_paste, target) {
+        (false, _) => PasteOutcome::Off,
+        (true, None) => PasteOutcome::NoTarget,
+        (true, Some(_)) if !can_post_keys() => PasteOutcome::NoAccess,
+        (true, Some(_)) => PasteOutcome::Sent,
+    }
+}
+
+#[cfg(debug_assertions)]
+fn debug_focus_snapshot(app: &AppHandle) -> (bool, Option<String>) {
+    let (tx, rx) = mpsc::sync_channel(1);
+    if app
+        .run_on_main_thread(move || {
+            let _ = tx.send(crate::macos::island_panel::debug_app_focus_state());
+        })
+        .is_ok()
+    {
+        rx.recv_timeout(Duration::from_millis(100)).unwrap_or((false, None))
+    } else {
+        (false, None)
+    }
+}
+
+fn paste_into(app: &AppHandle, target: Option<i32>, auto_paste: bool, enter: bool, pinned: bool) -> PasteOutcome {
+    let result = outcome(target, auto_paste, input::can_post_keys);
+    match result {
+        PasteOutcome::NoTarget => eprintln!("clipboard paste: no app was recorded when the window opened, so it was only copied"),
+        PasteOutcome::NoAccess => {
+            let own = i32::try_from(std::process::id()).unwrap_or_default();
+            let owner = apps::display_name(apps::responsible_pid(own)).unwrap_or_else(|| "Fuyu".to_string());
+            eprintln!("clipboard paste: {owner} may not send keys (Privacy & Security > Accessibility), so it was only copied");
+            thread::spawn(input::ask_to_post_keys);
+        }
+        PasteOutcome::Sent | PasteOutcome::Off => {}
+    }
+    let (PasteOutcome::Sent, Some(target)) = (result, target) else {
+        return result;
+    };
+    let handle = app.clone();
+    thread::spawn(move || {
+        let (tx, rx) = mpsc::sync_channel(1);
+        let main = handle.clone();
+        let queued = handle.run_on_main_thread(move || {
+            let _ = tx.send(crate::macos::island_panel::release_panel_key_for_paste(&main, WINDOW_LABEL, target, pinned));
+        });
+        let activated = match queued {
+            Ok(()) => rx.recv_timeout(Duration::from_millis(500)).unwrap_or_else(|_| apps::activate_main_window(target)),
+            Err(_) => apps::activate_main_window(target),
+        };
+        if !activated {
+            eprintln!("clipboard paste: could not bring app {target} to the front, so ⌘V was not sent");
+            return;
+        }
+        thread::sleep(FOCUS_SETTLE);
+        #[cfg(debug_assertions)]
+        let (fuyu_active, fuyu_key) = debug_focus_snapshot(&handle);
+        input::send_paste_shortcut();
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "clipboard paste: sent ⌘V to pid {target} ({}) [front={:?} ax={} post={} fuyu_active={} fuyu_key={:?}]",
+            apps::display_name(target).unwrap_or_default(),
+            apps::frontmost_pid(),
+            crate::macos::accessibility::is_trusted(),
+            input::can_post_keys(),
+            fuyu_active,
+            fuyu_key,
+        );
+        if enter {
+            thread::sleep(FOCUS_SETTLE);
+            input::send_enter();
+        }
+    });
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{outcome, pinned_origin, ClipboardHistorySettings, PasteOutcome};
+
+    fn pinned_at(pinned: bool, x: Option<i32>, y: Option<i32>) -> ClipboardHistorySettings {
+        ClipboardHistorySettings { popup_pinned: pinned, popup_pin_x: x, popup_pin_y: y, ..ClipboardHistorySettings::default() }
+    }
+
+    #[test]
+    fn keys_are_sent_only_with_a_target_auto_paste_and_access() {
+        assert_eq!(outcome(Some(42), true, || true), PasteOutcome::Sent);
+        assert_eq!(outcome(Some(42), true, || false), PasteOutcome::NoAccess);
+        assert_eq!(outcome(Some(42), false, || true), PasteOutcome::Off);
+        assert_eq!(outcome(None, true, || true), PasteOutcome::NoTarget);
+        assert_eq!(outcome(None, false, || panic!("access is not asked when auto paste is off")), PasteOutcome::Off);
+    }
+
+    #[test]
+    fn the_pinned_spot_is_used_only_while_it_is_on_a_screen() {
+        let screens = [(0, 0, 1512, 982), (1512, -200, 3432, 880)];
+        assert_eq!(pinned_origin(&pinned_at(true, Some(2000), Some(100)), &screens), Some((2000, 100)));
+        assert_eq!(pinned_origin(&pinned_at(true, Some(1600), Some(-150)), &screens), Some((1600, -150)));
+        assert_eq!(pinned_origin(&pinned_at(true, Some(4000), Some(100)), &screens), None);
+        assert_eq!(pinned_origin(&pinned_at(true, Some(2000), Some(100)), &screens[..1]), None);
+        assert_eq!(pinned_origin(&pinned_at(false, Some(200), Some(100)), &screens), None);
+        assert_eq!(pinned_origin(&pinned_at(true, None, Some(100)), &screens), None);
+    }
+}

@@ -1,0 +1,17 @@
+.tuck-settings__strip-row .settings-row__main {
+  align-items: start;
+}
+
+.tuck-settings__holds .settings-choice--multi {
+  flex-wrap: wrap;
+}
+
+.tuck-settings__strip-row,
+.tuck-preview {
+  --settings-thumb-wall-a: var(--tuck-wall-a, #5b6fa6);
+  --settings-thumb-wall-b: var(--tuck-wall-b, #2a345c);
+}
+
+.tuck-settings__strip {
+  min-width: 0;
+}

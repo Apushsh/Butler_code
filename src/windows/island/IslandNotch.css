@@ -1,0 +1,264 @@
+:root {
+  --island-notch-drop-height: 38px;
+}
+
+:root[data-island-notch] .island--collapsed {
+  --island-top-fillet-size: 6;
+  --island-shell-height: calc(var(--island-notch-height) + var(--island-notch-ring-extra, 0px) * var(--island-scale, 1));
+  --island-shell-bottom-corner: calc(14px * var(--island-scale, 1));
+  --island-shell-fill: var(--color-black, #000);
+  background: var(--island-shell-fill);
+  box-shadow: none;
+}
+
+:root[data-island-notch] .island--appearance-liquidGlass.island--collapsed,
+:root[data-island-notch] .island--appearance-liquidGlass.island--collapsed:has(:focus-visible) {
+  --island-shell-fill: var(--color-black, #000);
+  background: var(--island-shell-fill);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-island-notch] .island--collapsed .island__glass {
+  opacity: 0;
+}
+
+:root[data-island-notch] .island--collapsed .island__glass::before,
+:root[data-island-notch] .island--collapsed .island__glass-highlight {
+  display: none;
+}
+
+:root[data-island-notch] .island--collapsed .island__collapsed {
+  flex-direction: column;
+  align-items: stretch;
+  height: calc(var(--island-notch-height) / var(--island-collapsed-scale, 1) + var(--island-notch-ring-extra, 0px));
+  gap: 0;
+  padding: 0 12px;
+}
+
+:root[data-island-notch] .island--collapsed:has(.island__notch-drop) {
+  --island-shell-height: calc(var(--island-notch-height) + (var(--island-notch-drop-height) + var(--island-notch-ring-extra, 0px)) * var(--island-scale, 1));
+}
+
+:root[data-island-notch] .island--collapsed .island__collapsed:has(.island__notch-drop) {
+  height: calc(var(--island-notch-height) / var(--island-collapsed-scale, 1) + var(--island-notch-drop-height) + var(--island-notch-ring-extra, 0px));
+}
+
+.island__notch-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: calc(var(--island-notch-height) / var(--island-collapsed-scale, 1));
+  margin-bottom: var(--island-notch-ring-extra, 0px);
+}
+
+.island__notch-drop {
+  display: flex;
+  flex: 0 0 var(--island-notch-drop-height);
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: 0 6px 4px;
+}
+
+:root[data-island-notch="on"] .island--popup .island__expanded {
+  padding-top: calc(var(--island-notch-height) / var(--island-expanded-scale, 1) + 8px);
+}
+
+:root[data-island-notch="on"] .island--expanded:not(.island--popup) .island__expanded {
+  padding-top: 0;
+}
+
+:root[data-island-notch="on"] .island__header {
+  grid-template-columns: minmax(0, 1fr) calc(var(--island-notch-width) / var(--island-expanded-scale, 1) + 16px) minmax(0, 1fr);
+  gap: 0;
+  height: calc(var(--island-notch-height) / var(--island-expanded-scale, 1));
+  min-height: 0;
+}
+
+:root[data-island-notch="on"] .island__header-start {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+:root[data-island-notch="on"] .island__header .island__title {
+  flex: 0 0 auto;
+}
+
+:root[data-island-notch="on"] .island__header .editor-dots {
+  flex: 0 0 auto;
+  min-width: 0;
+  height: auto;
+  padding-left: 0;
+  overflow: visible;
+}
+
+:root[data-island-notch="on"] .island__header .dot-button:has(.panel-text-icon) {
+  padding: 0 10px;
+}
+
+:root[data-island-notch="on"] .island__header .island__collapse-target {
+  height: 100%;
+  margin: 0;
+}
+
+:root[data-island-notch="on"] .island__header .window-actions {
+  justify-self: end;
+  gap: 2px;
+  min-width: 0;
+}
+
+:root[data-island-notch="on"] .island__header .icon-button,
+:root[data-island-notch="on"] .island__header .island__agent-button,
+:root[data-island-notch="on"] .island__header .dot-button:not(:has(.panel-text-icon)) {
+  width: 28px;
+  height: 26px;
+}
+
+:root[data-island-notch] .stage:not(.island-light) .island--expanded {
+  background:
+    linear-gradient(
+      var(--color-black, #000) calc(var(--island-notch-height) - 2px),
+      var(--island-shell-fill) calc(var(--island-notch-height) + 14px)
+    );
+}
+
+.island__notch-wing {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+  height: 100%;
+  animation: islandNotchWingIn var(--motion-medium) var(--motion-ease) backwards;
+}
+
+@keyframes islandNotchWingIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island__notch-wing { animation: none; }
+}
+
+.island__notch-wing--left {
+  padding-right: var(--space-md);
+}
+
+.island__notch-wing--right {
+  padding-left: var(--space-md);
+}
+
+.island__notch-row .island__notch-wing .island__open-button {
+  padding-left: 0;
+}
+
+.island__notch-gap {
+  flex: 0 0 calc(var(--island-notch-width) / var(--island-collapsed-scale, 1));
+  align-self: stretch;
+}
+
+:root[data-island-notch="on"] .island--collapsed.island--tucked {
+  --island-shell-width: calc(var(--island-notch-width) - 4px);
+  --island-shell-bottom-corner: 10px;
+}
+
+:root[data-island-notch="on"] .island--collapsed.island--tucked::before,
+:root[data-island-notch="on"] .island--collapsed.island--tucked::after {
+  opacity: 0;
+}
+
+.notch-alert__icon {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+.notch-alert__value {
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.notch-alert__value .device-alert__text,
+.notch-alert__value .agent-quota-alert__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notch-alert__level .level-popup__icon {
+  display: none;
+}
+
+.island__notch-wing--left:has(.notch-alert__icon) {
+  justify-content: flex-start;
+}
+
+.notch-message__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notch-message__from {
+  display: inline-flex;
+  align-items: center;
+}
+
+:root[data-island-notch="simulated"] .island__notch-band,
+.island__expanded:has([data-island-notch-band]) .island__notch-band {
+  display: none;
+}
+
+.island__notch-band {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  right: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(var(--island-notch-width) / var(--island-expanded-scale, 1) + 16px) minmax(0, 1fr);
+  align-items: center;
+  height: calc(var(--island-notch-height) / var(--island-expanded-scale, 1));
+}
+
+.island__notch-band-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.island__notch-band-icon {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.island__notch-band-logo {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.island__notch-band-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.island__notch-band-close.icon-button {
+  justify-self: end;
+  width: 26px;
+  height: 26px;
+}

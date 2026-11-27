@@ -1,0 +1,325 @@
+use std::{fs, path::Path};
+
+use super::{
+    claude_hooks::APPROVAL_HOOK_TIMEOUT_SECONDS, write_text_file, AGENT_APPROVAL_SCRIPT_FILE_NAME,
+    AGENT_RUNNING_NOTIFICATION_ARG, AGENT_SESSION_SCRIPT_FILE_NAME,
+};
+
+pub(super) const ISLAND_HOOK_BLOCK_BEGIN: &str = "# BEGIN Fuyu Agent Status Hooks";
+pub(super) const ISLAND_HOOK_BLOCK_END: &str = "# END Fuyu Agent Status Hooks";
+const LEGACY_HOOK_BLOCK: (&str, &str) = ("# BEGIN FocuSD Agent Status Hooks", "# END FocuSD Agent Status Hooks");
+
+pub(super) fn install_codex_status_hooks(
+    config_path: &Path,
+    running_script_path: &Path,
+    status_script_path: &Path,
+    async_session_start: bool,
+) -> Result<(), String> {
+    let content = fs::read_to_string(config_path).unwrap_or_default();
+    let content = remove_managed_codex_hook_block(&content);
+    let block = build_codex_hook_block(running_script_path, status_script_path, async_session_start);
+    let mut next_content = content.trim_end().to_string();
+    if !next_content.is_empty() {
+        next_content.push_str("\n\n");
+    }
+    next_content.push_str(&block);
+
+    write_text_file(config_path, &next_content)
+}
+
+pub(super) fn uninstall_codex_status_hooks(config_path: &Path) -> Result<(), String> {
+    let content = match fs::read_to_string(config_path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(format!("Failed to read Codex config.toml: {error}")),
+    };
+    let cleaned = remove_managed_codex_hook_block(&content);
+    if cleaned == content {
+        return Ok(());
+    }
+    let trimmed = cleaned.trim_end();
+    let next = if trimmed.is_empty() {
+        String::new()
+    } else {
+        let newline = if content.contains("\r\n") { "\r\n" } else { "\n" };
+        format!("{trimmed}{newline}")
+    };
+    write_text_file(config_path, &next)
+}
+
+pub(super) fn build_codex_hook_block(
+    running_script_path: &Path,
+    status_script_path: &Path,
+    async_session_start: bool,
+) -> String {
+    let submit_command = agent_running_command(running_script_path, "codex");
+    let stop_command = agent_status_command(status_script_path, "codex", "completed");
+    let session_start_async = if async_session_start { "\nasync = true" } else { "" };
+    let session_script_path = status_script_path.with_file_name(AGENT_SESSION_SCRIPT_FILE_NAME);
+    let session_start_command = agent_status_command(&session_script_path, "codex", "start");
+    let session_end_command = agent_status_command(&session_script_path, "codex", "end");
+    let permission_command = agent_running_command_with(running_script_path, "codex", AGENT_RUNNING_NOTIFICATION_ARG);
+    let approval_script_path = status_script_path.with_file_name(AGENT_APPROVAL_SCRIPT_FILE_NAME);
+    let approval_command = agent_status_command(&approval_script_path, "codex", "permission");
+
+    format!(
+        r#"{begin}
+
+[[hooks.UserPromptSubmit]]
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = {submit_command}
+command_windows = {submit_command}
+timeout = 1
+statusMessage = "Updating Fuyu agent status"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = {stop_command}
+command_windows = {stop_command}
+timeout = 5
+statusMessage = "Updating Fuyu agent status"
+
+[[hooks.SessionStart]]
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = {session_start_command}
+command_windows = {session_start_command}
+timeout = 15{session_start_async}
+
+[[hooks.SessionEnd]]
+[[hooks.SessionEnd.hooks]]
+type = "command"
+command = {session_end_command}
+command_windows = {session_end_command}
+timeout = 5
+
+[[hooks.PermissionRequest]]
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = {permission_command}
+command_windows = {permission_command}
+timeout = 2
+
+[[hooks.PermissionRequest.hooks]]
+type = "command"
+command = {approval_command}
+command_windows = {approval_command}
+timeout = {approval_timeout}
+
+{end}"#,
+        begin = ISLAND_HOOK_BLOCK_BEGIN,
+        end = ISLAND_HOOK_BLOCK_END,
+        submit_command = toml_basic_string(&submit_command),
+        stop_command = toml_basic_string(&stop_command),
+        session_start_command = toml_basic_string(&session_start_command),
+        session_end_command = toml_basic_string(&session_end_command),
+        permission_command = toml_basic_string(&permission_command),
+        approval_command = toml_basic_string(&approval_command),
+        approval_timeout = APPROVAL_HOOK_TIMEOUT_SECONDS,
+    )
+}
+
+pub(super) fn remove_managed_codex_hook_block(content: &str) -> String {
+    let current = remove_hook_blocks(content, ISLAND_HOOK_BLOCK_BEGIN, ISLAND_HOOK_BLOCK_END);
+    let (legacy_begin, legacy_end) = LEGACY_HOOK_BLOCK;
+    remove_legacy_codex_focusd_hooks(&remove_hook_blocks(&current, legacy_begin, legacy_end))
+}
+
+pub(super) fn remove_hook_blocks(content: &str, begin: &str, end_marker: &str) -> String {
+    let mut remaining = content;
+    let mut next_content = String::new();
+
+    while let Some(start) = remaining.find(begin) {
+        next_content.push_str(&remaining[..start]);
+        let after_begin = &remaining[start..];
+        let Some(end) = after_begin.find(end_marker) else {
+            remaining = "";
+            break;
+        };
+
+        remaining = &after_begin[end + end_marker.len()..];
+        if let Some(stripped) = remaining.strip_prefix("\r\n") {
+            remaining = stripped;
+        } else if let Some(stripped) = remaining.strip_prefix('\n') {
+            remaining = stripped;
+        }
+    }
+
+    next_content.push_str(remaining);
+    next_content
+}
+
+pub(super) fn remove_legacy_codex_focusd_hooks(content: &str) -> String {
+    let lines = content.lines().collect::<Vec<_>>();
+    let mut next_lines: Vec<&str> = Vec::new();
+    let mut index = 0;
+
+    while index < lines.len() {
+        let trimmed = lines[index].trim();
+        if let Some(hook_path) = codex_hook_event_path(trimmed) {
+            let start = index;
+            index += 1;
+
+            while index < lines.len() && !lines[index].trim().starts_with('[') {
+                index += 1;
+            }
+
+            let metadata_end = index;
+            let mut kept_child_ranges = Vec::new();
+            let mut removed_managed_child = false;
+
+            while index < lines.len() {
+                let candidate = lines[index].trim();
+                if !is_codex_nested_hook_header_for(candidate, &hook_path) {
+                    break;
+                }
+
+                let child_start = index;
+                index += 1;
+                while index < lines.len() && !lines[index].trim().starts_with('[') {
+                    index += 1;
+                }
+
+                let child_block = lines[child_start..index].join("\n");
+                if super::is_island_hook_text(&child_block) {
+                    removed_managed_child = true;
+                } else {
+                    kept_child_ranges.push(child_start..index);
+                }
+            }
+
+            if !removed_managed_child {
+                next_lines.extend_from_slice(&lines[start..index]);
+                continue;
+            }
+
+            if kept_child_ranges.is_empty() {
+                continue;
+            }
+
+            next_lines.extend_from_slice(&lines[start..metadata_end]);
+            for range in kept_child_ranges {
+                next_lines.extend_from_slice(&lines[range]);
+            }
+            continue;
+        }
+
+        next_lines.push(lines[index]);
+        index += 1;
+    }
+
+    next_lines.join("\n")
+}
+
+pub(super) fn codex_hook_event_path(header: &str) -> Option<String> {
+    if !header.starts_with("[[hooks.") || !header.ends_with("]]") {
+        return None;
+    }
+
+    let hook_path = header.strip_prefix("[[")?.strip_suffix("]]")?;
+    if hook_path.ends_with(".hooks") {
+        return None;
+    }
+
+    Some(hook_path.to_string())
+}
+
+pub(super) fn is_codex_nested_hook_header_for(header: &str, hook_path: &str) -> bool {
+    header == format!("[[{hook_path}.hooks]]")
+}
+
+#[cfg(windows)]
+pub(super) fn agent_running_command(script_path: &Path, provider: &str) -> String {
+    let script = script_path.to_string_lossy();
+    format!("cmd.exe /d /s /c \"if exist \"{script}\" (\"{script}\" {provider}) else exit /b 0\"")
+}
+
+#[cfg(windows)]
+pub(super) fn agent_running_command_with(script_path: &Path, provider: &str, arg: &str) -> String {
+    let script = script_path.to_string_lossy();
+    format!("cmd.exe /d /s /c \"if exist \"{script}\" (\"{script}\" {provider} {arg}) else exit /b 0\"")
+}
+
+#[cfg(windows)]
+pub(super) fn agent_status_command(script_path: &Path, provider: &str, phase: &str) -> String {
+    let script = script_path.to_string_lossy();
+    format!(
+        "cmd.exe /d /s /c \"if exist \"{script}\" (powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"{script}\" {provider} {phase}) else exit /b 0\""
+    )
+}
+
+#[cfg(not(windows))]
+fn shell_quoted(path: &Path) -> String {
+    format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"))
+}
+
+#[cfg(not(windows))]
+pub(super) fn agent_running_command(script_path: &Path, provider: &str) -> String {
+    let script = shell_quoted(script_path);
+    format!("[ -f {script} ] && exec /bin/sh {script} {provider} || exit 0")
+}
+
+#[cfg(not(windows))]
+pub(super) fn agent_running_command_with(script_path: &Path, provider: &str, arg: &str) -> String {
+    let script = shell_quoted(script_path);
+    format!("[ -f {script} ] && exec /bin/sh {script} {provider} {arg} || exit 0")
+}
+
+#[cfg(not(windows))]
+pub(super) fn agent_status_command(script_path: &Path, provider: &str, phase: &str) -> String {
+    let script = shell_quoted(script_path);
+    format!("[ -f {script} ] && exec /bin/sh {script} {provider} {phase} || exit 0")
+}
+
+pub(super) fn toml_basic_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn prompt_submit_hook_only_marks_running() {
+        let block = build_codex_hook_block(
+            Path::new(r"C:\a b\fuyu-agent-running.cmd"),
+            Path::new(r"C:\a b\fuyu-agent-status.ps1"),
+            false,
+        );
+        assert!(!block.contains("async"));
+        let background = build_codex_hook_block(Path::new(r"C:\r.cmd"), Path::new(r"C:\s.ps1"), true);
+        assert!(background.contains("timeout = 15\nasync = true\n"));
+        assert_eq!(background.matches("async = true").count(), 1, "only SessionStart runs in the background");
+
+        assert!(block.contains(
+            r#"command = "cmd.exe /d /s /c \"if exist \"C:\\a b\\fuyu-agent-running.cmd\" (\"C:\\a b\\fuyu-agent-running.cmd\" codex) else exit /b 0\"""#
+        ));
+        assert!(!block.contains("capture"));
+        assert!(block.contains(
+            r#"command = "cmd.exe /d /s /c \"if exist \"C:\\a b\\fuyu-agent-running.cmd\" (\"C:\\a b\\fuyu-agent-running.cmd\" codex notification) else exit /b 0\"""#
+        ));
+        assert!(block.contains("[[hooks.SessionStart]]") && block.contains("[[hooks.PermissionRequest]]"));
+        assert!(block.contains(r#"fuyu-agent-session.ps1\" codex start) else exit /b 0"#));
+        assert_eq!(
+            agent_running_command(Path::new(r"C:\s.cmd"), "codex"),
+            r#"cmd.exe /d /s /c "if exist "C:\s.cmd" ("C:\s.cmd" codex) else exit /b 0""#
+        );
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn mac_commands_quote_the_script_for_the_shell() {
+        let block = build_codex_hook_block(Path::new("/Users/a b/.fuyu/fuyu-agent-running.sh"), Path::new("/Users/a b/.fuyu/fuyu-agent-status.sh"), false);
+        assert!(block.contains(r#"command = "[ -f '/Users/a b/.fuyu/fuyu-agent-running.sh' ] && exec /bin/sh '/Users/a b/.fuyu/fuyu-agent-running.sh' codex || exit 0""#));
+        assert!(block.contains(r#"command = "[ -f '/Users/a b/.fuyu/fuyu-agent-session.sh' ] && exec /bin/sh '/Users/a b/.fuyu/fuyu-agent-session.sh' codex start || exit 0""#));
+        assert!(block.contains(r#"command = "[ -f '/Users/a b/.fuyu/fuyu-agent-approval.sh' ] && exec /bin/sh '/Users/a b/.fuyu/fuyu-agent-approval.sh' codex permission || exit 0""#));
+        assert_eq!(
+            agent_running_command(Path::new("/tmp/it's.sh"), "codex"),
+            r#"[ -f '/tmp/it'\''s.sh' ] && exec /bin/sh '/tmp/it'\''s.sh' codex || exit 0"#
+        );
+    }
+
+}

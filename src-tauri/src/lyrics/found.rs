@@ -1,0 +1,142 @@
+use std::time::Duration;
+
+use super::matching::{clean_title, fold};
+use crate::system::updater::reqwest_proxy;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct FoundLyrics {
+    pub(super) lrc: String,
+    pub(super) translation: Option<String>,
+}
+
+const CREDIT_WORDS: &[&str] = &[
+    "作词", "作曲", "编曲", "词", "曲", "制作人", "制作", "监制", "和声", "混音", "母带", "录音", "吉他", "贝斯", "鼓",
+    "键盘", "弦乐", "出品", "发行", "演唱", "原唱", "翻唱", "op", "sp", "lyrics", "lyricist", "composer", "arranger",
+    "producer", "written by",
+];
+
+const CREDIT_PARTS: &[&str] = &[
+    "作词", "作曲", "编曲", "录音", "混音", "母带", "制作", "监制", "和声", "吉他", "贝斯", "键盘", "弦乐", "出品", "发行", "版权",
+    "统筹", "策划", "企划", "鸣谢", "配唱", "人声",
+];
+const MAX_CREDIT_HEADING_CHARS: usize = 8;
+
+pub(super) fn is_credit(text: &str, title: &str) -> bool {
+    let text = fold(text);
+    if let Some((head, _)) = text.split_once([':', '：']) {
+        let head = head.trim();
+        if CREDIT_WORDS.contains(&head) || (head.chars().count() <= MAX_CREDIT_HEADING_CHARS && CREDIT_PARTS.iter().any(|part| head.contains(part))) {
+            return true;
+        }
+    }
+    let title = clean_title(title);
+    !title.is_empty() && text.split_once(" - ").is_some_and(|(left, right)| clean_title(left) == title || clean_title(right) == title)
+}
+
+pub(super) fn word_tag(ms: u64) -> String {
+    format!("<{:02}:{:02}.{:02}>", ms / 60_000, ms / 1000 % 60, ms % 1000 / 10)
+}
+
+pub(super) fn plain_text(text: &str) -> String {
+    let mut plain = String::new();
+    let mut rest = text;
+    while let Some(start) = rest.find('<') {
+        let tag = rest[start + 1..].find('>').map(|end| &rest[start + 1..start + 1 + end]);
+        match tag.filter(|tag| !tag.is_empty() && tag.chars().all(|c| c.is_ascii_digit() || c == ':' || c == '.')) {
+            Some(tag) => {
+                plain.push_str(&rest[..start]);
+                rest = &rest[start + tag.len() + 2..];
+            }
+            None => {
+                plain.push_str(&rest[..=start]);
+                rest = &rest[start + 1..];
+            }
+        }
+    }
+    plain.push_str(rest);
+    plain
+}
+
+pub(super) fn has_word_times(lrc: &str) -> bool {
+    lrc.lines().any(|line| plain_text(line).len() < line.len())
+}
+
+fn timestamp(ms: u64) -> String {
+    format!("[{:02}:{:02}.{:02}]", ms / 60_000, ms / 1000 % 60, ms % 1000 / 10)
+}
+
+pub(super) fn from_lines(lines: &[(u64, String)], translations: Option<&[String]>, title: &str) -> Option<FoundLyrics> {
+    let mut lrc = String::new();
+    let mut translated = String::new();
+    for (index, (ms, text)) in lines.iter().enumerate() {
+        if is_credit(&plain_text(text), title) {
+            continue;
+        }
+        lrc.push_str(&format!("{}{text}\n", timestamp(*ms)));
+        if let Some(line) = translations.and_then(|all| all.get(index)).filter(|line| !line.is_empty()) {
+            translated.push_str(&format!("{}{line}\n", timestamp(*ms)));
+        }
+    }
+    let sung = lrc.lines().any(|line| plain_text(line).len() > 10);
+    sung.then(|| FoundLyrics { lrc, translation: (!translated.is_empty()).then_some(translated) })
+}
+
+pub(super) fn lrc_lines(lrc: &str) -> Vec<(u64, String)> {
+    lrc.lines()
+        .filter_map(|line| {
+            let rest = line.trim().strip_prefix('[')?;
+            let (time, text) = rest.split_once(']')?;
+            let (minutes, seconds) = time.split_once(':')?;
+            let seconds: f64 = seconds.parse().ok()?;
+            let ms = minutes.parse::<u64>().ok()? * 60_000 + (seconds * 1000.0).round() as u64;
+            Some((ms, text.trim().to_string()))
+        })
+        .collect()
+}
+
+pub(super) fn browser_client() -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder()
+        .timeout(Duration::from_secs(8))
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36");
+    if let Some(proxy) = reqwest_proxy().map_err(|error| error.to_string())? {
+        builder = builder.proxy(proxy);
+    }
+    builder.build().map_err(|error| format!("Could not create the HTTP client: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn credits_and_the_heading_line_are_dropped() {
+        assert!(is_credit("作词：卡夫", "余香"));
+        assert!(is_credit("作曲 : 张小九", "余香"));
+        assert!(is_credit("张小九 - 余香", "余香"));
+        assert!(is_credit("Composer: Paul McCartney", "Yesterday"));
+        assert!(is_credit("Yesterday (Remaster) - The Beatles (披头士)", "Yesterday"));
+        assert!(!is_credit("Yesterday - all my troubles seemed so far away", "Something"));
+        assert!(!is_credit("划一根火柴 将慵倦的夜点亮", "余香"));
+        assert!(!is_credit("时间：慢慢调养", "余香"));
+        assert!(is_credit("录音助理：刘勇志", "晴天"));
+        assert!(is_credit("词版权管理方：某某传媒", "晴天"));
+        assert!(!is_credit("我在录音棚里唱了一整夜的歌：你听", "晴天"));
+    }
+
+    #[test]
+    fn timed_lines_become_lrc_with_a_matching_translation() {
+        let lines = [(201, "张小九 - 余香".to_string()), (1052, "作词：卡夫".to_string()), (31_440, "Oh I believe".to_string()), (75_005, String::new())];
+        let translations = ["".to_string(), "".to_string(), "哦 我相信".to_string(), String::new()];
+        let found = from_lines(&lines, Some(&translations), "余香").unwrap();
+        assert_eq!(found.lrc, "[00:31.44]Oh I believe\n[01:15.00]\n");
+        assert_eq!(found.translation.as_deref(), Some("[00:31.44]哦 我相信\n"));
+        assert_eq!(from_lines(&lines[..2], None, "余香"), None);
+        let timed = [(500, "<00:00.50>作词：<00:01.00>卡夫<00:02.00>".to_string()), (3000, "<00:03.00>划一根<00:04.00>".to_string())];
+        assert_eq!(from_lines(&timed, None, "余香").unwrap().lrc, "[00:03.00]<00:03.00>划一根<00:04.00>
+");
+        assert_eq!(plain_text("<00:03.00>a<b> <x>c<00:04.00>"), "a<b> <x>c");
+        assert!(has_word_times("[00:01.00]x\n[00:03.00]<00:03.00>a<00:04.00>\n"));
+        assert!(!has_word_times("[00:01.00]a<b>\n"));
+        assert_eq!(lrc_lines("[00:31.440]划一根\n[01:02.5]x\nno tag"), [(31_440, "划一根".to_string()), (62_500, "x".to_string())]);
+    }
+}

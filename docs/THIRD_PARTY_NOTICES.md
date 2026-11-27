@@ -1,0 +1,72 @@
+# Third-party notices / 第三方声明
+
+Fuyu (浮屿, formerly FocuSD Island) includes material derived from the following projects. Their licenses apply to that material.
+
+本项目包含源自以下项目的内容，这些内容适用各自的许可证。
+
+## fly-island (flyl1u)
+
+- Used in: the whole app; this project started from fly-island 0.2.14.
+- 用于：整个应用；本项目最初基于 fly-island 0.2.14。
+- License: MIT. The original notice, kept as the license requires / 按许可要求保留的原声明：
+
+```text
+MIT License
+
+Copyright (c) 2026 flyl1u and contributors
+Copyright (c) 2026 TixXin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## wechatauto-replica
+
+- Used in: `src-tauri/src/wechat_reminders/gate.rs` — the approach of switching on WeChat 4.x's Qt accessibility by setting one byte in `Weixin.dll`, and the instruction pattern used to find that byte (from `wake_uia.py`).
+- 用于：`src-tauri/src/wechat_reminders/gate.rs`——通过改 `Weixin.dll` 里一个字节打开微信 4.x 的 Qt 辅助功能的做法，以及查找这个字节用的指令特征（来自 `wake_uia.py`）。
+- License: Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+The code in `gate.rs` was rewritten in Rust and changed (address cache, restoring the byte, one candidate tried); it is not a copy of the original file.
+
+`gate.rs` 是用 Rust 重写并修改过的（地址缓存、写回原值、只试一个候选），不是原文件的拷贝。
+
+## gifski (ImageOptim / Kornel Lesiński)
+
+- Used in: screen recording to GIF (`src-tauri/src/recording/gif.rs`), linked as the Rust library `gifski` from crates.io, unmodified.
+- 用于：录屏出 GIF（`src-tauri/src/recording/gif.rs`），以 crates.io 上的 Rust 库 `gifski` 原样链接。
+- License: AGPL-3.0-or-later. Fuyu is AGPL-3.0-only, which this license allows. Source: https://github.com/ImageOptim/gifski
+- 许可证：AGPL-3.0-or-later。浮屿是 AGPL-3.0-only，和它兼容。源码：https://github.com/ImageOptim/gifski
+
+## Kaushan Script (Pablo Impallari)
+
+- Used in: the handwritten `https://fuyu.ing` in the README's island images (`docs/assets/readme/island-zh.svg`, `island-en.svg`). The glyph outlines are stored as a path in `scripts/readme/address-outline.json`; the font file is not in the repository and is not shipped with the app.
+- 用于：README 小岛图（`docs/assets/readme/island-zh.svg`、`island-en.svg`）里手写的 `https://fuyu.ing`。字形轮廓以路径的形式存在 `scripts/readme/address-outline.json`；字体文件不在仓库里，也不随应用发布。
+- License: SIL Open Font License 1.1 — https://openfontlicense.org
+
+## marked (MarkedJS)
+
+- Used in: the `doc-preview` skill for coding agents (`.claude/skills/doc-preview/vendor/marked.umd.js`, the UMD build of marked v16.4.2). The script inlines it into the HTML pages it generates so they can render Markdown offline. It is a development tool and is not shipped with the app.
+- 用于：给编程代理用的 `doc-preview` skill（`.claude/skills/doc-preview/vendor/marked.umd.js`，marked v16.4.2 的 UMD 构建产物）。脚本把它内嵌进生成的 HTML 页面，离线也能渲染 Markdown。它是开发工具，不随应用发布。
+- License: MIT. The original notice is kept next to the file / 原声明保留在文件旁边：`.claude/skills/doc-preview/vendor/marked-LICENSE.md`. Source: https://github.com/markedjs/marked
+
+## Cordis (Shigma and the Cordiverse contributors)
+
+- Used in: the kernel of the plugin platform (`vendor/cordis/`, the npm builds of `cordis` 4.0.0-rc.13 and five `@cordisjs/*` packages, with the local changes listed in `vendor/README.md`). The same copy ships in the open-source base, [tauri-cordis](https://github.com/TixXin/tauri-cordis).
+- 用于：插件平台的内核（`vendor/cordis/`，`cordis` 4.0.0-rc.13 和五个 `@cordisjs/*` 包在 npm 上的构建产物，本地改动记在 `vendor/README.md`）。开源基座 [tauri-cordis](https://github.com/TixXin/tauri-cordis) 里带的是同一份。
+- License: MIT. The original notice is kept next to the code / 原声明保留在代码旁边：`vendor/cordis/LICENSE`. Source: https://github.com/cordiverse/cordis
+

@@ -1,0 +1,92 @@
+:root {
+  font-family: var(--font-ui);
+  color: var(--color-page-text);
+  background: transparent;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html[data-input-modality="pointer"] button:focus,
+html[data-input-modality="pointer"] button:focus-visible {
+  outline: none;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+input,
+.stage textarea,
+.stage select {
+  font: inherit;
+}
+
+
+.settings-button {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  color: var(--color-text);
+  background: var(--color-white-a08);
+  border: 1px solid var(--color-white-a10);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.settings-button:hover:not(:disabled) {
+  background: var(--color-white-a10);
+}
+
+.settings-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.settings-button--quiet {
+  color: var(--color-text-muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.settings-button--quiet:hover:not(:disabled) {
+  color: var(--error-text, #ffb4a8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-property: opacity, visibility, color, background-color, border-color, outline-color, fill, stroke !important;
+    scroll-behavior: auto !important;
+  }
+}

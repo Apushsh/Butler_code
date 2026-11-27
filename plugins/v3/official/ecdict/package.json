@@ -1,0 +1,83 @@
+{
+  "name": "@fuyu/ecdict",
+  "version": "1.0.1",
+  "type": "module",
+  "description": "Look up English words in Quick translate even when you're offline, or find the English for a Chinese word.",
+  "keywords": [
+    "词典",
+    "字典",
+    "查词",
+    "单词",
+    "英汉",
+    "离线",
+    "翻译",
+    "dictionary",
+    "translation",
+    "offline",
+    "word lookup",
+    "ecdict"
+  ],
+  "license": "MIT",
+  "author": "TixXin",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev --official",
+    "build": "fuyu-plugin build --official",
+    "check": "fuyu-plugin check --official --market",
+    "package": "fuyu-plugin pack --official",
+    "typecheck": "tsc",
+    "lint": "eslint ."
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "离线词典",
+      "en": "Offline dictionary"
+    },
+    "description": {
+      "zh-CN": "在快捷翻译里查英文单词，不联网也能查，也能用中文反查英文。",
+      "en": "Look up English words in Quick translate even when you're offline, or find the English for a Chinese word."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/lookup.png",
+        "caption": {
+          "zh-CN": "在快捷翻译里查英文单词：音标和各词性的中文释义",
+          "en": "Looking up an English word in Quick translate: phonetics and meanings by part of speech"
+        }
+      },
+      {
+        "path": "screenshots/inflection.png",
+        "caption": {
+          "zh-CN": "变形词先还原成原形再查",
+          "en": "Inflected forms are traced back to the base word"
+        }
+      },
+      {
+        "path": "screenshots/reverse.png",
+        "caption": {
+          "zh-CN": "输入中文，反查对应的英文词条",
+          "en": "Type Chinese to find the matching English entries"
+        }
+      }
+    ],
+    "categories": [
+      "utilities",
+      "productivity"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "inject": {
+      "required": [
+        "translator.engines"
+      ]
+    }
+  }
+}

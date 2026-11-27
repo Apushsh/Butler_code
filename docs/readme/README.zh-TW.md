@@ -1,0 +1,238 @@
+<div align="center">
+  <a name="readme-top"></a>
+  <a href="https://fuyu.ing/zh/"><img src="../assets/readme/island-zh.svg" alt="掛在頁面頂端的一座小島，左邊是一隻小水母，寫著「浮嶼 Fuyu」，不時會展開，寫著「開源 · 螢幕頂端的效率小島」；右下方用連筆手寫著官網網址 https://fuyu.ing，一個小箭頭指向小島" width="540" height="100"></a>
+
+  <h1>浮嶼 Fuyu</h1>
+
+  <p><b>一座島，收納桌面上的零碎</b></p>
+
+  <p>Windows 和 macOS 上的桌面動態島：待辦、剪貼簿、訊息、翻譯、音樂和 AI 狀態，全都在螢幕頂端的一座小島上。</p>
+
+  <p>
+    <a href="https://github.com/TixXin/fuyu/releases/latest"><img src="../assets/readme/download-windows.svg" alt="下載 Windows 版（x64）" width="156" height="38"></a>
+    &nbsp;
+    <a href="https://github.com/TixXin/fuyu/releases"><img src="../assets/readme/download-macos.svg" alt="下載 macOS 版（Apple 晶片）" width="156" height="38"></a>
+    <br>
+    <a href="https://fuyu.ing/zh/#mac-install"><img src="../assets/readme/mac-guide-zh.svg" alt="Mac 安裝教學：第一次開啟需要手動允許，照著做大約 3 分鐘" width="94" height="22"></a>
+  </p>
+
+  <p>
+    <a href="https://github.com/TixXin/fuyu/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/TixXin/fuyu?label=version&style=flat-square&labelColor=1b1f24&color=3d444d"></a>
+    <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%7C%20macOS%2015%2B-3d444d?style=flat-square&labelColor=1b1f24">
+    <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-3d444d?style=flat-square&labelColor=1b1f24">
+    <a href="../../LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-3d444d?style=flat-square&labelColor=1b1f24"></a>
+    <a href="https://github.com/TixXin/fuyu/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/TixXin/fuyu?style=flat-square&label=stars&labelColor=1b1f24&color=3d444d"></a>
+  </p>
+
+  <p>
+    <a href="../../README.md">简体中文</a>
+    ·
+    <b>繁體中文</b>
+    ·
+    <a href="README.en.md">English</a>
+    ·
+    <a href="README.ja.md">日本語</a>
+    ·
+    <a href="README.ko.md">한국어</a>
+    ·
+    <a href="README.es.md">Español</a>
+    ·
+    <a href="README.fr.md">Français</a>
+    ·
+    <a href="README.de.md">Deutsch</a>
+    ·
+    <a href="README.ru.md">Русский</a>
+    ·
+    <a href="README.pt-BR.md">Português</a>
+  </p>
+  <p><sub>本文譯自 2026-11-25 的<a href="../../README.md">簡體中文 README</a>，內容可能稍有落後，歡迎以繁體中文為母語的朋友協助修正。</sub></p>
+
+  <p>
+    <a href="https://fuyu.ing/zh/">官網</a>
+    ·
+    <a href="https://fuyu.ing/zh/plugins/">外掛市集</a>
+    ·
+    <a href="../plugins/README.md">開發外掛</a>
+    ·
+    <a href="https://github.com/TixXin/fuyu/issues">回報問題</a>
+  </p>
+
+  <p>
+    <a href="../assets/promo-001-one-island.mp4"><img src="../assets/readme/tour-zh.gif" alt="浮嶼示範：桌面上散落的視窗收進螢幕頂端的島，依序展開待辦、音樂與歌詞、新訊息、剪貼簿、翻譯和 AI Agent 審核，最後自己收回去" width="800" height="450"></a>
+    <br>
+    <sub>43 秒看一輪。畫面裡的島就是真正的前端，不是螢幕錄影（<a href="../../video/README.md">怎麼做的</a>）· <a href="../assets/promo-001-one-island.mp4">觀看有聲音的完整影片</a> · <a href="../assets/promo-004-one-day.mp4">《浮嶼的一天》（41 秒，有旁白）</a></sub>
+  </p>
+</div>
+
+## 這是什麼
+
+浮嶼（Fuyu）是一座輕巧、無邊框、永遠置頂的懸浮島。平常收在螢幕頂端，需要時展開，用完自動收回。常用的東西都放在島上，不必為了看一眼資訊而在視窗之間切來切去。
+
+<p align="center">
+  <img src="../assets/readme/collapsed-zh.webp" alt="收起的浮嶼：螢幕頂端一條窄窄的黑色小島，正在顯示同步歌詞和音訊波形" width="800" height="100">
+  <br>
+  <sub>收起時只佔螢幕頂端這一小條，圖中它正跟著歌曲顯示歌詞和音訊波形</sub>
+</p>
+
+## 島上有什麼
+
+<p><sub>點功能名稱展開或收起；點動圖到官網親手點一點這座島</sub></p>
+
+<details open>
+<summary><b>01 · 待辦與筆記</b></summary>
+<p>每天的任務、目前專注的事項、每日筆記和歷史封存。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="../assets/readme/todo-zh.webp" alt="展開的島上是今天的待辦，已完成的劃掉並收在下方" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>02 · 音樂</b></summary>
+<p>控制正在播放的媒體，顯示音訊波形和同步歌詞。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="../assets/readme/music-zh.webp" alt="島上的音樂頁：封面、同步歌詞、進度條和播放控制" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>03 · 訊息</b></summary>
+<p>QQ、微信、企業微信、TIM、Telegram、Discord、WhatsApp、飛書、釘釘有新訊息，島上都會提醒，點一下打開對應的 App；還有多個信箱，郵件可以直接在島上閱讀和回覆。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="../assets/readme/messages-zh.webp" alt="島下方跳出的新訊息：一封郵件、一則微信和一則 QQ" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>04 · 剪貼簿與檔案中轉</b></summary>
+<p>圖文剪貼簿紀錄；先把檔案拖到島上暫放，再拖到其他程式。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="../assets/readme/clipboard-zh.webp" alt="島上的剪貼簿紀錄：指令、連結、一段文字和一張圖片，各自標示來源" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>05 · 快速翻譯</b></summary>
+<p>一個快速鍵就能開啟，支援多家大型語言模型翻譯服務。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="../assets/readme/translate-zh.webp" alt="島上的翻譯頁：左邊是原文，右邊是譯文" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>06 · AI Agent</b></summary>
+<p>支援 Claude Code、Codex、Cursor、WorkBuddy、Antigravity、TRAE、Qwen Code、Kimi Code、Copilot CLI 等 17 家主流 AI 代理：在島上檢視執行狀態、工作階段清單與額度用量，需要確認時直接在島上核准，點一下切到對應終端機或編輯器，支援 SSH 遠端主機監控；離開電腦時透過 Telegram、Discord、飛書機器人或 iPhone Bark 推播到手機。</p>
+<p><a href="https://fuyu.ing/zh/#agent"><img src="../assets/readme/agents-zh.webp" alt="島上跳出 Claude Code 的審核請求：要執行的指令，以及拒絕和允許兩個按鈕" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>07 · 行事曆</b></summary>
+<p>今天和明天的行程、附農曆和節假日的月曆，會議快開始時在島上倒數，可一鍵加入。</p>
+</details>
+
+<details>
+<summary><b>08 · 系統提示</b></summary>
+<p>音量與亮度變化、耳機外設與電池電量、大寫鎖定提示，以及攝影機和麥克風正被哪個程式使用。</p>
+</details>
+
+<details>
+<summary><b>09 · 截圖、錄影與貼圖</b></summary>
+<p>區域 / 視窗（支援透明底與柔和陰影）/ 長截圖 / 延時截圖，內建標註、OCR 識字、翻譯與螢幕貼圖，並支援 MP4 / GIF 錄影。</p>
+</details>
+
+<details>
+<summary><b>10 · 語音輸入、計時器與休息提醒</b></summary>
+<p>按快速鍵離線本機語音辨識，一鍵存為待辦或追加到每日筆記；內建倒數計時、碼表與久坐 / 護眼休息提醒。</p>
+</details>
+
+<details>
+<summary><b>11 · 外掛、佈景主題與跨裝置同步</b></summary>
+<p>從外掛市集安裝外掛來擴充島嶼（原始碼建置、逐版審核與冷靜期），在佈景主題市集挑選外觀，並可透過共享資料夾或 WebDAV 端對端加密同步多台裝置的資料。</p>
+</details>
+
+島嶼的外觀、大小、收起方式、快速鍵和每項功能都可以在設定視窗裡調整，並支援應用程式內自動更新。資料全都儲存在本機。
+
+## 資源佔用
+
+收起、閒置、沒有播放音樂時（預設設定，未安裝外掛）：
+
+| | 實測 |
+|---|---|
+| CPU | 約佔單核心的 **10%**（20 核心電腦上約佔總量的 0.5%） |
+| 記憶體 | 浮嶼本身約 **16 MB** |
+| Agent 頁每秒重新整理一次工作階段清單 | 單核心的 **0.1%** |
+
+量測方法和數據請見 [idle-usage.md](../investigations/idle-usage.md)。
+
+## 快速上手
+
+1. **下載安裝**：從 [Releases](https://github.com/TixXin/fuyu/releases/latest) 下載安裝檔並安裝。
+   - **Windows**：下載 `_x64-setup.exe`。安裝檔沒有程式碼簽章，SmartScreen 跳出提示時點「其他資訊 → 仍要執行」。
+   - **macOS**：在 [Releases 清單](https://github.com/TixXin/fuyu/releases)裡找最新一個附有 `_aarch64.dmg` 的版本下載（最新正式版裡沒有的話，就在它上方的測試版裡），把 Fuyu 拖進「應用程式」。第一次開啟時要到「系統設定 → 隱私權與安全性」裡點「強制打開」，逐步說明請見 [Mac 安裝教學](https://fuyu.ing/zh/#mac-install)。
+2. **展開小島**：把滑鼠移到螢幕頂端的島上就會展開，點齒輪或系統匣圖示（Mac 上是選單列圖示）開啟設定。在 Mac 上，新手導覽會帶你開啟需要用到的系統權限。
+3. **設定一次**：信箱、翻譯和 AI Agent 需要先在設定裡設定一次，詳見各自的說明：[信箱](../features/mail.md)、[AI Agent](../features/agent-status-hooks.md)、[QQ 通知](../features/qq-notifications.md)、[微信提醒](../features/wechat-reminders.md)、[手機推播](../features/cc-connect.md)。
+
+> [!NOTE]
+> 支援 Windows 10 / 11 和 macOS 15 以上（Apple 晶片）。Mac 版有幾處和 Windows 不同：QQ、微信只顯示未讀數，讀不到訊息內容；媒體控制和亮度用到了系統私有 API。每項功能在兩個平台上的支援情況請見 [platforms.md](../architecture/platforms.md)。
+
+## 外掛
+
+島上缺什麼，可以自己加。外掛用 TypeScript 或 JavaScript 撰寫：背景邏輯在島嶼啟動的 Node 程序裡執行，介面用 React 撰寫，放進島上和設定視窗預留的位置。清單就是 `package.json`，安裝包是一個 `.fuyu` 檔案。
+
+```sh
+npm create fuyu-plugin@latest
+```
+
+- **安裝現成的**：在島嶼的「設定 → 外掛市集」裡安裝，也可以先到[官網的外掛市集](https://fuyu.ing/zh/plugins/)看看有哪些。
+- **自己寫**：用上面的指令產生一個專案，在專案裡執行 `npm run dev` 就會把它裝進正在執行的島嶼，修改後自動重新建置；完整說明請見[外掛文件](../plugins/README.md)和[命令列](../plugins/cli.md)。
+- **分享給別人**：把提交號碼交給[外掛市集](https://github.com/TixXin/fuyu-plugins)，市集會從原始碼建置，每個版本審核後上架；或者打包成 `.fuyu` 檔案自己傳給別人。步驟請見[發佈](../plugins/publish.md)。
+
+## 從原始碼建置
+
+- **Windows**：需要 Windows 10/11、Node.js、pnpm、Rust、Visual Studio C++ Build Tools 和 WebView2 Runtime。
+- **macOS**：需要 macOS 15 以上、Xcode 命令列工具（`xcode-select --install`）、Node.js、pnpm 和 Rust。
+
+```sh
+git clone https://github.com/TixXin/fuyu.git
+cd fuyu
+pnpm install
+pnpm tauri dev      # 開發模式
+pnpm tauri build    # 打包安裝程式
+```
+
+技術棧：Tauri 2、React 19 + TypeScript、Rust。發佈與應用程式內更新請見 [docs/features/updater.md](../features/updater.md)。
+
+## 使用者交流群組
+
+使用上有問題、有想法，或者只是想聊聊，歡迎加入 [Discord 社群](https://discord.gg/azu5aZFuRY)、[QQ 群組（610594458）](https://qm.qq.com/q/EDhCUUcPse) 或掃描 QR Code 加入微信群組 / QQ 群組：
+
+<p align="center">
+  <img src="../assets/readme/wechat-group.png" alt="浮嶼使用者交流群組的微信 QR Code" height="220">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="../assets/readme/qq-group.png" alt="Fuyu-浮嶼交流群的 QQ 群組 QR Code（群號 610594458）" height="220">
+</p>
+
+## 參與貢獻
+
+浮嶼是大家一起打造的，歡迎你也來添一塊：
+
+- **提出問題和想法**：到 [Issues](https://github.com/TixXin/fuyu/issues) 說說哪裡不好用、還想要什麼。
+- **修改程式碼、文件或翻譯**：直接提 PR。怎麼提、提之前要跑哪些檢查，請見 [CONTRIBUTING.md](../../CONTRIBUTING.md)；程式碼怎麼組織，請見 [AGENTS.md](../../AGENTS.md)。
+- **寫外掛**：不用改動島嶼本體，做好後上架到[外掛市集](https://github.com/TixXin/fuyu-plugins)。
+
+<a href="https://github.com/TixXin/fuyu/graphs/contributors"><img src="https://contrib.rocks/image?repo=TixXin/fuyu" alt="浮嶼的貢獻者"></a>
+
+## Star 趨勢
+
+每一顆 Star 都是浮嶼繼續前進的動力。
+
+<p align="center">
+  <a href="https://star-history.com/#TixXin/fuyu&amp;Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TixXin/fuyu&amp;type=Date&amp;theme=dark">
+      <img alt="浮嶼的 Star 數隨時間的變化" src="https://api.star-history.com/svg?repos=TixXin/fuyu&amp;type=Date" width="600">
+    </picture>
+  </a>
+</p>
+
+## 授權條款
+
+[AGPL-3.0](../../LICENSE)。外掛作者可以自行選擇授權條款。第三方相依套件和內建資源遵循各自的授權：來源和聲明請見[第三方聲明](../THIRD_PARTY_NOTICES.md)，內建字型請見[字型說明](../../src/assets/fonts/README.md)。
+
+> [!NOTE]
+> 本專案由 [TixXin](https://github.com/TixXin) 和 [ShengLin1001](https://github.com/ShengLin1001) 共同維護，2026 年 11 月由 fly-island 更名為浮嶼。原作者 [flyl1u](https://github.com/flyl1u/fly-island) 偏好精簡的動態島介面；為了進一步豐富動態島的功能，讓更多使用者把自己 DIY 的功能放上島，本專案另闢一支，由大家共同維護，並發展出了外掛市集模式。歡迎大家提 PR 貢獻程式碼（請見[參與貢獻](../../CONTRIBUTING.md)），把自己的元件上傳到[外掛市集](https://github.com/TixXin/fuyu-plugins)，或者在本機安裝自己的外掛（請見[外掛文件](../plugins/README.md)）。
+
+<p align="center">
+  <a href="#readme-top"><img src="../assets/readme/island-tuck.svg" alt="回到頂端" width="480" height="64"></a>
+  <br>
+  <sub>用完，它會自己收回去 · <a href="#readme-top">回到頂端</a></sub>
+</p>

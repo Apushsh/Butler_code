@@ -1,0 +1,115 @@
+pub(crate) mod accent_color;
+pub(crate) mod agent_notifications;
+mod command_flags;
+pub(crate) mod download_mirrors;
+pub(crate) mod fullscreen;
+pub(crate) mod msix;
+#[cfg_attr(target_os = "macos", path = "network_cost_macos.rs")]
+pub(crate) mod network_cost;
+pub(crate) mod permissions;
+pub(crate) mod proxy;
+pub(crate) mod settings_backup;
+#[cfg_attr(target_os = "macos", path = "startup_macos.rs")]
+pub(crate) mod startup;
+pub(crate) mod todo_export;
+pub(crate) mod update_backup;
+pub(crate) mod update_channel;
+pub(crate) mod update_runtime;
+pub(crate) mod update_notifications;
+pub(crate) mod updater;
+
+use std::{env, path::PathBuf};
+
+pub(crate) use command_flags::{CommandExt, CREATE_NO_WINDOW};
+
+#[cfg(windows)]
+pub(crate) fn downloads_dir() -> Option<PathBuf> {
+    crate::win32::known_folder::downloads()
+}
+
+#[cfg(windows)]
+pub(crate) fn pictures_dir() -> Option<PathBuf> {
+    crate::win32::known_folder::pictures()
+}
+
+#[cfg(not(windows))]
+pub(crate) fn pictures_dir() -> Option<PathBuf> {
+    windows_home_dir().ok().map(|home| home.join("Pictures"))
+}
+
+#[cfg(windows)]
+pub(crate) fn videos_dir() -> Option<PathBuf> {
+    crate::win32::known_folder::videos()
+}
+
+#[cfg(not(windows))]
+pub(crate) fn videos_dir() -> Option<PathBuf> {
+    windows_home_dir().ok().map(|home| home.join("Movies"))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn downloads_dir() -> Option<PathBuf> {
+    windows_home_dir().ok().map(|home| home.join("Downloads"))
+}
+
+#[cfg(not(windows))]
+pub(crate) fn windows_home_dir() -> Result<PathBuf, String> {
+    env::var("HOME")
+        .ok()
+        .map(|home| home.trim().to_string())
+        .filter(|home| !home.is_empty())
+        .map(PathBuf::from)
+        .ok_or_else(|| "Failed to resolve the user home directory.".to_string())
+}
+
+#[cfg(windows)]
+pub(crate) fn windows_home_dir() -> Result<PathBuf, String> {
+    if let Ok(user_profile) = env::var("USERPROFILE") {
+        let user_profile = user_profile.trim();
+        if !user_profile.is_empty() {
+            return Ok(PathBuf::from(user_profile));
+        }
+    }
+
+    match (env::var("HOMEDRIVE"), env::var("HOMEPATH")) {
+        (Ok(home_drive), Ok(home_path)) if !home_drive.is_empty() && !home_path.is_empty() => {
+            Ok(PathBuf::from(format!("{home_drive}{home_path}")))
+        }
+        _ => Err("Failed to resolve the Windows user profile directory.".to_string()),
+    }
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::system::todo_export::save_todo_markdown,
+            crate::system::todo_export::get_default_todo_save_directory,
+            crate::system::todo_export::get_legacy_todo_save_directory,
+            crate::system::fullscreen::get_foreground_fullscreen,
+            crate::system::accent_color::get_windows_accent_color,
+            crate::system::startup::get_launch_at_startup,
+            crate::system::startup::set_launch_at_startup,
+            crate::system::updater::updater_configured,
+            crate::system::update_channel::updater_check,
+            crate::system::update_channel::updater_install,
+            crate::system::update_channel::updater_download,
+            crate::system::network_cost::updater_metered,
+            crate::system::permissions::get_system_permissions,
+            crate::system::permissions::open_system_permission,
+            crate::system::permissions::request_system_permission,
+            crate::system::proxy::get_network_proxy,
+            crate::system::proxy::save_network_proxy,
+            crate::system::proxy::test_network_proxy,
+            crate::system::update_runtime::updater_state,
+            crate::system::update_notifications::updater_notify,
+            crate::system::agent_notifications::agent_notify,
+            crate::system::update_notifications::updater_diagnostics,
+            crate::system::settings_backup::save_settings_backup,
+            crate::system::settings_backup::restart_island,
+            crate::system::update_backup::update_backup_create,
+            crate::system::update_backup::update_backup_list,
+            crate::system::update_backup::update_backup_restore,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

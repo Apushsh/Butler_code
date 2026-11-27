@@ -1,0 +1,310 @@
+.fuyu-countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  font-family: var(--fuyu-plugin-font);
+  font-size: 13px;
+  color: var(--fuyu-plugin-text);
+}
+
+.fuyu-countdown__sample {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--fuyu-plugin-accent) 30%, var(--fuyu-plugin-border));
+  border-radius: var(--fuyu-plugin-radius);
+  background: color-mix(in srgb, var(--fuyu-plugin-accent) 10%, var(--fuyu-plugin-surface));
+  font-size: 11.5px;
+}
+
+.fuyu-countdown__sample-text {
+  color: var(--fuyu-plugin-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuyu-countdown__sample-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: none;
+  border-radius: var(--fuyu-plugin-radius);
+  background: var(--fuyu-plugin-accent);
+  color: var(--fuyu-plugin-on-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fuyu-countdown__hero {
+  border: 1px solid color-mix(in srgb, var(--fuyu-plugin-accent) 35%, var(--fuyu-plugin-border));
+  border-radius: var(--fuyu-plugin-radius);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--fuyu-plugin-accent) 20%, var(--fuyu-plugin-surface)),
+    color-mix(in srgb, var(--fuyu-plugin-accent) 7%, var(--fuyu-plugin-surface))
+  );
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.fuyu-countdown__hero-shade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+}
+
+.fuyu-countdown__hero--image .fuyu-countdown__hero-shade {
+  background: color-mix(in srgb, var(--fuyu-plugin-surface) 72%, transparent);
+}
+
+.fuyu-countdown__hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fuyu-countdown__hero-title {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuyu-countdown__hero-date {
+  font-size: 11.5px;
+  color: var(--fuyu-plugin-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.fuyu-countdown__hero-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fuyu-countdown__hero-days {
+  flex-shrink: 0;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--fuyu-plugin-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fuyu-countdown__hero.is-dim .fuyu-countdown__hero-days {
+  color: var(--fuyu-plugin-text-muted);
+}
+
+.fuyu-countdown__hero-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--fuyu-plugin-border) 70%, transparent);
+  border-radius: var(--fuyu-plugin-radius);
+  background: color-mix(in srgb, var(--fuyu-plugin-surface) 65%, transparent);
+  color: var(--fuyu-plugin-text-secondary);
+  cursor: pointer;
+}
+
+.fuyu-countdown__hero-edit:hover {
+  background: var(--fuyu-plugin-surface-hover);
+  color: var(--fuyu-plugin-text);
+}
+
+.fuyu-countdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fuyu-countdown__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--fuyu-plugin-border) 60%, transparent);
+  border-radius: var(--fuyu-plugin-radius);
+  background: var(--fuyu-plugin-surface);
+}
+
+.fuyu-countdown__row:hover {
+  background: var(--fuyu-plugin-surface-hover);
+}
+
+.fuyu-countdown__row.is-dim {
+  opacity: 0.55;
+}
+
+.fuyu-countdown__row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fuyu-countdown__row-date {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--fuyu-plugin-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.fuyu-countdown__row-days {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--fuyu-plugin-surface-hover);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fuyu-plugin-text-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fuyu-countdown__row-days.is-today {
+  background: color-mix(in srgb, var(--fuyu-plugin-accent) 20%, var(--fuyu-plugin-surface));
+  color: var(--fuyu-plugin-accent);
+  font-weight: 600;
+}
+
+.fuyu-countdown__row-days.is-anniv {
+  color: var(--fuyu-plugin-text);
+}
+
+.fuyu-countdown__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fuyu-countdown__manage {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: var(--fuyu-plugin-radius);
+  background: transparent;
+  color: var(--fuyu-plugin-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fuyu-countdown__manage:hover {
+  background: var(--fuyu-plugin-surface-hover);
+  color: var(--fuyu-plugin-text);
+}
+
+.fuyu-countdown__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 18px 14px;
+  border: 1px solid var(--fuyu-plugin-border);
+  border-radius: var(--fuyu-plugin-radius);
+  background: var(--fuyu-plugin-surface);
+}
+
+.fuyu-countdown__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fuyu-plugin-accent) 14%, var(--fuyu-plugin-surface));
+  color: var(--fuyu-plugin-accent);
+}
+
+.fuyu-countdown__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.fuyu-countdown__go,
+.fuyu-countdown__secondary {
+  padding: 5px 12px;
+  border-radius: var(--fuyu-plugin-radius);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fuyu-countdown__go {
+  border: none;
+  background: var(--fuyu-plugin-accent);
+  color: var(--fuyu-plugin-on-accent);
+  font-weight: 500;
+}
+
+.fuyu-countdown__secondary {
+  border: 1px solid var(--fuyu-plugin-border);
+  background: transparent;
+  color: var(--fuyu-plugin-text);
+}
+
+.fuyu-countdown__secondary:hover {
+  background: var(--fuyu-plugin-surface-hover);
+}
+
+.fuyu-countdown__note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fuyu-plugin-text-muted);
+}
+
+.fuyu-countdown-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--fuyu-plugin-font);
+  font-size: 12px;
+  color: var(--fuyu-plugin-accent);
+  white-space: nowrap;
+}
+
+.fuyu-countdown-chip__title {
+  max-width: 72px;
+  overflow: hidden;
+  color: var(--fuyu-plugin-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.fuyu-countdown-chip__days {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--fuyu-plugin-text);
+}

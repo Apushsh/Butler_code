@@ -1,0 +1,154 @@
+import type { ReactNode } from "react";
+import { AppWindow } from "lucide-react";
+import { IslandGlyph } from "../../components/settings/IslandGlyph";
+import { SettingsChoice } from "../../components/settings/SettingsChoice";
+import { SettingsChoiceCards } from "../../components/settings/SettingsChoiceCards";
+import { SettingsFootnote } from "../../components/settings/SettingsFootnote";
+import { SettingsGroup } from "../../components/settings/SettingsGroup";
+import { SettingsRow } from "../../components/settings/SettingsRow";
+import { SettingsSelect } from "../../components/settings/SettingsSelect";
+import { SettingsToggleRow } from "../../components/settings/SettingsToggleRow";
+import { useTranslation } from "../../i18n";
+import { isMacOS } from "../../lib/platform";
+import type { ClipboardHistorySettings, ClipboardOpenIn, ClipboardPopupLayout, ClipboardPopupPosition } from "./api";
+import { ALT_KEY } from "./pins";
+import { CLIPBOARD_CARD_SECONDS } from "./settings";
+
+export function ClipboardSettingsSection({ clipboardSettings, onClipboardSettingsChange, shortcuts, children }: {
+  clipboardSettings: ClipboardHistorySettings;
+  onClipboardSettingsChange: (settings: ClipboardHistorySettings) => void;
+  shortcuts?: ReactNode;
+  children?: ReactNode;
+}) {
+  const t = useTranslation();
+  const text = t.settings.clipboard;
+  const listText = t.clipboardList;
+  const change = (patch: Partial<ClipboardHistorySettings>) => onClipboardSettingsChange({ ...clipboardSettings, ...patch });
+  const inWindow = clipboardSettings.openIn === "window";
+
+  return (
+    <>
+      <SettingsGroup title={text.openTitle} footer={<SettingsFootnote text={text.openInHint} />}>
+        <SettingsRow title={text.openIn}>
+          <SettingsChoiceCards<ClipboardOpenIn>
+            value={clipboardSettings.openIn}
+            ariaLabel={text.openIn}
+            options={[
+              { value: "window", label: text.openInOptions.window, art: <AppWindow size={30} strokeWidth={1.4} /> },
+              { value: "island", label: text.openInOptions.island, art: <IslandGlyph state="expanded" /> },
+            ]}
+            onChange={(openIn) => change({ openIn })}
+          />
+        </SettingsRow>
+        {inWindow && (
+          <SettingsRow
+            indent
+            title={text.popupPosition}
+            control={
+              <SettingsChoice<ClipboardPopupPosition>
+                value={clipboardSettings.popupPosition}
+                ariaLabel={text.popupPosition}
+                options={[
+                  { value: "cursor", label: text.popupPositionOptions.cursor },
+                  { value: "center", label: text.popupPositionOptions.center },
+                ]}
+                onChange={(popupPosition) => change({ popupPosition })}
+              />
+            }
+          />
+        )}
+        {inWindow && (
+          <SettingsRow
+            indent
+            title={text.popupLayout}
+            description={text.popupLayoutHint}
+            control={
+              <SettingsChoice<ClipboardPopupLayout>
+                value={clipboardSettings.popupLayout ?? "standard"}
+                ariaLabel={text.popupLayout}
+                options={[
+                  { value: "standard", label: text.popupLayoutOptions.standard },
+                  { value: "wide", label: text.popupLayoutOptions.wide },
+                ]}
+                onChange={(popupLayout) => change({ popupLayout })}
+              />
+            }
+          />
+        )}
+      </SettingsGroup>
+
+      <SettingsGroup title={text.pasteTitle}>
+        {inWindow && (
+          <SettingsToggleRow
+            title={text.autoPaste}
+            description={isMacOS ? text.autoPasteHintMac : text.autoPasteHint}
+            checked={clipboardSettings.autoPaste}
+            onChange={(autoPaste) => change({ autoPaste })}
+          />
+        )}
+        {inWindow && (
+          <SettingsToggleRow
+            title={listText.pinFavorites}
+            description={listText.pinFavoritesHint(ALT_KEY.replace("+", ""))}
+            checked={clipboardSettings.pinFavorites !== false}
+            onChange={(pinFavorites) => change({ pinFavorites })}
+          />
+        )}
+        <SettingsRow
+          title={text.copyCard}
+          description={text.copyCardHint}
+          control={
+            <SettingsSelect
+              value={String(clipboardSettings.copyCardSeconds ?? 3)}
+              options={CLIPBOARD_CARD_SECONDS.map((seconds) => ({ value: String(seconds), label: text.copyCardOption(seconds) }))}
+              ariaLabel={text.copyCard}
+              onChange={(seconds) => change({ copyCardSeconds: Number(seconds) })}
+            />
+          }
+        />
+        {children}
+      </SettingsGroup>
+
+      {inWindow && clipboardSettings.autoPaste && (
+        <SettingsGroup title={text.terminalTitle}>
+          <SettingsToggleRow
+            title={text.terminalImagePath}
+            description={isMacOS ? text.terminalImagePathHintMac : text.terminalImagePathHint}
+            checked={clipboardSettings.terminalImagePath}
+            onChange={(terminalImagePath) => change({ terminalImagePath })}
+          />
+          <SettingsToggleRow
+            title={text.flattenTerminalCommands}
+            description={text.flattenTerminalCommandsHint}
+            checked={clipboardSettings.flattenTerminalCommands === true}
+            onChange={(flattenTerminalCommands) => change({ flattenTerminalCommands })}
+          />
+        </SettingsGroup>
+      )}
+
+      {inWindow && (
+        <SettingsGroup title={text.privacyPerfTitle}>
+          <SettingsToggleRow
+            title={text.hideFromCapture}
+            description={text.hideFromCaptureHint}
+            checked={clipboardSettings.hideFromCapture === true}
+            onChange={(hideFromCapture) => change({ hideFromCapture })}
+          />
+          <SettingsToggleRow
+            title={text.linkPreview}
+            description={text.linkPreviewHint}
+            checked={clipboardSettings.linkPreview === true}
+            onChange={(linkPreview) => change({ linkPreview })}
+          />
+          <SettingsToggleRow
+            title={text.prewarmWindow}
+            description={text.prewarmWindowHint}
+            checked={clipboardSettings.prewarmWindow ?? !isMacOS}
+            onChange={(prewarmWindow) => change({ prewarmWindow })}
+          />
+        </SettingsGroup>
+      )}
+      {shortcuts}
+    </>
+  );
+}

@@ -1,0 +1,289 @@
+import { Fragment, useEffect, useRef, type ReactNode } from "react";
+import { useCollapsedBarItems, type CollapsedBarItem } from "./collapsedBarItems";
+import { arrangeCollapsedItems, saveCollapsedOverflow, shelfIds, zoneIds, type CollapsedZone } from "../../lib/settings/collapsedItems";
+import { useCollapsedPlacements } from "../../lib/settings/useCollapsedPlacements";
+import { useTranslation } from "../../i18n";
+import { SlotView } from "../../features/plugin-kernel/SlotView";
+import { shownLine, visibleLines } from "../../features/plugin-kernel/islandContributions";
+import { runIslandAction, useIslandContributed } from "../../features/plugin-kernel/useIslandContributions";
+import { lineSlot, type CollapsedLineContext } from "./slots/line";
+import type { CollapsedSlots, IslandPage } from "./types";
+import { useCollapsedContextMenu } from "./useCollapsedContextMenu";
+import { useWindowDragGesture } from "./useWindowDragGesture";
+import { useBarMirrorWatched } from "../../features/plugin-kernel/barMirrorWatch";
+import { hasNotchDrop, MAX_NOTCH_WING, reportNotchTextRow, useIslandNotch } from "./notch";
+import { useNotchText } from "./useNotchText";
+import { notchTextPage } from "./notchText";
+import { CollapsedMore } from "./CollapsedMore";
+import { BAR_UNIT, useCollapsedOverflow, type CollapsedOverflowState } from "./useCollapsedOverflow";
+import { usePillOverflow } from "./usePillOverflow";
+import { usePlaceNewPluginItems } from "./usePlaceNewPluginItems";
+import { useCollapsedItemNames } from "./useCollapsedItemNames";
+import { useCollapsedContent } from "./useCollapsedContent";
+import { AlertPopup, NotchAlertLeading, NotchAlertTrailing, useActiveAlert } from "./NotchAlert";
+import { IslandSummary } from "./IslandSummary";
+import { DevWatermark } from "../../components/DevWatermark";
+import "./IslandCollapsedBar.css";
+
+type IslandCollapsedBarProps = {
+  page: IslandPage;
+  homePage?: IslandPage;
+  isExpanded: boolean;
+  isTucked: boolean;
+  showTitle: boolean;
+  showCollapsedText: boolean;
+  collapsedLabel: string;
+  agentVisualState: string;
+  onOpenPage: (page: IslandPage) => void;
+  notice?: { content: ReactNode; actions: ReactNode } | null;
+  onWindowDragStart: () => void;
+  onTuck: () => void;
+  slots?: CollapsedSlots;
+  overflowMore?: boolean;
+  notchWingMax?: number;
+  notchText?: boolean;
+};
+
+const NO_SLOTS: CollapsedSlots = {};
+const NO_SOURCES = {};
+const OPENS_BAR = "data-opens-bar";
+
+type BarUnit = { key: string; ids: string[]; node: ReactNode; movable: boolean; keep?: boolean };
+
+const KEEP_IN_NOTCH = new Set(["caps-lock"]);
+
+function barUnits(items: readonly CollapsedBarItem[], placed: ReadonlySet<string>): BarUnit[] {
+  const units: BarUnit[] = [];
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (!item.group || KEEP_IN_NOTCH.has(item.id)) {
+      units.push({ key: item.id, ids: [item.id], node: item.node, movable: !placed.has(item.id), keep: KEEP_IN_NOTCH.has(item.id) });
+      continue;
+    }
+    const group = [item];
+    while (items[index + 1]?.group === item.group && !KEEP_IN_NOTCH.has(items[index + 1].id)) group.push(items[(index += 1)]);
+    units.push({ key: group[0].id, ids: group.map((member) => member.id), node: <div className="island__gauge-slot">{group.map((member) => <Fragment key={member.id}>{member.node}</Fragment>)}</div>, movable: group.every((member) => !placed.has(member.id)) });
+  }
+  return units;
+}
+
+function renderUnits(units: readonly BarUnit[], overflow: CollapsedOverflowState, marked: boolean) {
+  if (!overflow.fitting) return units.map((unit) => (
+    <Fragment key={unit.key}>
+      {marked ? <i key="mark" hidden data-bar-mark={unit.ids.join(" ")} /> : null}
+      <Fragment key="node">{unit.node}</Fragment>
+    </Fragment>
+  ));
+  return units
+    .filter((unit) => !unit.ids.every((id) => overflow.shelved.has(id)))
+    .map((unit) => <span key={unit.key} className="island__bar-unit" {...{ [BAR_UNIT]: unit.key, "data-bar-items": unit.ids.join(" ") }}>{unit.node}</span>);
+}
+
+export function IslandCollapsedBar({
+  page,
+  homePage = page,
+  isExpanded,
+  isTucked,
+  showTitle,
+  showCollapsedText,
+  collapsedLabel,
+  agentVisualState,
+  onOpenPage,
+  notice = null,
+  onWindowDragStart,
+  onTuck,
+  slots = NO_SLOTS,
+  overflowMore = true,
+  notchWingMax = MAX_NOTCH_WING,
+  notchText = false,
+}: IslandCollapsedBarProps) {
+  const t = useTranslation();
+  const notch = useIslandNotch();
+  const marked = useBarMirrorWatched();
+  const { didDragRef, prepareWindowDrag, cancelWindowDrag } =
+    useWindowDragGesture(isTucked, onWindowDragStart);
+  const pulseClassName = [
+    "island__pulse",
+    `island__pulse--agent-${agentVisualState}`,
+  ].join(" ");
+  const contributed = useIslandContributed();
+  const preview = contributed.preview;
+  const activeAlert = useActiveAlert();
+  const alertSources = NO_SOURCES;
+  const lines = visibleLines(contributed.lines, showCollapsedText);
+  const notchRoute = useNotchText(notch !== null && notchText && !isExpanded && !isTucked, contributed.lines);
+  const alwaysLine = shownLine(lines);
+  const rowLine = !alwaysLine && !preview && !notice && !activeAlert ? notchRoute.row : null;
+  const line = alwaysLine ?? rowLine;
+  const peekLine = line?.drop ? line : null;
+  const openTarget = homePage;
+  const openPeek = () => {
+    if (peekLine?.action) runIslandAction(peekLine.action);
+  };
+  const lineContext: CollapsedLineContext = { showTitle, center: slots.center ?? null, agentIcon: slots.agentIcon ?? null };
+  const lineView = (id: string) => <SlotView key={id} slot={lineSlot} props={lineContext} select={(items) => items.filter((item) => item.id === id)} />;
+  const showCenter = Boolean(slots.center) && !preview && !peekLine && !notice
+    && !(showCollapsedText && (showTitle || lines.some((candidate) => candidate.reserve !== true && candidate.measure !== undefined)));
+  const { placements: saved, save: savePlacements } = useCollapsedPlacements();
+  const openItemsMenu = useCollapsedContextMenu(!isExpanded && !isTucked, savePlacements);
+  const items = useCollapsedBarItems({
+    t,
+    statusLight: slots.statusLight
+      ? <span className="island__mark-light" {...{ [OPENS_BAR]: "" }}>{slots.statusLight}</span>
+      : <span className={pulseClassName} {...{ [OPENS_BAR]: "" }} />,
+    hints: contributed.hints,
+    slots,
+    onOpenPage,
+  });
+  const offered = items.map(({ id }) => id);
+  const placements = arrangeCollapsedItems(offered, saved);
+  usePlaceNewPluginItems(offered, saved, placements, savePlacements);
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const zone = (name: CollapsedZone) => zoneIds(placements, name, offered).flatMap((id) => byId.get(id) ?? []);
+
+  const alerted = notch !== null && activeAlert !== null;
+  const dropped = notch !== null && hasNotchDrop({ preview, notice, peek: peekLine, row: rowLine });
+  useEffect(() => {
+    reportNotchTextRow(rowLine !== null);
+    return () => reportNotchTextRow(false);
+  }, [rowLine]);
+  const messaged = notch !== null && !alerted && !notice && preview !== null;
+  const wings = alerted ? "alert" : messaged ? `message:${preview?.key}` : dropped ? "dropped" : "idle";
+  const leftWingRef = useRef<HTMLDivElement>(null);
+  const rightWingRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  useCollapsedContent(barRef, notch === null);
+  const leftItems = zone("left");
+  const rightItems = zone("right");
+  const placed = new Set(saved.map(({ id }) => id));
+  const leftUnits = barUnits(leftItems, placed);
+  const rightUnits = barUnits(rightItems, placed);
+  const pinned = new Set(shelfIds(placements, offered));
+  const panelTexts = notchRoute.panel;
+  const forceChip = pinned.size > 0 || panelTexts.length > 0;
+  const notchOverflow = useCollapsedOverflow(
+    notch !== null && (overflowMore || forceChip),
+    !isExpanded && !isTucked && (wings === "idle" || wings === "dropped"),
+    { left: leftUnits, right: rightUnits },
+    { left: leftWingRef, right: rightWingRef },
+    { auto: overflowMore, forceChip, maxWing: notchWingMax },
+  );
+  const pillOverflow = usePillOverflow(
+    notch === null && overflowMore,
+    !isExpanded && !isTucked,
+    [...leftUnits, ...rightUnits],
+    barRef,
+    { auto: overflowMore, keepChip: pinned.size > 0, hasText: Boolean(notice || activeAlert || line || (showCollapsedText && showTitle)) },
+  );
+  const overflow = notch !== null ? notchOverflow : pillOverflow;
+  const overflowKey = [...overflow.shelved].join("\n");
+  useEffect(() => {
+    saveCollapsedOverflow(overflowKey === "" ? [] : overflowKey.split("\n"));
+  }, [overflowKey]);
+  const nameOf = useCollapsedItemNames();
+  const moreRows = placements
+    .flatMap((placement) => (placement.hidden ? [] : byId.get(placement.id) ?? []))
+    .filter((item) => pinned.has(item.id) || overflow.shelved.has(item.id))
+    .map((item) => ({ id: item.id, name: nameOf(item.id), page: item.page ?? null }));
+  const chipSide = notch !== null ? overflow.chip : pinned.size > 0 || overflow.shelved.size > 0 ? "end" : null;
+  const moreTexts = panelTexts.map((text) => ({ id: text.item, node: lineView(text.item), page: notchTextPage(text) as IslandPage | null }));
+  const more = (side: "left" | "right" | "end") => chipSide === side && moreRows.length + moreTexts.length > 0 && <CollapsedMore rows={moreRows} texts={moreTexts} onOpenPage={onOpenPage} reserve={side === "end"} />;
+
+  const stays = (unit: BarUnit) => !overflow.moved.has(unit.key);
+  const crossed = (unit: BarUnit) => overflow.moved.has(unit.key);
+  const left = <>{renderUnits([...leftUnits.filter(stays), ...rightUnits.filter(crossed)], overflow, marked)}{more("left")}</>;
+  const message = (
+    <>
+        <button
+          className={`island__open-button${showCenter ? " island__open-button--center" : ""}`}
+          type="button"
+          aria-label={preview?.label !== undefined
+            ? preview.label
+            : peekLine ? peekLine.label : t.messages.expand(collapsedLabel)}
+          data-tooltip=""
+          aria-expanded={preview || peekLine ? undefined : isExpanded}
+          aria-controls={preview || peekLine ? undefined : "island-panel"}
+          onPointerDown={prepareWindowDrag}
+          onPointerUp={cancelWindowDrag}
+          onPointerCancel={cancelWindowDrag}
+          onClick={(event) => {
+            if (event.detail === 0 || !didDragRef.current) {
+              if (preview) {
+                if (preview.action) runIslandAction(preview.action);
+              } else if (peekLine) {
+                openPeek();
+              } else {
+                onOpenPage(rowLine ? (notchTextPage(rowLine) ?? openTarget) as IslandPage : openTarget);
+              }
+            }
+          }}
+        >
+          <IslandSummary item={contributed.summary} enabled={!isExpanded && !isTucked} bodyOnly={notch !== null} grow={notch === null}>
+            {notice ? notice.content : activeAlert ? (
+              <AlertPopup alert={activeAlert} sources={alertSources} />
+            ) : line?.bare ? lineView(line.item) : <>
+            {showCollapsedText && showTitle && (
+              <span className="island__brand">{t.island.appName}</span>
+            )}
+            {line && lineView(line.item)}
+            </>}
+          </IslandSummary>
+          {showCenter && <span className="island__center-slot">{slots.center}</span>}
+        </button>
+        {notice && !preview && notice.actions}
+        {!preview && !notice && !activeAlert && !peekLine && contributed.trails.map(lineView)}
+        {preview && lineView(`${preview.item}.actions`)}
+    </>
+  );
+  const right = (
+    <>
+        {renderUnits([...leftUnits.filter(crossed), ...rightUnits.filter(stays)], overflow, marked)}
+        {more("end")}
+        {!contributed.hints.has("agents.count") && (
+          <button
+            className="island__quiet-button"
+            type="button"
+            aria-label={t.island.collapseIsland}
+            data-tooltip=""
+            onClick={(event) => {
+              event.stopPropagation();
+              onTuck();
+            }}
+          />
+        )}
+    </>
+  );
+  return (
+    <div
+      ref={barRef}
+      className="island__collapsed"
+      aria-hidden={isExpanded}
+      inert={isExpanded}
+      onContextMenu={openItemsMenu}
+      onClick={(event) => {
+        if (event.target === event.currentTarget || (event.target instanceof Element && event.target.hasAttribute(OPENS_BAR))) {
+          if (peekLine && !preview) openPeek();
+          else onOpenPage(openTarget);
+        }
+      }}
+    >
+      <DevWatermark place="collapsed" />
+      {notch ? (
+        <>
+          <div className="island__notch-row">
+            <div key={`left:${wings}`} ref={leftWingRef} className="island__notch-wing island__notch-wing--left" {...{ [OPENS_BAR]: "" }}>{alerted && activeAlert ? <NotchAlertLeading alert={activeAlert} sources={alertSources} /> : messaged && preview ? lineView(`${preview.item}.leading`) : left}</div>
+            <span className="island__notch-gap" aria-hidden="true" {...{ [OPENS_BAR]: "" }} />
+            <div key={`right:${wings}`} ref={rightWingRef} className="island__notch-wing island__notch-wing--right" {...{ [OPENS_BAR]: "" }}>{alerted && activeAlert ? <NotchAlertTrailing alert={activeAlert} sources={alertSources} /> : messaged && preview ? lineView(`${preview.item}.trailing`) : dropped ? <>{more("right")}{right}</> : <>{more("right")}{message}{right}</>}</div>
+          </div>
+          {dropped && <div className="island__notch-drop">{message}</div>}
+        </>
+      ) : (
+        <>
+          {left}
+          {message}
+          {right}
+        </>
+      )}
+    </div>
+  );
+}

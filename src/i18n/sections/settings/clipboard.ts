@@ -1,0 +1,347 @@
+export type SettingsClipboardText = {
+  title: string;
+  headerShortcut: (keys: string) => string;
+  captureImages: string;
+  maxItems: string;
+  shortcut: string;
+  shortcutEnabled: string;
+  backupShortcut: string;
+  backupShortcutHint: string;
+  noShortcut: string;
+  pressKeys: string;
+  openTitle: string;
+  pasteTitle: string;
+  terminalTitle: string;
+  privacyPerfTitle: string;
+  privacyTitle: string;
+  storageTitle: string;
+  storageSummary: (items: number, days: number) => string;
+  transferSummary: string;
+  openIn: string;
+  openInHint: string;
+  openInOptions: Record<"window" | "island", string>;
+  popupPosition: string;
+  popupPositionOptions: Record<"cursor" | "center", string>;
+  popupLayout: string;
+  popupLayoutHint: string;
+  popupLayoutOptions: Record<"standard" | "wide", string>;
+  autoPaste: string;
+  autoPasteHint: string;
+  autoPasteHintMac: string;
+  terminalImagePath: string;
+  terminalImagePathHint: string;
+  terminalImagePathHintMac: string;
+  skipSensitive: string;
+  skipSensitiveHint: string;
+  skipSensitiveHintMac: string;
+  retention: string;
+  retentionHint: string;
+  retentionOption: (days: number) => string;
+  winV: string;
+  winVHint: string;
+  ocr: string;
+  ocrHint: string;
+  ocrHintMac: string;
+  captureFiles: string;
+  captureFilesHint: string;
+  captureFilesHintMac: string;
+  captureHtml: string;
+  captureHtmlHint: string;
+  captureHtmlHintMac: string;
+  secrets: string;
+  secretsHint: string;
+  secretsOptions: Record<"mask" | "skip" | "keep", string>;
+  excludedApps: string;
+  excludedAppsHint: string;
+  excludedAppsHintMac: string;
+  flattenTerminalCommands: string;
+  flattenTerminalCommandsHint: string;
+  hideFromCapture: string;
+  hideFromCaptureHint: string;
+  prewarmWindow: string;
+  prewarmWindowHint: string;
+  linkPreview: string;
+  linkPreviewHint: string;
+  copyCard: string;
+  copyCardHint: string;
+  copyCardOption: (seconds: number) => string;
+  localApiRead: string;
+  localApiReadHint: string;
+  transfer: {
+    title: string;
+    export: string;
+    exportHint: string;
+    exportAction: string;
+    import: string;
+    importHint: string;
+    importAction: string;
+    exported: string;
+    imported: (items: number, snippets: number) => string;
+    failed: string;
+    show: string;
+    showMac: string;
+  };
+  aiPrompts: {
+    title: string;
+    hintTitle: string;
+    hintTitleMac: string;
+    hint: string;
+    empty: string;
+    add: string;
+    adding: string;
+    editing: string;
+    edit: (title: string) => string;
+    remove: (title: string) => string;
+    titlePlaceholder: string;
+    promptPlaceholder: string;
+    save: string;
+    cancel: string;
+  };
+  snippets: {
+    title: string;
+    hintTitle: string;
+    hint: string;
+    empty: string;
+    add: string;
+    adding: string;
+    editing: string;
+    edit: (title: string) => string;
+    remove: (title: string) => string;
+    titlePlaceholder: string;
+    textPlaceholder: string;
+    save: string;
+    cancel: string;
+  };
+};
+
+export const zhCN: SettingsClipboardText = {
+  title: "剪贴板历史",
+  headerShortcut: (keys) => `按 ${keys} 打开`,
+  captureImages: "记录图片",
+  maxItems: "最大历史条数",
+  shortcut: "快捷键",
+  shortcutEnabled: "用快捷键打开",
+  backupShortcut: "备用快捷键",
+  backupShortcutHint: "Win+V 被远程桌面、游戏或以管理员身份运行的窗口拦住时，用它打开。",
+  noShortcut: "两个都关着时，只能从岛屿或托盘菜单打开剪贴板。",
+  pressKeys: "按下组合键",
+  openTitle: "打开方式",
+  pasteTitle: "粘贴",
+  terminalTitle: "贴到终端",
+  privacyPerfTitle: "隐私与性能",
+  privacyTitle: "隐私与过滤",
+  storageTitle: "容量与清理",
+  storageSummary: (items, days) => (days === 0 ? `最多 ${items} 条 · 不自动清理` : `最多 ${items} 条 · ${days} 天没再复制的自动删`),
+  transferSummary: "换电脑时用：导出、从文件导入",
+  openIn: "快捷键打开",
+  openInHint: "独立窗口在鼠标旁弹出，选中一条直接粘贴到原来的窗口；岛上页面和以前一样，展开岛的剪贴板页。",
+  openInOptions: { window: "独立窗口", island: "岛上页面" },
+  popupPosition: "弹出位置",
+  popupPositionOptions: { cursor: "鼠标旁", center: "屏幕中间" },
+  popupLayout: "窗口宽度",
+  popupLayoutHint: "宽版右边显示选中这条的完整内容、大图和来源，粘贴前能看清是不是要的那条。",
+  popupLayoutOptions: { standard: "标准", wide: "宽版" },
+  autoPaste: "选中后自动粘贴",
+  autoPasteHint: "关掉时只复制，回到原来的窗口自己按 Ctrl+V。",
+  autoPasteHintMac: "自动粘贴要在「系统设置 → 隐私与安全性 → 辅助功能」里允许浮屿，第一次用时系统会提示；没允许或关掉时只复制，回到原来的窗口自己按 ⌘V。",
+  terminalImagePath: "粘贴图片到终端时贴文件路径",
+  terminalImagePathHint: "Windows Terminal 等终端里粘贴图片时改贴它的文件路径，Claude Code 会把路径当成图片附上（直接粘贴位图常常贴不上）。",
+  terminalImagePathHintMac: "在终端、iTerm、Ghostty 等终端里粘贴图片时改贴它的文件路径，Claude Code 会把路径当成图片附上（直接粘贴位图常常贴不上）。",
+  skipSensitive: "不记录密码",
+  skipSensitiveHint: "密码管理器（KeePass、Bitwarden、1Password 等）复制的密码带着「不要记录」的标记，和系统剪贴板历史一样跳过它们。",
+  skipSensitiveHintMac: "密码管理器（1Password、Bitwarden 等）复制的密码带着「不要记录」的标记，浮屿跳过它们。",
+  retention: "自动清理",
+  retentionHint: "超过这个时间没再复制过的记录自动删除，收藏的不删。",
+  retentionOption: (days) => (days === 0 ? "不清理" : `${days} 天`),
+  winV: "用 Win+V 打开",
+  winVHint: "按 Win+V 打开岛屿的剪贴板，代替系统自带的剪贴板历史；关掉后 Win+V 还给系统。表情、GIF 和符号仍可用 Win+. 打开。",
+  ocr: "识别图片里的文字",
+  ocrHint: "用 Windows 自带的文字识别在本机识别，不联网。识别出的文字可以搜索，也可以单独复制。",
+  ocrHintMac: "用 macOS 自带的文字识别在本机识别，不联网。识别出的文字可以搜索，也可以单独复制。",
+  captureFiles: "记录复制的文件",
+  captureFilesHint: "在资源管理器里复制的文件也进历史，粘贴回去仍是文件；贴到终端里是文件路径。",
+  captureFilesHintMac: "在访达里复制的文件也进历史，粘贴回去仍是文件；贴到终端里是文件路径。",
+  captureHtml: "保留格式",
+  captureHtmlHint: "从网页、Word 复制的文字连同格式一起记下，粘贴时带格式；独立窗口里按 Shift+Enter 粘贴成纯文本。",
+  captureHtmlHintMac: "从网页、Pages、Word 复制的文字连同格式一起记下，粘贴时带格式；独立窗口里按 ⇧↩ 粘贴成纯文本。",
+  secrets: "密钥和令牌",
+  secretsHint: "看起来像 API Key、GitHub 令牌、私钥的内容：打码显示（粘贴时仍是原文）、不记录，或照常记录。",
+  secretsOptions: { mask: "打码", skip: "不记录", keep: "照常" },
+  excludedApps: "不记录这些程序复制的内容",
+  excludedAppsHint: "填程序名，逗号分隔，比如 keepass.exe。每条记录旁边会显示它来自哪个程序。",
+  excludedAppsHintMac: "填应用名，逗号分隔，比如 1Password.app。每条记录旁边会显示它来自哪个应用。",
+  flattenTerminalCommands: "多行命令贴到终端时合成一行",
+  flattenTerminalCommandsHint: "带 \ 续行的多行命令粘贴到终端时去掉续行，合成一行；剪贴板窗口的「转换后粘贴」里也能手动选。",
+  hideFromCapture: "共享屏幕时隐藏",
+  hideFromCaptureHint: "开会共享屏幕、录屏、用别的软件截图时，剪贴板窗口显示为空白，不露出历史；浮屿自己的截图照样截得到它。",
+  prewarmWindow: "启动时预先准备剪贴板窗口",
+  prewarmWindowHint: "开启后第一次打开剪贴板也是秒开，但窗口会一直留在后台，多占约 40 MB 内存。关闭时第一次打开会慢一点，收起 3 分钟没再用就释放。",
+  linkPreview: "读取链接标题和图标",
+  linkPreviewHint: "列表里的网址显示网站图标，宽版里再显示网页标题。会访问那个网址，默认关。",
+  copyCard: "岛上的复制卡片",
+  copyCardHint: "在剪贴板窗口或岛上的剪贴板页复制、粘贴一条后，浮屿顶部显示刚操作的内容。鼠标停在上面时不会收起。",
+  copyCardOption: (seconds) => (seconds === 0 ? "不显示" : `显示 ${seconds} 秒`),
+  localApiRead: "允许本地接口读取历史",
+  localApiReadHint: "开了以后，AI 工具可以通过本地接口 GET /v1/clipboard 读取最近的文字记录（打码的仍是打码）。默认关。",
+  transfer: {
+    title: "导入导出",
+    export: "导出剪贴板历史",
+    exportHint: "历史记录（含图片）和常用语写成一个 JSON 文件，放在「下载」文件夹。里面可能有你复制过的密码和私人内容，注意保管。",
+    exportAction: "导出",
+    import: "从文件导入",
+    importHint: "导入另一台电脑导出的文件：只加入这里还没有的记录和常用语，不删除任何东西。",
+    importAction: "选择文件",
+    exported: "已导出",
+    imported: (items, snippets) => `导入了 ${items} 条记录、${snippets} 条常用语`,
+    failed: "没有成功",
+    show: "在文件夹中显示",
+    showMac: "在访达中显示",
+  },
+  aiPrompts: {
+    title: "AI 提示词",
+    hintTitle: "剪贴板窗口里 Ctrl+I 的改写",
+    hintTitleMac: "剪贴板窗口里 ⌘I 的改写",
+    hint: "除了总结、润色、改错字、中英互译，再加自己的，比如「改成正式的邮件语气」「提取里面的待办」。用快捷翻译设置的服务、Key 和模型。",
+    empty: "还没有自定义提示词。",
+    add: "添加提示词",
+    adding: "新提示词",
+    editing: "修改提示词",
+    edit: (title) => `修改「${title}」`,
+    remove: (title) => `删除「${title}」`,
+    titlePlaceholder: "名字，显示在列表里",
+    promptPlaceholder: "要 AI 对这段文字做什么",
+    save: "保存",
+    cancel: "取消",
+  },
+  snippets: {
+    title: "常用语",
+    hintTitle: "在剪贴板窗口按 Tab 切到「常用语」",
+    hint: "粘贴时会填好这些变量：{date} 日期、{time} 时间、{datetime} 日期和时间、{weekday} 星期、{clipboard} 剪贴板里现在的文字。",
+    empty: "还没有保存常用语。",
+    add: "新建常用语",
+    adding: "新建常用语",
+    editing: "修改常用语",
+    edit: (title) => `修改「${title}」`,
+    remove: (title) => `删除「${title}」`,
+    titlePlaceholder: "名字（不填就用第一行）",
+    textPlaceholder: "内容，比如：{date} 周报",
+    save: "保存",
+    cancel: "取消",
+  },
+};
+
+export const en: SettingsClipboardText = {
+  title: "Clipboard history",
+  headerShortcut: (keys) => `Opens with ${keys}`,
+  captureImages: "Record images",
+  maxItems: "Max entries",
+  shortcut: "Shortcut",
+  shortcutEnabled: "Open with a shortcut",
+  backupShortcut: "Backup shortcut",
+  backupShortcutHint: "For when Win+V is caught by Remote Desktop, a game or a window running as administrator.",
+  noShortcut: "With both off, the clipboard only opens from the island or the tray menu.",
+  pressKeys: "Press keys",
+  openTitle: "Opening",
+  pasteTitle: "Pasting",
+  terminalTitle: "Pasting into terminals",
+  privacyPerfTitle: "Privacy and performance",
+  privacyTitle: "Privacy and filtering",
+  storageTitle: "Limits and cleanup",
+  storageSummary: (items, days) => (days === 0 ? `Up to ${items} entries · no cleanup` : `Up to ${items} entries · removed after ${days === 1 ? "1 day" : `${days} days`} unused`),
+  transferSummary: "For moving computers: export, import from a file",
+  openIn: "The shortcut opens",
+  openInHint: "The window pops up by the pointer and pastes what you pick into the window you were in; the island page opens the island's clipboard page as before.",
+  openInOptions: { window: "A window", island: "The island page" },
+  popupPosition: "Where it appears",
+  popupPositionOptions: { cursor: "By the pointer", center: "Screen centre" },
+  popupLayout: "Window width",
+  popupLayoutHint: "Wide shows the picked entry in full beside the list, with a large image and where it came from.",
+  popupLayoutOptions: { standard: "Standard", wide: "Wide" },
+  autoPaste: "Paste what you pick",
+  autoPasteHint: "Off: it is only copied, and you press Ctrl+V back in your window.",
+  autoPasteHintMac: "Pasting needs Fuyu allowed in System Settings > Privacy & Security > Accessibility; macOS asks the first time. Until then, or when off, it is only copied and you press ⌘V back in your window.",
+  terminalImagePath: "Paste images into terminals as their path",
+  terminalImagePathHint: "In Windows Terminal and other terminals an image is pasted as its file path, which Claude Code attaches as an image (pasting the bitmap often fails there).",
+  terminalImagePathHintMac: "In Terminal, iTerm, Ghostty and other terminals an image is pasted as its file path, which Claude Code attaches as an image (pasting the bitmap often fails there).",
+  skipSensitive: "Do not record passwords",
+  skipSensitiveHint: "Password managers (KeePass, Bitwarden, 1Password...) mark the passwords they copy; like Windows' own clipboard history, these are skipped.",
+  skipSensitiveHintMac: "Password managers (1Password, Bitwarden...) mark the passwords they copy, and Fuyu skips them.",
+  retention: "Clean up",
+  retentionHint: "Entries not copied again for this long are deleted; favourites stay.",
+  retentionOption: (days) => (days === 0 ? "Never" : days === 1 ? "1 day" : `${days} days`),
+  winV: "Open with Win+V",
+  winVHint: "Win+V opens the island's clipboard instead of Windows' own clipboard history; turned off, Win+V goes back to Windows. Emoji, GIFs and symbols are still on Win+.",
+  ocr: "Read the text in images",
+  ocrHint: "Windows' own text recognition, on this computer, offline. The text can be searched and copied on its own.",
+  ocrHintMac: "macOS's own text recognition, on this computer, offline. The text can be searched and copied on its own.",
+  captureFiles: "Record copied files",
+  captureFilesHint: "Files copied in Explorer join the history and paste back as files; into a terminal they go as paths.",
+  captureFilesHintMac: "Files copied in Finder join the history and paste back as files; into a terminal they go as paths.",
+  captureHtml: "Keep formatting",
+  captureHtmlHint: "Text copied from web pages or Word keeps its formatting when pasted; Shift+Enter in the window pastes plain text.",
+  captureHtmlHintMac: "Text copied from web pages, Pages or Word keeps its formatting when pasted; ⇧↩ in the window pastes plain text.",
+  secrets: "Keys and tokens",
+  secretsHint: "What looks like an API key, GitHub token or private key: shown masked (pasted as it is), not recorded, or recorded as usual.",
+  secretsOptions: { mask: "Mask", skip: "Skip", keep: "Keep" },
+  excludedApps: "Do not record copies from these programs",
+  excludedAppsHint: "Program names separated by commas, such as keepass.exe. Each entry shows the program it came from.",
+  excludedAppsHintMac: "App names separated by commas, such as 1Password.app. Each entry shows the app it came from.",
+  flattenTerminalCommands: "Paste multi-line commands into terminals as one line",
+  flattenTerminalCommandsHint: "A command continued over lines with \ goes into a terminal as one line. Also available by hand under \"Paste transformed\" in the clipboard window.",
+  hideFromCapture: "Hide while sharing the screen",
+  hideFromCaptureHint: "Screen sharing, recordings and other apps' screenshots show the clipboard window as blank; Fuyu's own screenshots still include it.",
+  prewarmWindow: "Prepare the clipboard window at startup",
+  prewarmWindowHint: "The clipboard opens instantly even the first time, but its window stays in the background and uses about 40 MB more memory. When off, the first open is a little slower, and the window is freed after 3 minutes unused.",
+  linkPreview: "Read link titles and icons",
+  linkPreviewHint: "Copied links show the site's icon in the list, and the page title in the wide window. This visits the address; off by default.",
+  copyCard: "Copy card on the island",
+  copyCardHint: "After you copy or paste an entry from the clipboard window or the island's clipboard page, the island shows what was copied or pasted. It stays while the pointer is on it.",
+  copyCardOption: (seconds) => (seconds === 0 ? "Don't show" : `Show for ${seconds} s`),
+  localApiRead: "Let the local API read the history",
+  localApiReadHint: "AI tools can read recent text entries with GET /v1/clipboard on the local API (masked keys stay masked). Off by default.",
+  transfer: {
+    title: "Import and export",
+    export: "Export the clipboard history",
+    exportHint: "The entries (with images) and snippets go into one JSON file in Downloads. It may hold passwords and private things you copied; keep it safe.",
+    exportAction: "Export",
+    import: "Import from a file",
+    importHint: "A file exported on another computer: only entries and snippets not here yet are added, nothing is removed.",
+    importAction: "Choose file",
+    exported: "Exported",
+    imported: (items, snippets) => `Imported ${items} ${items === 1 ? "entry" : "entries"} and ${snippets} ${snippets === 1 ? "snippet" : "snippets"}`,
+    failed: "That did not work",
+    show: "Show in folder",
+    showMac: "Show in Finder",
+  },
+  aiPrompts: {
+    title: "AI prompts",
+    hintTitle: "Ctrl+I rewrites in the clipboard window",
+    hintTitleMac: "⌘I rewrites in the clipboard window",
+    hint: "Besides summarize, polish, fix grammar and translate, add your own, such as \"make it a formal email\" or \"list the to-dos in it\". Uses the quick translation's service, key and model.",
+    empty: "No custom prompts yet.",
+    add: "Add a prompt",
+    adding: "New prompt",
+    editing: "Edit prompt",
+    edit: (title) => `Edit “${title}”`,
+    remove: (title) => `Delete “${title}”`,
+    titlePlaceholder: "Name, shown in the list",
+    promptPlaceholder: "What the AI should do with the text",
+    save: "Save",
+    cancel: "Cancel",
+  },
+  snippets: {
+    title: "Snippets",
+    hintTitle: "Press Tab in the clipboard window for Snippets",
+    hint: "When pasted, these are filled in: {date}, {time}, {datetime}, {weekday} and {clipboard} (the text on the clipboard now).",
+    empty: "No snippets saved yet.",
+    add: "New snippet",
+    adding: "New snippet",
+    editing: "Edit snippet",
+    edit: (title) => `Edit "${title}"`,
+    remove: (title) => `Delete "${title}"`,
+    titlePlaceholder: "Name (the first line if empty)",
+    textPlaceholder: "Text, such as: Weekly report {date}",
+    save: "Save",
+    cancel: "Cancel",
+  },
+};

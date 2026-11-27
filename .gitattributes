@@ -1,0 +1,6 @@
+.githooks/* text eol=lf
+
+# Written with LF by a tool (the Tauri CLI syncs Cargo.toml features). Checking it
+# out with LF too keeps a build from leaving it modified under core.autocrlf, which
+# blocks land.
+src-tauri/Cargo.toml text eol=lf

@@ -1,0 +1,144 @@
+import { useEffect, useState } from "react";
+import { Star } from "lucide-react";
+import { SettingsChoice } from "../../components/settings/SettingsChoice";
+import { SettingsSwitch } from "../../components/settings/SettingsSwitch";
+import type { ExpandTrigger, IslandSettings } from "../../lib/settings/types";
+import { listenClipboardPopupOpened, type ClipboardHistorySettings } from "../../features/clipboard/api";
+import { getFileShelf, type FileShelfItem } from "../../features/file-shelf/api";
+import { useTranslation } from "../../i18n";
+import { ActHeading } from "./ActHeading";
+import type { OnboardingModule } from "./personas";
+import "./PlayAct.css";
+import { isMacOS } from "../../lib/platform";
+import { visibilityInterval } from "../../lib/useVisibilityInterval";
+import { openShortcutLabel } from "../../features/clipboard/shortcut";
+
+const SHELF_POLL_MS = 800;
+
+type Task = "expand" | "drop" | "shortcut";
+
+function newest(items: FileShelfItem[]) {
+  return items.reduce((latest, item) => Math.max(latest, item.addedAt), 0);
+}
+
+function useShelfGotFile(watch: boolean, onFile: () => void) {
+  useEffect(() => {
+    if (!watch) return;
+    let start: number | null = null;
+    let stopped = false;
+    const read = () =>
+      void getFileShelf()
+        .then(({ items }) => {
+          if (stopped) return;
+          if (start === null) start = newest(items);
+          else if (newest(items) > start) onFile();
+        })
+        .catch(() => undefined);
+    read();
+    const stop = visibilityInterval(read, SHELF_POLL_MS);
+    return () => {
+      stopped = true;
+      stop();
+    };
+  }, [watch, onFile]);
+}
+
+function ShortcutBadge({ keys }: { keys: string }) {
+  const parts = keys.split("+").filter(Boolean);
+  return (
+    <span className="play-act__keys">
+      {parts.map((part, at) => (
+        <span key={`${at}:${part}`} className="play-act__key-group">
+          {at > 0 && <span className="play-act__key-plus">+</span>}
+          <kbd className="play-act__kbd">{part}</kbd>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function PlayAct({ settings, modules, clipboard, islandOpen, onSettingsChange, onClipboardChange }: {
+  settings: IslandSettings;
+  modules: ReadonlySet<OnboardingModule>;
+  clipboard: ClipboardHistorySettings;
+  islandOpen: boolean;
+  onSettingsChange: (settings: IslandSettings) => void;
+  onClipboardChange: (settings: ClipboardHistorySettings) => void;
+}) {
+  const t = useTranslation();
+  const text = t.onboarding.play;
+  const [done, setDone] = useState<ReadonlySet<Task>>(() => new Set());
+  const [finish] = useState(() => (task: Task) => setDone((current) => (current.has(task) ? current : new Set(current).add(task))));
+  const [finishDrop] = useState(() => () => finish("drop"));
+  const [sawClosed, setSawClosed] = useState(!islandOpen);
+  const hover = settings.expandTrigger === "hover";
+  const tasks: Task[] = ["expand"];
+  if (modules.has("shelf")) tasks.push("drop");
+  const openKeys = openShortcutLabel(clipboard);
+  if (modules.has("clipboard") && openKeys) tasks.push("shortcut");
+  const doneCount = tasks.filter((task) => done.has(task)).length;
+  const completed = doneCount === tasks.length;
+
+  if (!islandOpen && !sawClosed) setSawClosed(true);
+  if (islandOpen && sawClosed && !done.has("expand")) finish("expand");
+  useShelfGotFile(tasks.includes("drop") && !done.has("drop"), finishDrop);
+
+  useEffect(() => {
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+    void listenClipboardPopupOpened(() => finish("shortcut"))
+      .then((stop) => (cancelled ? stop() : (unlisten = stop)))
+      .catch((error: unknown) => console.error("Failed to listen for the clipboard popup", error));
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [finish]);
+
+  return (
+    <>
+      <div className="play-act__head">
+        <ActHeading title={text.title} lead={completed ? text.allDone : text.lead(modules.has("music"), modules.has("agents"))} />
+        <span className={completed ? "play-act__score play-act__score--done" : "play-act__score"}>
+          <Star size={13} aria-hidden="true" />
+          {text.stars(doneCount, tasks.length)}
+        </span>
+      </div>
+      <ol className="play-act__tasks" aria-label={text.stars(doneCount, tasks.length)}>
+        {tasks.map((task) => (
+          <li key={task} className={done.has(task) ? "play-act__task play-act__task--done" : "play-act__task"}>
+            <Star className="play-act__star" size={18} aria-hidden="true" />
+            <span className="play-act__task-text">
+              {task === "expand" ? (
+                hover ? text.hover : text.click
+              ) : task === "drop" ? (
+                isMacOS ? text.dropMac : text.drop
+              ) : (
+                <span className="play-act__shortcut-line">
+                  {text.shortcut(openKeys ?? "")}
+                  {openKeys && <ShortcutBadge keys={openKeys} />}
+                </span>
+              )}
+              {task === "drop" && <small>{text.dropHint}</small>}
+              {task === "shortcut" && <small>{text.shortcutHint}</small>}
+            </span>
+            {task === "expand" && (
+              <SettingsChoice<ExpandTrigger>
+                value={settings.expandTrigger}
+                ariaLabel={text.expandBy}
+                options={[{ value: "hover", label: text.expandHover }, { value: "click", label: text.expandClick }]}
+                onChange={(expandTrigger) => onSettingsChange({ ...settings, expandTrigger })}
+              />
+            )}
+            {task === "shortcut" && !isMacOS && (
+              <label className="play-act__winv">
+                {text.winV}
+                <SettingsSwitch id="onboarding-winv" checked={clipboard.winV} onChange={(winV) => onClipboardChange({ ...clipboard, winV })} />
+              </label>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}

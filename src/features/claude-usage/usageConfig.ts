@@ -1,0 +1,61 @@
+import { shownHoverProviders, shownUsageProviders, type AllUsageProviderId } from "./usageRing.ts";
+
+export type UsageShow = "used" | "remaining";
+
+export const USAGE_INTERVAL = { min: 5, max: 120 } as const;
+
+export const USAGE_CONFIG_DEFAULTS = {
+  claudeCode: true,
+  codex: false,
+  antigravity: false,
+  glm: false,
+  kimi: false,
+  cursor: false,
+  workbuddy: false,
+  dsh: false,
+  show: "used",
+  askAnthropic: false,
+  askWhenStale: true,
+  proxy: "",
+  intervalMinutes: 5,
+} as const satisfies Record<string, boolean | number | string>;
+
+export type UsageConfigKey = keyof typeof USAGE_CONFIG_DEFAULTS;
+
+export type UsageConfig = {
+  providers: Record<AllUsageProviderId, boolean>;
+  show: UsageShow;
+  askAnthropic: boolean;
+  askWhenStale: boolean;
+  proxy: string;
+  intervalMinutes: number;
+};
+
+export function usageConfig(raw: Readonly<Record<string, unknown>>): UsageConfig {
+  const shown = new Set([
+    ...shownUsageProviders(raw).map((provider) => provider.id),
+    ...shownHoverProviders(raw).map((provider) => provider.id),
+  ]);
+  const interval = typeof raw.intervalMinutes === "number" && Number.isFinite(raw.intervalMinutes) ? Math.round(raw.intervalMinutes) : USAGE_CONFIG_DEFAULTS.intervalMinutes;
+  return {
+    providers: {
+      claudeCode: shown.has("claudeCode"),
+      codex: shown.has("codex"),
+      antigravity: shown.has("antigravity"),
+      glm: shown.has("glm"),
+      kimi: shown.has("kimi"),
+      cursor: shown.has("cursor"),
+      workbuddy: shown.has("workbuddy"),
+      dsh: shown.has("dsh"),
+    },
+    show: raw.show === "remaining" ? "remaining" : "used",
+    askAnthropic: raw.askAnthropic === true,
+    askWhenStale: raw.askWhenStale !== false,
+    proxy: typeof raw.proxy === "string" ? raw.proxy : "",
+    intervalMinutes: Math.min(USAGE_INTERVAL.max, Math.max(USAGE_INTERVAL.min, interval)),
+  };
+}
+
+export function storedValue(key: UsageConfigKey, value: boolean | number | string): boolean | number | string | null {
+  return value === USAGE_CONFIG_DEFAULTS[key] ? null : value;
+}

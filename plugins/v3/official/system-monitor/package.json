@@ -1,0 +1,85 @@
+{
+  "name": "@fuyu/system-monitor",
+  "version": "1.1.2",
+  "type": "module",
+  "description": "CPU, GPU, memory, network, battery and the busiest programs on the island; the bar changes color when readings run high.",
+  "keywords": [
+    "系统监控",
+    "性能",
+    "任务管理器",
+    "活动监视器",
+    "CPU",
+    "GPU",
+    "内存",
+    "网速",
+    "电池",
+    "温度",
+    "system monitor",
+    "performance",
+    "memory",
+    "RAM",
+    "network speed",
+    "battery",
+    "task manager"
+  ],
+  "license": "MIT",
+  "author": "TixXin",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev --official",
+    "build": "fuyu-plugin build --official",
+    "check": "fuyu-plugin check --official --market",
+    "package": "fuyu-plugin pack --official",
+    "typecheck": "tsc",
+    "lint": "eslint ."
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "系统监控",
+      "en": "System monitor"
+    },
+    "description": {
+      "zh-CN": "在岛上看 CPU、GPU、内存、网速、电池和最占资源的程序，读数偏高时收起条会变色提醒。",
+      "en": "CPU, GPU, memory, network, battery and the busiest programs on the island; the bar changes color when readings run high."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：CPU、GPU、内存、网速和最占资源的程序",
+          "en": "Island page: CPU, GPU, memory, network and the busiest programs"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：CPU 和内存占用",
+          "en": "Collapsed bar: CPU and memory use"
+        }
+      }
+    ],
+    "categories": [
+      "utilities",
+      "information"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "settings.section/v1"
+    ]
+  }
+}

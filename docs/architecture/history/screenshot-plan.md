@@ -1,0 +1,115 @@
+# 内置截图：分步计划
+
+> 任务：[C41](/docs/tasks/0-archive/C/C41.md)（调研是 [C40](/docs/tasks/0-archive/C/C40.md)，结果在 [screenshot-tools.md](/docs/research/screenshot-tools.md)）。用户 2026-11-10 同意调研建议的范围：第一版做区域截图、标注、复制 / 保存 / 贴图和浮屿特有的去处，长截图、自动打码、截图历史、像素测量放第二版，上传图床、美化背景不做；做成能在设置里关掉的内置模块。同一天用户定了快捷键（`Ctrl+Shift+1`–`7`，主键盘和小键盘的数字都算，见「快捷键」），并把**录屏**加进来（原来列在「不做」里），排在第三版。
+
+每一步做完勾选，写上提交号。每一步都能单独验证、单独合入；第 1–6 步合完才算第一版，中间可以照常发 beta（模块默认关闭，直到第 6 步把开关做好再决定默认开不开）。
+
+## 用起来是什么样
+
+1. 按快捷键（见下一节）或点托盘菜单 / 岛上的按钮。
+2. 屏幕**立刻冻结**：每个显示器先截成图，再在上面盖一层选区窗口。鼠标下的窗口和控件自动高亮，单击选中；拖动画任意区域。光标旁有放大镜，显示坐标、选区尺寸和像素颜色，按 `C` 复制颜色值。
+3. 选好后，选区旁出现工具栏：矩形、椭圆、箭头、画笔、荧光笔、文字、马赛克、序号；撤销 / 重做；然后是去处：**复制**、**保存**、**贴到屏幕上**、**识别文字**、**翻译**、**发给 Agent**、取消。`Enter` 复制，`Esc` 取消，`Ctrl+S` 保存，`T` 贴图。
+4. 贴到屏幕上的图，按 `T` 一起隐藏、再按一次显示（不是关闭；关闭在贴图的右键菜单里）。
+5. 截完后岛上出现几秒截图卡片（缩略图）：可以拖到别的应用、放进文件中转、发给 Agent；不管它就自己收起。
+
+「发给 Agent」：截图存成 PNG，切到选中会话的终端（复用 Agent 页点会话时的跳转），把带引号的文件路径贴进去。剪贴板调研查过，Claude Code 在 Windows 上读剪贴板里的位图有一串没修好的 bug，贴路径一直可靠（[clipboard-managers.md](/docs/research/clipboard-managers.md)「历史图片粘贴到 Claude Code CLI」）。只有一个会话在等输入时直接发给它，多个时让用户选。
+
+## 快捷键
+
+用户 2026-11-10 定的默认值：`Ctrl+Shift+数字`，主键盘上排的数字和右侧小键盘的数字都能用。先定的是 `Ctrl+数字`，因为会抢走浏览器切标签页、VS Code 切编辑器分组这些常用快捷键，改成了 `Ctrl+Shift`。每个都能在设置里改或关掉（第 6 步）。
+
+| 快捷键 | 做什么 | 哪一步做 |
+|---|---|---|
+| `Ctrl+Shift+1` | 截图：选区，选好后出现标注工具栏 | 第 1 步 |
+| `Ctrl+Shift+2` | 截图并复制：选好区域松开鼠标就复制，不出工具栏 | 第 4 步 |
+| `Ctrl+Shift+3` | 截图并识别文字：OCR 结果复制到剪贴板，岛上显示识别出的文字 | 第 5 步 |
+| `Ctrl+Shift+4` | 截图并翻译：OCR 后交给浮屿的快捷翻译 | 第 5 步 |
+| `Ctrl+Shift+5` | 长截图 | 第二版（C41.7） |
+| `Ctrl+Shift+6` | 录屏 | 第三版（C41.11） |
+| `Ctrl+Shift+7` | 全屏：截鼠标所在的整个显示器，直接出工具栏（`Enter` 即复制） | 第 1 步 |
+| `T` | 截图工具栏里：贴到屏幕上。不在截图时：隐藏 / 显示所有贴图 | 第 4 步 |
+
+- `T` 不是全局快捷键：截图时由选区窗口处理（正在写文字标注时不算）；有贴图时只在贴图窗口或浮屿有焦点时生效，否则会吃掉别处输入的字母 t。全局的隐藏 / 显示贴图另给一个可选的快捷键，默认不设。
+- 还没做的功能（`Ctrl+Shift+5`、`6`）在做好之前不注册，免得白白占着按键。
+- **小键盘要用键盘钩子认**：开着 NumLock 时按住 Shift 再按小键盘数字，Windows 发出的不是 `VK_NUMPAD1`，而是先替你松开 Shift、再发 `End`、`↓` 这类导航键（小键盘 1 对应 End，2 对应 ↓，依此类推）。`RegisterHotKey` 收不到，注册 `Ctrl+End` 又会把主键盘的 `Ctrl+End` 一起抢走。所以主键盘的数字用 `RegisterHotKey`，小键盘的用现有的低级键盘钩子（`win32/win_key_hook.rs`）：按扫描码认出小键盘的键（导航键的「扩展键」标志为 0 的才是小键盘），只吃掉 Ctrl 按着、Shift 刚被系统假松开的那一下，其余照常放行。NumLock 关着时小键盘本来就是导航键，`Ctrl+Shift+小键盘 1` 发的就是 `Ctrl+Shift+End`，这时不截图，免得抢走编辑器里的「选到末尾」。
+- 已知会撞的：Excel 的 `Ctrl+Shift+1`–`6` 是数字格式；个别输入法用 `Ctrl+Shift+数字` 切换方案。设置页对注册失败的快捷键标出来，用户可以改。
+
+## 结构
+
+| 位置 | 放什么 |
+|---|---|
+| `src-tauri/src/screenshot/` | `capture.rs` 每个显示器截一张（GDI `BitBlt`，失败的显示器用 DXGI，见「技术选择」）；`targets.rs` 截图前取好窗口和控件的矩形（`EnumWindows` 加 UI Automation）；`overlay.rs` 选区窗口的创建、定位和显示；`output.rs` 保存 PNG、写剪贴板（位图 + PNG + 文件引用）、交给文件中转；`pin.rs` 贴图窗口；`mod.rs` 命令和快捷键。`unsafe` 只在 `src-tauri/src/win32/`，新的 Win32 调用加在那里 |
+| `src/windows/screenshot/` | 选区窗口（`?window=screenshot`）和贴图窗口（`?window=pin`）的根组件 |
+| `src/features/screenshot/` | 选区、放大镜、标注的状态和绘制（纯逻辑放 `.ts` 方便单测）；`api.ts`、`storage.ts`；设置页的分组；岛上的截图卡片 |
+| 设置 | 新页面「设置 → 功能 → 截图」：模块开关、快捷键、接管 PrintScreen、保存位置和格式、截完默认做什么（复制 / 打开工具栏）、截图卡片停留时间 |
+
+**对外契约的新增**（写进 [contracts.md](/docs/architecture/contracts.md)，只加不改）：窗口 label `screenshot-<显示器序号>`、`pin-<编号>`；`?window=screenshot` / `pin`；localStorage key `fuyu-screenshot-settings`；应用数据目录下的 `screenshots/`（截图文件，见「数据」）；新的 Tauri 命令和事件。
+
+**数据**：截图只存在本机。复制、贴图、发给 Agent 用到的 PNG 写在应用数据目录的 `screenshots/`，第一版只留最近 50 张、7 天内的，启动时清理；用户点「保存」的才写到用户选的文件夹。截图常含密码、聊天记录，不上传、不进日志。写进 [data-storage.md](/docs/architecture/data-storage.md)。
+
+## 技术选择
+
+- **先截图，再弹窗**：按下快捷键先把每个显示器截成图（冻结画面），选区窗口只显示这张图。这样窗口弹出的那几百毫秒里屏幕变了也不要紧，也不会遇到 Windows Graphics Capture 的黄色边框。
+- **截屏接口**：第一版用 GDI `BitBlt` 截每个显示器（我们已经直接用 `windows` crate，几十行）。硬件加速的窗口截出黑屏时改用 DXGI Desktop Duplication。先不引入 [xcap](https://github.com/nashaofu/xcap)：要先看它的 Windows 后端和 DPI 处理，自己写也不多。
+- **每个显示器一个选区窗口**，按各自的 DPI 显示，不用一个大窗口横跨所有屏幕。Flameshot 在混合 DPI 下选区偏移的 bug 就出在这里（调研 [29]）。进程要是 Per-Monitor V2；Tauri（tao）默认就这样设置，第 1 步实测确认。
+- **选区窗口常驻、隐藏**：WebView2 窗口新建要几百毫秒，按快捷键时再建会慢。和剪贴板窗口一样启动时建好、平时隐藏；显示器数量变化时补建或销毁。
+- **放大镜和取色在前端算**：冻结的图已经在页面里，读像素不用再找原生端。
+- **快捷键**：主键盘的数字用现有的 `win32/hotkey.rs`（`RegisterHotKey`），各注册一次，注册失败（被别的程序占了）的在设置里标出来；小键盘的数字用低级键盘钩子，见「快捷键」一节。PrintScreen 被系统截图工具占着时，「接管 PrintScreen」开关用剪贴板接管 Win+V 的同一套低级键盘钩子（`win32/win_key_hook.rs`），并提示用户也可以在系统设置里关掉。
+- **OCR**：直接复用 `win32/ocr.rs`（剪贴板历史给图片做文字搜索已经在用）。
+
+## 步骤
+
+- [x] **第 1 步：截屏和选区。**（[C41.1](/docs/tasks/0-archive/C/C41.1.md)）每个显示器截图、常驻的选区窗口、拖动选区、调整选区、放大镜（坐标、尺寸、颜色）、`Esc` 取消、`Enter` 复制到剪贴板；`Ctrl+Shift+1` 截图、`Ctrl+Shift+7` 全屏，主键盘和小键盘都要能用（小键盘的单元测试：按键序列里 Shift 被假松开、导航键的扩展键标志）。快捷键先写死，设置在第 6 步。验证：单元测试（选区坐标在物理像素和逻辑像素之间换算、跨显示器的选区）、`cargo test`、`pnpm check`；**实测**：100% + 150% 两块屏、竖屏、副屏在主屏左边，选区截出来的图和屏幕上的位置一致。
+- [x] **第 2 步：自动识别窗口和控件。**（[C41.2](/docs/tasks/0-archive/C/C41.2.md)）截图前取好顶层窗口的矩形（去掉不可见、最小化、DWM 阴影），鼠标悬停时高亮最内层的控件（UI Automation，取不到就退回窗口），滚轮切换层级。用户 2026-11-10 加了「显示辅助线」开关（默认开）：虚线贯穿整屏：一横一竖跟着鼠标（选好区域后隐藏），选区的四条边也各延长一条。验证：单元测试（命中测试、层级）、实测资源管理器、浏览器、VS Code。
+- [x] **第 3 步：标注。**（[C41.3](/docs/tasks/0-archive/C/C41.3.md)）矩形、椭圆、箭头、画笔、荧光笔、文字、马赛克、序号；颜色和粗细；撤销 / 重做；选区确定后还能调整。合成在前端的 canvas 里做，导出 PNG 交给原生端。验证：单元测试（标注的数据和合成）、回归页（工具栏和快捷键）、实测高 DPI 下线条和文字清楚。
+- [x] **第 4 步：去处之一：复制、保存、贴图。**（[C41.4](/docs/tasks/0-archive/C/C41.4.md)）复制同时写入位图、PNG 和文件引用（聊天软件、画图、终端都能贴）；保存到设置的文件夹（默认「图片\浮屿截图」），文件名带时间；贴图窗口：置顶、可拖动、滚轮缩放、`Ctrl+滚轮` 调透明度、右键菜单（复制、保存、关闭、鼠标穿透），可以同时贴多张；`T` 贴图和隐藏 / 显示所有贴图；`Ctrl+Shift+2` 截图并复制。验证：`cargo test`、实测往微信、Word、画图、Windows Terminal 里贴。
+- [x] **第 5 步：去处之二：浮屿特有的。**（[C41.5](/docs/tasks/0-archive/C/C41.5.md)，`ba22f516`、`8e0350d2`，2026-11-12 用户实测通过）岛上的截图卡片（拖出、放进文件中转、发给 Agent）；进剪贴板历史（复用它的图片条目）；识别文字（OCR 结果复制，或打开快捷翻译）和 `Ctrl+Shift+3` / `4`；发给 Agent（存 PNG、切到会话的终端、贴路径）。验证：回归页（截图卡片）、实测发给 Windows Terminal 和 VS Code 里的 Claude Code、Codex，确认它们认出是图片。
+- [x] **第 6 步：设置、开关和收尾。**（[C41.6](/docs/tasks/0-archive/C/C41.6.md)，2026-11-13）「设置 → 功能 → 截图」页、模块开关、快捷键录制和冲突检查（复用 `shortcutConflicts.ts`）、接管 PrintScreen、托盘菜单和岛上的入口、中英文文案、`pnpm settings:index`、`docs/features/screenshot.md`、[contracts.md](/docs/architecture/contracts.md) 和 [data-storage.md](/docs/architecture/data-storage.md)。验证：`pnpm check`、`pnpm test:regression`、`cargo test`、`pnpm build:exe` 后整套走一遍。
+
+### 第二版（第一版合完再开工）
+
+- [x] **长截图**（[C41.7](/docs/tasks/0-archive/C/C41.7.md)，`Ctrl+Shift+5`，2026-11-13 做了自动滚动；C41.12 改成截图界面不退、带控制条，暂停时手动滚动也能拼）：选区后点「长截图」，模拟滚轮、截下一帧、按重叠区域拼接，内容不再变化或用户点停止时结束；先比较两帧找出不动的区域（吸顶的头部、侧栏），只在会动的区域里匹配（ShareX #8631 的思路）。另给手动滚动模式。
+- [x] **自动打码**（[C41.8](/docs/tasks/0-archive/C/C41.8.md)，2026-11-13；工具栏「自动打码」按钮，规则在 `src/features/screenshot/redact.ts`）：OCR 拿到文字和位置，按规则找出邮箱、手机号、IP、密钥样子的字符串，一键全部打码，每一处可以取消。
+- [x] **截图历史**（[C41.9](/docs/tasks/0-archive/C/C41.9.md)，2026-11-13；岛上新页面「截图历史」，复制、保存、贴图的都留一份，最多 100 张，保留 1 / 7 / 30 / 90 天）：`screenshots/` 里的截图在岛上或设置里可以翻看、再次贴图或复制；保留多久可以设置。
+- [x] **像素测量**（[C41.10](/docs/tasks/0-archive/C/C41.10.md)，2026-11-13；按住 `M`，逻辑在 `src/features/screenshot/measure.ts`）：选区里按住一个键出现尺子，测两点间距离和元素边界（Shottr 的做法）。
+
+### 第三版
+
+- [x] **录屏**（[C41.11](/docs/tasks/0-archive/C/C41.11.md)，`Ctrl+Shift+6`）：选区或整屏录制，开始前倒计时，岛上显示录制时长和停止按钮。用 Windows Graphics Capture 取帧、Media Foundation 的硬件编码器出 MP4（[windows-capture](https://github.com/NiiightmareXD/windows-capture) 两样都有，MIT，可以直接用或参考）。2026-11-13 用户定：要能出 GIF，要录系统声音和麦克风。实现方案见调研 [screen-recording.md](/docs/research/screen-recording.md)（不带 FFmpeg，全程 GPU + 硬件编码）。录屏是另一类功能，量比截图大，单独排期。GIF 用 gifski（用户 2026-11-13 定；它是 AGPL-3.0，按 GPLv3 第 13 条可以和浮屿一起发布）。分 5 步：
+  - [x] **第 1 步：录制管线**（[C41.11.1](/docs/tasks/0-archive/C/C41.11.1.md)，2026-11-13；实测 1600×900 60 fps 录 3 秒：硬件编码、不丢帧、帧间隔最大 16.7 ms）：WGC 采集一个显示器，选区在 GPU 上裁剪，帧拷进纹理池（样本释放时还回池子），经有界队列交给编码线程；编码线程按帧节奏（真实时间戳，静止 3 个间隔才补重复帧，暂停扣时长）写进 Media Foundation Sink Writer（D3D 设备管理器 + 硬件编码器，失败换软件），出 H.264 MP4。宽高取偶数，超过 4096 等比缩小。先不接界面。验证：帧节奏、尺寸、码率的单元测试；一个 `#[ignore]` 的测试真录 3 秒，用 ffprobe 看帧率和时长；`cargo test`、`pnpm build:exe`。
+  - [x] **第 2 步：声音**（[C41.11.2](/docs/tasks/0-archive/C/C41.11.2.md)，2026-11-13；WASAPI 共享模式直接要 48 kHz 立体声浮点（`AUTOCONVERTPCM`），省掉自己重采样；混音规则在 `recording/mixer.rs`：偏差 2 ms 内接上、更大的空缺补静音、重叠丢掉，落后 200 ms 的音源不再等；Sink Writer 输入 16 位 PCM、编 192 kbps AAC）：WASAPI loopback 录系统声音（同时开一路静音渲染流），WASAPI 录麦克风，QPC 时间戳，混成 48 kHz 立体声，Sink Writer 编 AAC。
+  - [x] **第 3 步：界面**（[C41.11.3](/docs/tasks/0-archive/C/C41.11.3.md)，2026-11-14；截图模式 `record`，按 `F` 选整屏；倒计时和计时在原生侧 `recording/control.rs`，岛上用截图卡片同一个位置显示；`Ctrl+Shift+6` 录制中再按就停止）：`Ctrl+Shift+6` 用截图的选区窗口选区域或整屏，3 秒倒计时；岛上显示时长、暂停和停止；浮屿自己的窗口用 `WDA_EXCLUDEFROMCAPTURE` 排除；存到「视频」下的浮屿录屏文件夹，岛上出卡片。
+  - [x] **第 4 步：GIF**（[C41.11.4](/docs/tasks/0-archive/C/C41.11.4.md)，2026-11-14；录屏模式里按 `G` 切换；MP4 照常编码到临时文件，编码线程每 1/15 秒挑一帧交给 GIF 线程，GIF 线程从显卡读回内存、交给 gifski（它自己缩到 960 宽），队列满了丢帧；结束后删掉临时 MP4。实测 1920×1080 录 3 秒：960×540、32 帧）：另一路低帧率（默认 15 fps）、限宽的帧拷回内存交给 gifski 的编码线程。
+  - [x] **第 5 步：设置和文档**（[C41.11.5](/docs/tasks/0-archive/C/C41.11.5.md)，2026-11-14；设置存在 `fuyu-screenshot-settings.record`，截图窗口在结束录屏选区时用请求头带给原生侧）：帧率、画质、声音、默认格式、快捷键；功能说明、契约、platforms.md。
+
+### 第四版（[C150](/docs/tasks/0-archive/C/C150.md)）
+
+- [x] **独占全屏截屏回退 WGC**（[C150.1](/docs/tasks/0-archive/C/C150.1.md)）：前台独占全屏或 GDI 截出纯黑（`screenshot/blank.rs`）时改走 WGC 取帧（`win32/graphics_capture.rs` `grab_screen`）。
+- [x] **冻结画面首帧直达与提速**（[C150.2](/docs/tasks/0-archive/C/C150.2.md)）：Windows 改走 WebView2 `PostSharedBufferToScript` 共享内存直传，省去 21–33 MB 自定义协议 IPC 流复制（旧驱动或失败时自动回退原 IPC `Response`）；Rust 侧 `session::open` 并发抓屏、建窗与枚举窗口（抓完即唤醒 `CAPTURED`，等抓屏完成才显示选区窗口）；Mac `ScreenCaptureKit` 零拷贝读取 `CGDataProvider` + 对齐 `u32` BGRA→RGBA（4K 9.22 ms → 2.38 ms）；前端打包剔除开发期全量翻译、`main.tsx` 顶层预取会话与帧数据并用 `useLayoutEffect` 首轮同步绘制画布。Mac 4K（3840×2160）release 离线包真实选区窗口从原先无抓屏 300.5 ms 降至 131.7–150.5 ms（空载 131.7–151.7 ms）。
+- [x] **已画标注选中编辑**（[C150.3](/docs/tasks/0-archive/C/C150.3.md)）：不选工具时点击已有标注选中，支持拖动移动、四角及端点调尺寸、工具栏改颜色与粗细、双击文字再编辑、`Delete` 删除及撤销/重做。
+- [x] **贴图增强**（[C150.4](/docs/tasks/0-archive/C/C150.4.md)）：贴图窗口支持就地标注、本机文字识别（`O`）、90° 旋转（`1`/`2`）、水平/垂直翻转（`3`/`4`）、缩成小方块（双击/`M`）、退出时保存并在下次启动恢复（`screenshot-pins/`）。
+- [x] **模糊、直线与聚光灯工具**（[C150.5](/docs/tasks/0-archive/C/C150.5.md)）：工具栏新增模糊（`B`）、直线（`L` + `Shift` 吸附 45°）、多区域聚光灯（`S`）。
+- [x] **延时截图**（[C150.6](/docs/tasks/0-archive/C/C150.6.md)）：支持 3 / 5 / 10 秒延时后冻结屏幕，岛上展示可取消倒计时，托盘/岛剪刀右键及快捷键可触发。
+- [x] **二维码识别**（[C150.7](/docs/tasks/0-archive/C/C150.7.md)）：选区后本机 `rqrr` 解码二维码，有结果时在工具栏列出文本与可打开的网页链接。
+- [x] **单窗口透明背景与阴影导出**（[C150.8](/docs/tasks/0-archive/C/C150.8.md)）：单击选中窗口时可勾选导出透明背景 + 圆角阴影 PNG，支持复制、保存和贴图（Windows 按窗口抓取后叠加柔和双层阴影，Mac 走 ScreenCaptureKit 单窗口抓取）。
+- [x] **截图历史按图内文字搜索**（[C150.9](/docs/tasks/0-archive/C/C150.9.md)）：后台本机 OCR 写入 `.words.json`，岛上截图历史页支持关键词过滤并高亮缩略图上的命中位置。
+- [x] **发给 Agent 附带指令与来源**（[C150.10](/docs/tasks/0-archive/C/C150.10.md)）：卡片发给 Agent 时可写指令并自动附上截图时的前台进程名、窗口标题和浏览器网址（可在设置开关）。
+- [x] **放进今日笔记与建成待办**（[C150.11](/docs/tasks/0-archive/C/C150.11.md)）：`todos` 内置宿主注册 `screenshotActions` 动作，从截图卡片和历史卡片直接写入今日笔记或带图新建待办。
+- [x] **官方图床示例插件**（[C150.12](/docs/tasks/0-archive/C/C150.12.md)）：`plugins/v3/official/image-host` 通过 `ctx.screenshotActions.register` 对接 S3 兼容对象存储上传并复制链接，并将来源上下文公开进插件文档。
+
+## 不做
+
+- 上传图床：ShareX 已经做得很好，浮屿的用户更需要的是发给 Agent 和文件中转。
+- 美化背景、AI 抠图、AI 裁剪：和浮屿关系不大。
+- 做成插件：要用到原生截屏、多个窗口和 OCR，插件 API 给不了。
+
+## 待定
+
+- ~~**模块默认开不开**~~：2026-11-13 用户定默认关，「按 PrintScreen 截图」也默认关；快捷键会和 Excel、部分输入法撞，打开后在设置里能改。
+
+## 风险
+
+- **混合 DPI 和多显示器**最容易出错，第 1 步就要在真的两块不同缩放的屏上测，不能只在一块屏上看。
+- **选区窗口显示的速度**：WebView2 显示一张 4K 截图的时间最初实测（3072×1728）仅自定义协议 IPC 传 2100 万字节 + `putImageData` 就要 260–380 ms（debug），后来先在 D124 改成不常驻隐藏选区窗口以回收 50–80 MB 空闲内存，再在 2026-11（[C150.2](/docs/tasks/0-archive/C/C150.2.md)）把抓屏/建窗/窗口枚举改成并行、Mac 改零拷贝 `CGDataProvider` + `u32` BGRA→RGBA、Windows 改 WebView2 `PostSharedBufferToScript` 共享内存直传、前端入口去掉全量字典包并在 `main.tsx` 秒起预取后用 `useLayoutEffect` 首轮绘制画布：Mac release 4K 选区窗口实测从无抓屏 300.5 ms 降到 131.7–150.5 ms（含放大镜就绪）。
+- **独占全屏的游戏**截不到或截出黑屏（GDI 和 DXGI 都可能），第一版只保证普通窗口和无边框全屏。2026-11 起（C150.1）：前台是 D3D 独占全屏时先用录屏的 WGC 管线（`win32/graphics_capture.rs` 的 `grab_screen`）取一帧，GDI 截出整块纯黑时也再用 WGC 取一帧（判断在 `screenshot/blank.rs`），普通桌面仍只走 GDI。
+- **隐私**：截图里常有密码和聊天记录。只存本机、自动清理，发给 Agent 前用户要明确点一下。

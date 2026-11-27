@@ -1,0 +1,7 @@
+.island-hover-row .settings-row__main {
+  align-items: start;
+}
+
+.island-hover-row__strip {
+  min-width: 0;
+}

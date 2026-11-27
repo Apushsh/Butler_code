@@ -1,0 +1,238 @@
+.message-arrivals {
+  flex: none;
+  align-self: start;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  color: var(--text-1);
+}
+
+.message-arrivals__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.message-arrivals__tools {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.message-arrivals__clear {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.message-arrivals__clear:hover {
+  background: var(--color-white-a08);
+  color: var(--text-1);
+}
+
+.message-arrivals__all {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-height: 20px;
+  margin-right: -6px;
+  padding: 0 4px 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.message-arrivals__all:hover {
+  background: var(--color-white-a08);
+  color: var(--text-1);
+}
+
+.message-arrivals__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.message-arrivals__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message-arrivals__item {
+  border-radius: var(--radius-xl);
+  background: var(--color-white-a08);
+  animation: message-arrivals-in var(--motion-medium) var(--motion-ease-out) both;
+}
+
+@keyframes message-arrivals-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.message-arrivals__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.message-arrivals__row:hover {
+  background: var(--color-white-a08);
+}
+
+.message-arrivals__row > .message-brand-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.message-arrivals__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.message-arrivals__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.message-arrivals__sender {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-arrivals__time {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+}
+
+.message-arrivals__copied {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--mint-text, #b3ddc7);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.message-arrivals__body {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.message-arrivals__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 9px 42px;
+}
+
+.message-arrivals__action {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-white-a08);
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.message-arrivals__action:hover {
+  background: var(--color-white-a16);
+}
+
+.message-arrivals__row:focus-visible,
+.message-arrivals__all:focus-visible,
+.message-arrivals__clear:focus-visible,
+.message-arrivals__action:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.message-arrivals--inline .message-arrivals__item {
+  background: transparent;
+}
+
+.message-arrivals--inline .message-arrivals__row {
+  align-items: center;
+  gap: 12px;
+  padding: 8px 2px 0;
+}
+
+.message-arrivals--inline .message-arrivals__row:hover {
+  background: transparent;
+}
+
+.message-arrivals--inline .message-arrivals__row > .message-brand-icon {
+  margin-top: 0;
+  border-radius: 8px;
+}
+
+.message-arrivals--inline .message-arrivals__sender {
+  font-size: 14px;
+  line-height: 19px;
+}
+
+.message-arrivals--inline .message-arrivals__actions {
+  padding: 8px 2px 0 46px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-arrivals__item {
+    animation: none;
+  }
+}

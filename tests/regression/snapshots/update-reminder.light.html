@@ -1,0 +1,841 @@
+<body>
+  <main>
+    <h1>
+      新版本提示
+    </h1>
+    <p class="lead">
+      模拟后台检查发现新版本 v0.3.4（当前 v0.3.3）。岛上有两处提示：收起条右侧的「↑」按钮和展开后设置按钮上的小圆点，点它们都打开设置的「关于」页。下面的设置窗口就是那一页：可以读更新说明、点「下载并安装」看进度，也可以跳过这个版本。三处用的是同一个更新状态：开始下载或跳过以后，岛上的提示随之消失。
+    </p>
+    <div id="controls"></div>
+    <div class="row">
+      <section class="case">
+        <h2>
+          收起时
+        </h2>
+        <p>
+          收起条右侧多出「↑」按钮，带一个小点。悬停显示「发现新版本 v0.3.4，点击查看」。
+        </p>
+        <div class="island-box" id="collapsed">
+          <div class="stage" style="--collapsed-island-width: 300px; --expanded-island-height: 220px; --expanded-island-width: 460px">
+            <section aria-label="待办：剩余3个待办" class="island island--collapsed island--todo island--appearance-classic island--detached island--title-hidden" style="--island-outline-fillets-top: shape(nonzero from calc(var(--island-top-fillet)) calc(var(--island-top-fillet)), arc to calc(0px) calc(0px) of calc(var(--island-top-fillet)) ccw, line to calc(var(--island-top-fillet)) calc(0px), close, move to calc(100%) calc(0px), arc to calc(100% - var(--island-top-fillet)) calc(var(--island-top-fillet)) of calc(var(--island-top-fillet)) ccw, line to calc(100% - var(--island-top-fillet)) calc(0px), close); --island-outline-fillets-bottom: shape(nonzero from calc(var(--island-top-fillet)) calc(100% - (var(--island-top-fillet))), arc to calc(0px) calc(100% - (0px)) of calc(var(--island-top-fillet)) cw, line to calc(var(--island-top-fillet)) calc(100% - (0px)), close, move to calc(100%) calc(100% - (0px)), arc to calc(100% - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet))) of calc(var(--island-top-fillet)) cw, line to calc(100% - var(--island-top-fillet)) calc(100% - (0px)), close); --island-outline-fillets-left: shape(nonzero from calc(var(--island-top-fillet)) calc(var(--island-top-fillet)), arc to calc(0px) calc(0px) of calc(var(--island-top-fillet)) cw, line to calc(0px) calc(var(--island-top-fillet)), close, move to calc(0px) calc(100%), arc to calc(var(--island-top-fillet)) calc(100% - var(--island-top-fillet)) of calc(var(--island-top-fillet)) cw, line to calc(0px) calc(100% - var(--island-top-fillet)), close); --island-outline-fillets-right: shape(nonzero from calc(100% - (var(--island-top-fillet))) calc(var(--island-top-fillet)), arc to calc(100% - (0px)) calc(0px) of calc(var(--island-top-fillet)) ccw, line to calc(100% - (0px)) calc(var(--island-top-fillet)), close, move to calc(100% - (0px)) calc(100%), arc to calc(100% - (var(--island-top-fillet))) calc(100% - var(--island-top-fillet)) of calc(var(--island-top-fillet)) ccw, line to calc(100% - (0px)) calc(100% - var(--island-top-fillet)), close); --island-outline-rim-top: shape(evenodd from calc(var(--island-shell-top-corner)) calc(-1 * 0px), line to calc(100% - var(--island-shell-top-corner)) calc(-1 * 0px), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - var(--island-top-fillet) - 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) calc(var(--island-top-fillet) + 0px) / calc(100% - var(--island-top-fillet) - 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(100% - var(--island-top-fillet) - 0px) calc(100% - var(--island-shell-bottom-corner)), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner)) calc(100% - 0px) with calc(100% - var(--island-top-fillet) - 0px) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) calc(100% - 0px), line to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner)) calc(100% - 0px), curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-shell-bottom-corner)) with calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) calc(100% - 0px) / calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc(var(--island-top-fillet) + var(--island-shell-top-corner) + 0px) calc(var(--island-top-fillet) + 0px) with calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc(var(--island-top-fillet) + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) calc(var(--island-top-fillet) + 0px), arc to calc(var(--island-shell-top-corner)) calc(-1 * 0px) of calc(var(--island-top-fillet) + 0px) ccw, close, move to calc(var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)), line to calc(100% - var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, curve to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + 0px) / calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner)) calc(100% - var(--island-rim-width, 1px)) with calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) / calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) calc(100% - var(--island-rim-width, 1px)), line to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner)) calc(100% - var(--island-rim-width, 1px)), curve to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner)) with calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) calc(100% - var(--island-rim-width, 1px)) / calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))), line to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + 0px) with calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + 0px), arc to calc(var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, close); --island-outline-rim-bottom: shape(evenodd from calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)), line to calc(100% - var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(100% - var(--island-top-fillet) - 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) calc(100% - (var(--island-top-fillet) + 0px)) / calc(100% - var(--island-top-fillet) - 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(100% - var(--island-top-fillet) - 0px) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner)) calc(100% - (100% - 0px)) with calc(100% - var(--island-top-fillet) - 0px) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))) / calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) calc(100% - (100% - 0px)), line to calc(var(--island-top-fillet) + var(--island-shell-top-corner)) calc(100% - (100% - 0px)), curve to calc(var(--island-top-fillet) + 0px) calc(100% - (100% - var(--island-shell-top-corner))) with calc(var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) calc(100% - (100% - 0px)) / calc(var(--island-top-fillet) + 0px) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))), line to calc(var(--island-top-fillet) + 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px) calc(100% - (var(--island-top-fillet) + 0px)) with calc(var(--island-top-fillet) + 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)) of calc(var(--island-top-fillet) + 0px) cw, close, move to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))), line to calc(100% - var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, curve to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(100% - (var(--island-top-fillet) + 0px)) / calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner)) calc(100% - (100% - var(--island-rim-width, 1px))) with calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px)))) / calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px))) calc(100% - (100% - var(--island-rim-width, 1px))), line to calc(var(--island-top-fillet) + var(--island-shell-top-corner)) calc(100% - (100% - var(--island-rim-width, 1px))), curve to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner))) with calc(var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px))) calc(100% - (100% - var(--island-rim-width, 1px))) / calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px)))), line to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + 0px)) with calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, close); --island-outline-rim-left: shape(evenodd from calc(-1 * 0px) calc(0px), line to calc(-1 * 0px) calc(100% - 0px), arc to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - 0px) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px) with calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(100% - var(--island-top-fillet) - 0px), line to calc(100% - var(--island-side-radius)) calc(100% - var(--island-top-fillet) - 0px), curve to calc(100% - 0px) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(100% - var(--island-top-fillet) - 0px) / calc(100% - 0px) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)), line to calc(100% - 0px) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - var(--island-side-radius)) calc(var(--island-top-fillet) + 0px) with calc(100% - 0px) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(var(--island-top-fillet) + 0px), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px), curve to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + 0px) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(var(--island-top-fillet) + 0px) / calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)), arc to calc(-1 * 0px) calc(0px) of calc(var(--island-top-fillet) + 0px) cw, close, move to calc(-1 * var(--island-rim-width, 1px)) calc(0px), line to calc(-1 * var(--island-rim-width, 1px)) calc(100% - 0px), arc to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) with calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), line to calc(100% - var(--island-side-radius)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), curve to calc(100% - var(--island-rim-width, 1px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) / calc(100% - var(--island-rim-width, 1px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))), line to calc(100% - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - var(--island-side-radius)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) with calc(100% - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), curve to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px)) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) / calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))), arc to calc(-1 * var(--island-rim-width, 1px)) calc(0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, close); --island-outline-rim-right: shape(evenodd from calc(100% - (-1 * 0px)) calc(0px), line to calc(100% - (-1 * 0px)) calc(100% - 0px), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px) with calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(100% - var(--island-top-fillet) - 0px), line to calc(100% - (100% - var(--island-side-radius))) calc(100% - var(--island-top-fillet) - 0px), curve to calc(100% - (100% - 0px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(100% - var(--island-top-fillet) - 0px) / calc(100% - (100% - 0px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)), line to calc(100% - (100% - 0px)) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - (100% - var(--island-side-radius))) calc(var(--island-top-fillet) + 0px) with calc(100% - (100% - 0px)) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(var(--island-top-fillet) + 0px), line to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + 0px) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(var(--island-top-fillet) + 0px) / calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)), arc to calc(100% - (-1 * 0px)) calc(0px) of calc(var(--island-top-fillet) + 0px) ccw, close, move to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(0px), line to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(100% - 0px), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) with calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), line to calc(100% - (100% - var(--island-side-radius))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), curve to calc(100% - (100% - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px)))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) / calc(100% - (100% - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))), line to calc(100% - (100% - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - (100% - var(--island-side-radius))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) with calc(100% - (100% - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px)))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), line to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px)) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) / calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))), arc to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, close); --island-outline-body-top: shape(nonzero from calc((var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px), arc to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - 0px) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) - var(--island-top-fillet)) calc(100% - 0px), line to calc((var(--island-top-fillet) + var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - 0px), curve to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) - var(--island-top-fillet)) calc(100% - 0px) / calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc((var(--island-top-fillet) + var(--island-shell-top-corner) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) with calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc((var(--island-top-fillet) + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px), arc to calc((var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px) of calc(var(--island-top-fillet) + 0px) ccw, close); --island-outline-body-bottom: shape(nonzero from calc((var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)), arc to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(100% - (100% - 0px)) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) - var(--island-top-fillet)) calc(100% - (100% - 0px)), line to calc((var(--island-top-fillet) + var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(100% - (100% - 0px)), curve to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner))) with calc((var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) - var(--island-top-fillet)) calc(100% - (100% - 0px)) / calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))), line to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) with calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc((var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)) of calc(var(--island-top-fillet) + 0px) cw, close); --island-outline-body-left: shape(nonzero from calc(-1 * 0px) calc((0px) - var(--island-top-fillet)), line to calc(-1 * 0px) calc(((100% + 2 * var(--island-top-fillet)) - 0px) - var(--island-top-fillet)), arc to calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) with calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), line to calc(100% - var(--island-side-radius)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), curve to calc(100% - 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius)) - var(--island-top-fillet)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) / calc(100% - 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)), line to calc(100% - 0px) calc((var(--island-top-fillet) + var(--island-side-radius)) - var(--island-top-fillet)), curve to calc(100% - var(--island-side-radius)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) with calc(100% - 0px) calc((var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), line to calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), curve to calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px + 0px) - var(--island-top-fillet)) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) / calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)), arc to calc(-1 * 0px) calc((0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) cw, close); --island-outline-body-right: shape(nonzero from calc(100% - (-1 * 0px)) calc((0px) - var(--island-top-fillet)), line to calc(100% - (-1 * 0px)) calc(((100% + 2 * var(--island-top-fillet)) - 0px) - var(--island-top-fillet)), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) with calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), line to calc(100% - (100% - var(--island-side-radius))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), curve to calc(100% - (100% - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius)) - var(--island-top-fillet)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) / calc(100% - (100% - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)), line to calc(100% - (100% - 0px)) calc((var(--island-top-fillet) + var(--island-side-radius)) - var(--island-top-fillet)), curve to calc(100% - (100% - var(--island-side-radius))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) with calc(100% - (100% - 0px)) calc((var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), line to calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px + 0px) - var(--island-top-fillet)) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) / calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)), arc to calc(100% - (-1 * 0px)) calc((0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) ccw, close); --island-outline-rim-free: shape(evenodd from calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px), line to calc(((100% - 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px), arc to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px) + var(--island-top-fillet)) calc(0px + 0px) of calc(0px + 0px) ccw, curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) + var(--island-top-fillet)) calc(0px + 0px) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - 0px) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) + var(--island-top-fillet)) calc(100% - 0px), line to calc((0px + var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - 0px), curve to calc((0px + 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((0px + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) + var(--island-top-fillet)) calc(100% - 0px) / calc((0px + 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc((0px + 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)), curve to calc((0px + var(--island-shell-top-corner) + 0px) + var(--island-top-fillet)) calc(0px + 0px) with calc((0px + 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc((0px + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) + var(--island-top-fillet)) calc(0px + 0px), arc to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px) of calc(0px + 0px) ccw, close, move to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)), line to calc(((100% - 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)), arc to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) of calc(0px + 0px) ccw, curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-rim-width, 1px) - var(--island-shell-top-corner))), line to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)), line to calc((0px + var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)), curve to calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((0px + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)) / calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))), line to calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)), curve to calc((0px + var(--island-shell-top-corner) + 0px) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) with calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-rim-width, 1px) - var(--island-shell-top-corner))) / calc((0px + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)), arc to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)) of calc(0px + 0px) ccw, close); --island-hover-lift: 0.0000; --island-hover-grow-x: 0.000px; --island-hover-grow-y: 0.000px">
+              <div class="island__surface">
+                <div aria-hidden="false" class="island__collapsed">
+                  <span class="island__pulse island__pulse--agent-idle" data-opens-bar=""></span>
+                  <button aria-controls="island-panel" aria-expanded="false" aria-label="待办：剩余3个待办，点击展开" class="island__open-button" data-tooltip="" type="button">
+                    <span aria-atomic="true" aria-live="polite" class="island__summary" data-direction="restore" role="status">
+                      <span class="island__summary-layer">
+                        <span class="island__summary-row">
+                          <span class="island__active-task">
+                            剩余3个待办
+                          </span>
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  <button aria-label="发现新版本 v0.3.4，点击查看" class="island-message-button island-message-button--compact island-update-badge" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-circle-arrow-up" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                    <span aria-hidden="true" class="island-message-button__dot island-update-badge__dot"></span>
+                  </button>
+                  <button aria-label="收起岛屿" class="island__quiet-button" data-tooltip="" type="button"></button>
+                </div>
+                <div aria-hidden="true" class="island__expanded" id="island-panel" inert="">
+                  <header class="island__header">
+                    <span aria-hidden="true" class="island__page-pill" data-instant="true" data-shown="true" style="left: #px; right: #px; top: #px; height: #px"></span>
+                    <div class="island__header-start">
+                      <div class="island__title">
+                        <svg aria-label="AI Agent 空闲或已完成" class="lucide lucide-bot island__agent-status-icon island__agent-status-icon--idle" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </div>
+                      <div aria-label="岛屿编辑" class="editor-dots">
+                        <button aria-label="任务清单 (Alt+1)" aria-pressed="true" class="dot-button dot-button--todo dot-button--active" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                        <button aria-label="剪贴板历史 (Alt+2)" aria-pressed="false" class="dot-button dot-button--clipboard" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-clipboard-list" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                        <button aria-label="文件中转 (Alt+3)" aria-pressed="false" class="dot-button dot-button--shelf" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-inbox" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                      </div>
+                      <div class="window-actions window-actions--lead">
+                        <button aria-label="快捷翻译" class="icon-button island-translate-button" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <button aria-label="收起岛屿" class="island__collapse-target" data-tooltip="" type="button"></button>
+                    <div class="window-actions">
+                      <button aria-label="发现新版本 v0.3.4，点击查看" class="icon-button island-settings-button" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-settings" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span aria-hidden="true" class="island-settings-button__dot"></span>
+                      </button>
+                    </div>
+                  </header>
+                  <div class="island__content">
+                    <span>
+                      待办清单
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+      <section class="case">
+        <h2>
+          展开时
+        </h2>
+        <p>
+          右上角的设置按钮带一个小点，悬停文字同上。
+        </p>
+        <div class="island-box island-box--tall" id="expanded">
+          <div class="stage" style="--collapsed-island-width: 300px; --expanded-island-height: 220px; --expanded-island-width: 460px">
+            <section aria-label="待办：剩余3个待办" class="island island--expanded island--todo island--appearance-classic island--detached island--title-hidden" style="--island-outline-fillets-top: shape(nonzero from calc(var(--island-top-fillet)) calc(var(--island-top-fillet)), arc to calc(0px) calc(0px) of calc(var(--island-top-fillet)) ccw, line to calc(var(--island-top-fillet)) calc(0px), close, move to calc(100%) calc(0px), arc to calc(100% - var(--island-top-fillet)) calc(var(--island-top-fillet)) of calc(var(--island-top-fillet)) ccw, line to calc(100% - var(--island-top-fillet)) calc(0px), close); --island-outline-fillets-bottom: shape(nonzero from calc(var(--island-top-fillet)) calc(100% - (var(--island-top-fillet))), arc to calc(0px) calc(100% - (0px)) of calc(var(--island-top-fillet)) cw, line to calc(var(--island-top-fillet)) calc(100% - (0px)), close, move to calc(100%) calc(100% - (0px)), arc to calc(100% - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet))) of calc(var(--island-top-fillet)) cw, line to calc(100% - var(--island-top-fillet)) calc(100% - (0px)), close); --island-outline-fillets-left: shape(nonzero from calc(var(--island-top-fillet)) calc(var(--island-top-fillet)), arc to calc(0px) calc(0px) of calc(var(--island-top-fillet)) cw, line to calc(0px) calc(var(--island-top-fillet)), close, move to calc(0px) calc(100%), arc to calc(var(--island-top-fillet)) calc(100% - var(--island-top-fillet)) of calc(var(--island-top-fillet)) cw, line to calc(0px) calc(100% - var(--island-top-fillet)), close); --island-outline-fillets-right: shape(nonzero from calc(100% - (var(--island-top-fillet))) calc(var(--island-top-fillet)), arc to calc(100% - (0px)) calc(0px) of calc(var(--island-top-fillet)) ccw, line to calc(100% - (0px)) calc(var(--island-top-fillet)), close, move to calc(100% - (0px)) calc(100%), arc to calc(100% - (var(--island-top-fillet))) calc(100% - var(--island-top-fillet)) of calc(var(--island-top-fillet)) ccw, line to calc(100% - (0px)) calc(100% - var(--island-top-fillet)), close); --island-outline-rim-top: shape(evenodd from calc(var(--island-shell-top-corner)) calc(-1 * 0px), line to calc(100% - var(--island-shell-top-corner)) calc(-1 * 0px), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - var(--island-top-fillet) - 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) calc(var(--island-top-fillet) + 0px) / calc(100% - var(--island-top-fillet) - 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(100% - var(--island-top-fillet) - 0px) calc(100% - var(--island-shell-bottom-corner)), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner)) calc(100% - 0px) with calc(100% - var(--island-top-fillet) - 0px) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) calc(100% - 0px), line to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner)) calc(100% - 0px), curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-shell-bottom-corner)) with calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) calc(100% - 0px) / calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc(var(--island-top-fillet) + var(--island-shell-top-corner) + 0px) calc(var(--island-top-fillet) + 0px) with calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc(var(--island-top-fillet) + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) calc(var(--island-top-fillet) + 0px), arc to calc(var(--island-shell-top-corner)) calc(-1 * 0px) of calc(var(--island-top-fillet) + 0px) ccw, close, move to calc(var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)), line to calc(100% - var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, curve to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + 0px) / calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner)) calc(100% - var(--island-rim-width, 1px)) with calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) / calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) calc(100% - var(--island-rim-width, 1px)), line to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner)) calc(100% - var(--island-rim-width, 1px)), curve to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner)) with calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) calc(100% - var(--island-rim-width, 1px)) / calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))), line to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + 0px) with calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + 0px), arc to calc(var(--island-shell-top-corner)) calc(-1 * var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, close); --island-outline-rim-bottom: shape(evenodd from calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)), line to calc(100% - var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(100% - var(--island-top-fillet) - 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) calc(100% - (var(--island-top-fillet) + 0px)) / calc(100% - var(--island-top-fillet) - 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(100% - var(--island-top-fillet) - 0px) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner)) calc(100% - (100% - 0px)) with calc(100% - var(--island-top-fillet) - 0px) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))) / calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) calc(100% - (100% - 0px)), line to calc(var(--island-top-fillet) + var(--island-shell-top-corner)) calc(100% - (100% - 0px)), curve to calc(var(--island-top-fillet) + 0px) calc(100% - (100% - var(--island-shell-top-corner))) with calc(var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) calc(100% - (100% - 0px)) / calc(var(--island-top-fillet) + 0px) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))), line to calc(var(--island-top-fillet) + 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px) calc(100% - (var(--island-top-fillet) + 0px)) with calc(var(--island-top-fillet) + 0px) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * 0px)) of calc(var(--island-top-fillet) + 0px) cw, close, move to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))), line to calc(100% - var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))), arc to calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, curve to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(100% - var(--island-top-fillet) - var(--island-shell-bottom-corner) - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(100% - (var(--island-top-fillet) + 0px)) / calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner)) calc(100% - (100% - var(--island-rim-width, 1px))) with calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px)))) / calc(100% - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px))) calc(100% - (100% - var(--island-rim-width, 1px))), line to calc(var(--island-top-fillet) + var(--island-shell-top-corner)) calc(100% - (100% - var(--island-rim-width, 1px))), curve to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner))) with calc(var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px))) calc(100% - (100% - var(--island-rim-width, 1px))) / calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - var(--island-rim-width, 1px)))), line to calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + 0px)) with calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc(var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc(var(--island-shell-bottom-corner)) calc(100% - (-1 * var(--island-rim-width, 1px))) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, close); --island-outline-rim-left: shape(evenodd from calc(-1 * 0px) calc(0px), line to calc(-1 * 0px) calc(100% - 0px), arc to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - 0px) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px) with calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(100% - var(--island-top-fillet) - 0px), line to calc(100% - var(--island-side-radius)) calc(100% - var(--island-top-fillet) - 0px), curve to calc(100% - 0px) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(100% - var(--island-top-fillet) - 0px) / calc(100% - 0px) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)), line to calc(100% - 0px) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - var(--island-side-radius)) calc(var(--island-top-fillet) + 0px) with calc(100% - 0px) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(var(--island-top-fillet) + 0px), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px), curve to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + 0px) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(var(--island-top-fillet) + 0px) / calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)), arc to calc(-1 * 0px) calc(0px) of calc(var(--island-top-fillet) + 0px) cw, close, move to calc(-1 * var(--island-rim-width, 1px)) calc(0px), line to calc(-1 * var(--island-rim-width, 1px)) calc(100% - 0px), arc to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, curve to calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) with calc(var(--island-top-fillet) + 0px) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), line to calc(100% - var(--island-side-radius)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), curve to calc(100% - var(--island-rim-width, 1px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) / calc(100% - var(--island-rim-width, 1px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))), line to calc(100% - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - var(--island-side-radius)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) with calc(100% - var(--island-rim-width, 1px)) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), line to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), curve to calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px)) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) / calc(var(--island-top-fillet) + 0px) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))), arc to calc(-1 * var(--island-rim-width, 1px)) calc(0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) cw, close); --island-outline-rim-right: shape(evenodd from calc(100% - (-1 * 0px)) calc(0px), line to calc(100% - (-1 * 0px)) calc(100% - 0px), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px) with calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(100% - var(--island-top-fillet) - 0px), line to calc(100% - (100% - var(--island-side-radius))) calc(100% - var(--island-top-fillet) - 0px), curve to calc(100% - (100% - 0px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(100% - var(--island-top-fillet) - 0px) / calc(100% - (100% - 0px)) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)), line to calc(100% - (100% - 0px)) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - (100% - var(--island-side-radius))) calc(var(--island-top-fillet) + 0px) with calc(100% - (100% - 0px)) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(var(--island-top-fillet) + 0px), line to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + 0px) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(var(--island-top-fillet) + 0px) / calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)), arc to calc(100% - (-1 * 0px)) calc(0px) of calc(var(--island-top-fillet) + 0px) ccw, close, move to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(0px), line to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(100% - 0px), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px)) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) with calc(100% - (var(--island-top-fillet) + 0px)) calc(100% - var(--island-top-fillet) - 0px - var(--island-rim-width, 1px) + var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), line to calc(100% - (100% - var(--island-side-radius))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)), curve to calc(100% - (100% - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-side-radius)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px)))) calc(100% - var(--island-top-fillet) - var(--island-rim-width, 1px)) / calc(100% - (100% - var(--island-rim-width, 1px))) calc(100% - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))), line to calc(100% - (100% - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-side-radius)), curve to calc(100% - (100% - var(--island-side-radius))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) with calc(100% - (100% - var(--island-rim-width, 1px))) calc(var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px))) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - var(--island-rim-width, 1px)))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), line to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px)) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) / calc(100% - (var(--island-top-fillet) + 0px)) calc(var(--island-top-fillet) + 0px + var(--island-rim-width, 1px) - var(--island-corner-k, 0.5523) * (0px + var(--island-rim-width, 1px) - var(--island-rim-width, 1px))), arc to calc(100% - (-1 * var(--island-rim-width, 1px))) calc(0px) of calc(var(--island-top-fillet) + var(--island-rim-width, 1px)) ccw, close); --island-outline-body-top: shape(nonzero from calc((var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px), arc to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - 0px) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) - var(--island-top-fillet)) calc(100% - 0px), line to calc((var(--island-top-fillet) + var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - 0px), curve to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) - var(--island-top-fillet)) calc(100% - 0px) / calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner)), curve to calc((var(--island-top-fillet) + var(--island-shell-top-corner) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px) with calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(var(--island-top-fillet) + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc((var(--island-top-fillet) + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(var(--island-top-fillet) + 0px), arc to calc((var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(-1 * 0px) of calc(var(--island-top-fillet) + 0px) ccw, close); --island-outline-body-bottom: shape(nonzero from calc((var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)), arc to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-bottom-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))), line to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner))), curve to calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(100% - (100% - 0px)) with calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))) / calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) - var(--island-top-fillet)) calc(100% - (100% - 0px)), line to calc((var(--island-top-fillet) + var(--island-shell-top-corner)) - var(--island-top-fillet)) calc(100% - (100% - 0px)), curve to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner))) with calc((var(--island-top-fillet) + var(--island-shell-top-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px)) - var(--island-top-fillet)) calc(100% - (100% - 0px)) / calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (100% - var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) - 0px))), line to calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner))), curve to calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)) with calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-bottom-corner)))) / calc((var(--island-top-fillet) + var(--island-shell-bottom-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) + 0px - 0px)) - var(--island-top-fillet)) calc(100% - (var(--island-top-fillet) + 0px)), arc to calc((var(--island-shell-bottom-corner)) - var(--island-top-fillet)) calc(100% - (-1 * 0px)) of calc(var(--island-top-fillet) + 0px) cw, close); --island-outline-body-left: shape(nonzero from calc(-1 * 0px) calc((0px) - var(--island-top-fillet)), line to calc(-1 * 0px) calc(((100% + 2 * var(--island-top-fillet)) - 0px) - var(--island-top-fillet)), arc to calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) cw, curve to calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) with calc(var(--island-top-fillet) + 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)) / calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), line to calc(100% - var(--island-side-radius)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), curve to calc(100% - 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius)) - var(--island-top-fillet)) with calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) / calc(100% - 0px) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)), line to calc(100% - 0px) calc((var(--island-top-fillet) + var(--island-side-radius)) - var(--island-top-fillet)), curve to calc(100% - var(--island-side-radius)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) with calc(100% - 0px) calc((var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)) / calc(100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), line to calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), curve to calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px + 0px) - var(--island-top-fillet)) with calc(var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) / calc(var(--island-top-fillet) + 0px) calc((var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)), arc to calc(-1 * 0px) calc((0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) cw, close); --island-outline-body-right: shape(nonzero from calc(100% - (-1 * 0px)) calc((0px) - var(--island-top-fillet)), line to calc(100% - (-1 * 0px)) calc(((100% + 2 * var(--island-top-fillet)) - 0px) - var(--island-top-fillet)), arc to calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) ccw, curve to calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) with calc(100% - (var(--island-top-fillet) + 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px - 0px + var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)) / calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), line to calc(100% - (100% - var(--island-side-radius))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)), curve to calc(100% - (100% - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius)) - var(--island-top-fillet)) with calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - 0px) - var(--island-top-fillet)) / calc(100% - (100% - 0px)) calc(((100% + 2 * var(--island-top-fillet)) - var(--island-top-fillet) - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)), line to calc(100% - (100% - 0px)) calc((var(--island-top-fillet) + var(--island-side-radius)) - var(--island-top-fillet)), curve to calc(100% - (100% - var(--island-side-radius))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) with calc(100% - (100% - 0px)) calc((var(--island-top-fillet) + var(--island-side-radius) - var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px)) - var(--island-top-fillet)) / calc(100% - (100% - var(--island-side-radius) + var(--island-corner-k, 0.5523) * (var(--island-side-radius) - 0px))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), line to calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)), curve to calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px + 0px) - var(--island-top-fillet)) with calc(100% - (var(--island-top-fillet) + 0px + var(--island-corner-k, 0.5523) * (0px - 0px))) calc((var(--island-top-fillet) + 0px) - var(--island-top-fillet)) / calc(100% - (var(--island-top-fillet) + 0px)) calc((var(--island-top-fillet) + 0px + 0px - var(--island-corner-k, 0.5523) * (0px + 0px - 0px)) - var(--island-top-fillet)), arc to calc(100% - (-1 * 0px)) calc((0px) - var(--island-top-fillet)) of calc(var(--island-top-fillet) + 0px) ccw, close); --island-outline-rim-free: shape(evenodd from calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px), line to calc(((100% - 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px), arc to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px) + var(--island-top-fillet)) calc(0px + 0px) of calc(0px + 0px) ccw, curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) + var(--island-top-fillet)) calc(0px + 0px) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))), line to calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - 0px) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) + var(--island-top-fillet)) calc(100% - 0px), line to calc((0px + var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - 0px), curve to calc((0px + 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((0px + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)) + var(--island-top-fillet)) calc(100% - 0px) / calc((0px + 0px) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - 0px)), line to calc((0px + 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)), curve to calc((0px + var(--island-shell-top-corner) + 0px) + var(--island-top-fillet)) calc(0px + 0px) with calc((0px + 0px) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (0px - var(--island-shell-top-corner))) / calc((0px + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - 0px)) + var(--island-top-fillet)) calc(0px + 0px), arc to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(0px) of calc(0px + 0px) ccw, close, move to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)), line to calc(((100% - 2 * var(--island-top-fillet)) - var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)), arc to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) of calc(0px + 0px) ccw, curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-top-corner) - 0px + var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-rim-width, 1px) - var(--island-shell-top-corner))), line to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)), curve to calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)) with calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) / calc(((100% - 2 * var(--island-top-fillet)) - 0px - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)), line to calc((0px + var(--island-shell-bottom-corner)) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)), curve to calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner)) with calc((0px + var(--island-shell-bottom-corner) - var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(100% - var(--island-rim-width, 1px)) / calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(100% - var(--island-shell-bottom-corner) + var(--island-corner-k, 0.5523) * (var(--island-shell-bottom-corner) - var(--island-rim-width, 1px))), line to calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner)), curve to calc((0px + var(--island-shell-top-corner) + 0px) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)) with calc((0px + var(--island-rim-width, 1px)) + var(--island-top-fillet)) calc(0px + var(--island-shell-top-corner) + var(--island-corner-k, 0.5523) * (var(--island-rim-width, 1px) - var(--island-shell-top-corner))) / calc((0px + var(--island-shell-top-corner) + 0px - var(--island-corner-k, 0.5523) * (var(--island-shell-top-corner) + 0px - var(--island-rim-width, 1px))) + var(--island-top-fillet)) calc(0px + var(--island-rim-width, 1px)), arc to calc((var(--island-shell-top-corner)) + var(--island-top-fillet)) calc(var(--island-rim-width, 1px)) of calc(0px + 0px) ccw, close); --island-hover-lift: 0.0000; --island-hover-grow-x: 0.000px; --island-hover-grow-y: 0.000px">
+              <div class="island__surface">
+                <div aria-hidden="true" class="island__collapsed" inert="">
+                  <span class="island__pulse island__pulse--agent-idle" data-opens-bar=""></span>
+                  <button aria-controls="island-panel" aria-expanded="true" aria-label="待办：剩余3个待办，点击展开" class="island__open-button" data-tooltip="" type="button">
+                    <span aria-atomic="true" aria-live="polite" class="island__summary" data-direction="restore" role="status">
+                      <span class="island__summary-layer">
+                        <span class="island__summary-row">
+                          <span class="island__active-task">
+                            剩余3个待办
+                          </span>
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  <button aria-label="发现新版本 v0.3.4，点击查看" class="island-message-button island-message-button--compact island-update-badge" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-circle-arrow-up" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                    <span aria-hidden="true" class="island-message-button__dot island-update-badge__dot"></span>
+                  </button>
+                  <button aria-label="收起岛屿" class="island__quiet-button" data-tooltip="" type="button"></button>
+                </div>
+                <div aria-hidden="false" class="island__expanded" id="island-panel">
+                  <header class="island__header">
+                    <span aria-hidden="true" class="island__page-pill" data-instant="true" data-shown="true" style="left: #px; right: #px; top: #px; height: #px"></span>
+                    <div class="island__header-start">
+                      <div class="island__title">
+                        <svg aria-label="AI Agent 空闲或已完成" class="lucide lucide-bot island__agent-status-icon island__agent-status-icon--idle" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </div>
+                      <div aria-label="岛屿编辑" class="editor-dots">
+                        <button aria-label="任务清单 (Alt+1)" aria-pressed="true" class="dot-button dot-button--todo dot-button--active" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                        <button aria-label="剪贴板历史 (Alt+2)" aria-pressed="false" class="dot-button dot-button--clipboard" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-clipboard-list" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                        <button aria-label="文件中转 (Alt+3)" aria-pressed="false" class="dot-button dot-button--shelf" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-inbox" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8800000000000003" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                      </div>
+                      <div class="window-actions window-actions--lead">
+                        <button aria-label="快捷翻译" class="icon-button island-translate-button" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <button aria-label="收起岛屿" class="island__collapse-target" data-tooltip="" type="button"></button>
+                    <div class="window-actions">
+                      <button aria-label="发现新版本 v0.3.4，点击查看" class="icon-button island-settings-button" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-settings" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.25" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span aria-hidden="true" class="island-settings-button__dot"></span>
+                      </button>
+                    </div>
+                  </header>
+                  <div class="island__content">
+                    <span>
+                      待办清单
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+    <section class="case">
+      <h2>
+        设置 → 关于
+      </h2>
+      <p>
+        点上面两处提示打开的就是这一页。
+      </p>
+      <div id="settings">
+        <main class="settings-stage stage--font-system settings-stage--light">
+          <div class="settings-layout" data-tauri-drag-region="true">
+            <div class="window-buttons">
+              <button aria-label="最小化" class="window-buttons__button" type="button">
+                <svg aria-hidden="true" class="lucide lucide-minus" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+              </button>
+              <button aria-label="最大化" class="window-buttons__button" type="button">
+                <svg aria-hidden="true" class="lucide lucide-square" fill="none" height="11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="11" xmlns="http://www.w3.org/2000/svg"></svg>
+              </button>
+              <button aria-label="关闭" class="window-buttons__button window-buttons__button--close" type="button">
+                <svg aria-hidden="true" class="lucide lucide-x" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+              </button>
+            </div>
+            <div class="settings-sidebar-card" data-tauri-drag-region="true">
+              <nav aria-label="设置分类" class="settings-sidebar">
+                <div class="settings-sidebar__search">
+                  <svg aria-hidden="true" class="lucide lucide-search" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                  <input aria-label="搜索设置" placeholder="搜索设置" spellcheck="false" type="text" value="">
+                </div>
+                <div class="settings-sidebar__list">
+                  <ul class="settings-sidebar__top">
+                    <li>
+                      <button aria-current="page" class="settings-sidebar__item settings-sidebar__item--active" data-category="overview" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-compass" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span>
+                          概览
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+                  <section aria-label="基础" class="settings-sidebar__group">
+                    <button aria-expanded="true" aria-label="折叠「基础」" class="settings-sidebar__folder" data-group="basics" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-settings2 lucide-settings-2" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        基础
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                    <ul class="settings-sidebar__children">
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="general" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-sliders-horizontal" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            通用
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="appearance" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-layout-template" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            外观
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="islandLayout" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-layout-dashboard" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            岛屿布局
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="sideDocks" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-panel-right" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            侧边翼
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="behavior" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-mouse-pointer-click" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            行为
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="shortcuts" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-keyboard" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            快捷键
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </section>
+                  <section aria-label="功能" class="settings-sidebar__group">
+                    <button aria-expanded="true" aria-label="折叠「功能」" class="settings-sidebar__folder" data-group="features" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-layout-grid" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        功能
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                    <ul class="settings-sidebar__children">
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="todos" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            待办
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="calendar" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-calendar-days" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            日历
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="music" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-music" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            音乐
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="translation" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            翻译
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="clipboard" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-clipboard-list" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            剪贴板
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="shelf" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-inbox" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            文件中转
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="behaviorAlerts" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-timer" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            计时与提醒
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="messages" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-message-circle" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            消息
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested settings-sidebar__more" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-plus" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            开启更多功能
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </section>
+                  <section aria-label="AI Agent" class="settings-sidebar__group">
+                    <button aria-expanded="true" aria-label="折叠「AI Agent」" class="settings-sidebar__folder" data-group="agents" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        AI Agent
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                    <ul class="settings-sidebar__children">
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agents" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            Agent
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentAppearance" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-palette" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            外观
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentAlerts" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-bell" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            提醒
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentRemote" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-server" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            SSH 远程
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </section>
+                  <section aria-label="扩展" class="settings-sidebar__group">
+                    <button aria-expanded="true" aria-label="折叠「扩展」" class="settings-sidebar__folder" data-group="extensions" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-blocks" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        扩展
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                    <ul class="settings-sidebar__children">
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="pluginsV3" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-blocks" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            插件
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="pluginMarket" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-store" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            插件市场
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="generalApi" type="button">
+                          <svg aria-hidden="true" class="lucide lucide-cable" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                          <span>
+                            本机接口
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </section>
+                </div>
+                <div class="settings-sidebar__footer">
+                  <ul>
+                    <li>
+                      <button class="settings-sidebar__item" data-category="about" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-info" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span>
+                          关于
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </nav>
+            </div>
+            <div class="settings-content">
+              <div class="settings-page__header" data-tauri-drag-region="true">
+                <h1 class="settings-page__title" data-tauri-drag-region="true">
+                  概览
+                </h1>
+              </div>
+              <div class="editor-panel">
+                <div class="settings-overview" data-search="off">
+                  <section class="overview-stage" data-feature="todos">
+                    <div aria-hidden="true" class="overview-stage__island" style="--stage-fill: #030303; --stage-text: #ffffff; --stage-dot: #3ae489">
+                      <i class="overview-stage__dot"></i>
+                      <span class="overview-stage__demo">
+                        <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                        <span>
+                          周报交给龙虾写 · 还剩 3 件
+                        </span>
+                      </span>
+                    </div>
+                    <div class="overview-stage__copy">
+                      <strong>
+                        早上好
+                      </strong>
+                      <span>
+                        岛上开着 8 个功能。把鼠标移到下面的卡片上，看它在岛上的样子。
+                      </span>
+                    </div>
+                  </section>
+                  <section class="settings-group">
+                    <div class="settings-group__header">
+                      <h2 class="settings-group__title">
+                        常用
+                      </h2>
+                    </div>
+                    <div class="settings-overview__quick">
+                      <div class="settings-overview__tile" title="跟随系统时，系统切换深浅色，岛也跟着换。">
+                        <span class="settings-overview__tile-label">
+                          <svg aria-hidden="true" class="lucide lucide-sun-moon" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          深色或浅色
+                        </span>
+                        <div aria-label="深色或浅色" class="settings-choice" role="group">
+                          <button aria-pressed="true" class="settings-choice__option settings-choice__option--active" type="button">
+                            深色
+                          </button>
+                          <button aria-pressed="false" class="settings-choice__option" type="button">
+                            浅色
+                          </button>
+                          <button aria-pressed="false" class="settings-choice__option" type="button">
+                            跟随系统
+                          </button>
+                        </div>
+                      </div>
+                      <div class="settings-overview__tile">
+                        <span class="settings-overview__tile-label">
+                          <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          界面语言
+                        </span>
+                        <div class="settings-select">
+                          <div class="select-control">
+                            <button aria-controls="_id1_" aria-expanded="false" aria-haspopup="listbox" aria-label="界面语言" class="select-control__trigger" role="combobox" type="button">
+                              <span>
+                                简体中文
+                              </span>
+                              <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="settings-overview__tile">
+                        <label class="settings-overview__tile-label" for="_id2_">
+                          <svg aria-hidden="true" class="lucide lucide-power" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          开机自启动
+                        </label>
+                        <span class="settings-switch">
+                          <input id="_id2_" role="switch" type="checkbox">
+                          <span aria-hidden="true" class="settings-switch__track"></span>
+                        </span>
+                      </div>
+                    </div>
+                  </section>
+                  <section class="settings-group">
+                    <div class="settings-group__header">
+                      <h2 class="settings-group__title">
+                        功能
+                      </h2>
+                      <span class="settings-overview__count">
+                        已开 8 / 10
+                      </span>
+                    </div>
+                    <ul class="settings-overview__features">
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="todos">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id3_">
+                            待办
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            岛上记今天要做的事，做完打勾
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id3_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="calendar">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-calendar-days" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id4_">
+                            日历
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            看日程，会议开始前在岛上提醒
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id4_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="music">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-music" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id5_">
+                            音乐
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            显示正在播放的歌和歌词，切歌暂停
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id5_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="translation">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id6_">
+                            翻译
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            选中文字按快捷键，马上翻译
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id6_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="clipboard">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-clipboard-list" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id7_">
+                            剪贴板
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            记住复制过的文字和图片，随时再贴
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id7_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="shelf">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-inbox" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id8_">
+                            文件中转
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            把文件拖到岛上先放着，用时再拖走
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id8_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature" data-feature="screenshot">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-crop" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id9_">
+                            截图
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            框选截图，标注、贴到屏幕上或识别文字
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input id="_id9_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature" data-feature="voiceInput">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-mic" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id10_">
+                            语音输入
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            按快捷键说话，本机转成文字，存成待办或笔记
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input id="_id10_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="agents">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id11_">
+                            AI Agent
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            Claude Code、Codex 在干什么、在等你，岛上一眼看到
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id11_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="behaviorAlerts">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-timer" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <label class="settings-overview__feature-name" for="_id12_">
+                            计时与提醒
+                          </label>
+                          <span class="settings-overview__feature-hint">
+                            倒计时与番茄钟、久坐休息提醒，以及音量和设备状态提示
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side">
+                          <span class="settings-switch">
+                            <input checked="" id="_id12_" role="switch" type="checkbox">
+                            <span aria-hidden="true" class="settings-switch__track"></span>
+                          </span>
+                          <button class="settings-overview__open" type="button">
+                            设置
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                      <li class="settings-overview__feature settings-overview__feature--on" data-feature="messages">
+                        <span aria-hidden="true" class="settings-overview__feature-icon">
+                          <svg aria-hidden="true" class="lucide lucide-message-circle" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__feature-text">
+                          <span class="settings-overview__feature-name">
+                            消息
+                          </span>
+                          <span class="settings-overview__feature-hint">
+                            QQ、微信和邮箱的新消息在岛上提醒
+                          </span>
+                        </span>
+                        <span class="settings-overview__feature-side settings-overview__feature-side--end">
+                          <button class="settings-overview__open" type="button">
+                            选择消息来源
+                            <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </span>
+                      </li>
+                    </ul>
+                    <div class="settings-group__footer">
+                      <p>
+                        关掉的功能会从岛上和左边菜单里藏起来，后台也停下；已有数据都保留，随时可以再打开。
+                      </p>
+                    </div>
+                  </section>
+                  <section class="settings-group">
+                    <div class="settings-group__header">
+                      <h2 class="settings-group__title">
+                        接下来
+                      </h2>
+                    </div>
+                    <div class="settings-overview__next">
+                      <button class="settings-overview__next-tile" type="button">
+                        <span aria-hidden="true" class="settings-overview__next-icon">
+                          <svg aria-hidden="true" class="lucide lucide-sliders-horizontal" fill="none" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="17" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__next-text">
+                          <strong>
+                            调整岛的样子
+                          </strong>
+                          <span>
+                            大小、收起时显示什么、离顶部多远。
+                          </span>
+                        </span>
+                        <svg aria-hidden="true" class="lucide lucide-arrow-up-right settings-overview__next-arrow" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                      <button class="settings-overview__next-tile" type="button">
+                        <span aria-hidden="true" class="settings-overview__next-icon">
+                          <svg aria-hidden="true" class="lucide lucide-palette" fill="none" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="17" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__next-text">
+                          <strong>
+                            换一套主题
+                          </strong>
+                          <span>
+                            从主题市场挑别人做好的配色和风格。
+                          </span>
+                        </span>
+                        <svg aria-hidden="true" class="lucide lucide-arrow-up-right settings-overview__next-arrow" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                      <button class="settings-overview__next-tile" type="button">
+                        <span aria-hidden="true" class="settings-overview__next-icon">
+                          <svg aria-hidden="true" class="lucide lucide-keyboard" fill="none" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="17" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__next-text">
+                          <strong>
+                            查看所有快捷键
+                          </strong>
+                          <span>
+                            翻页、翻译、剪贴板、截图的按键都在这里。
+                          </span>
+                        </span>
+                        <svg aria-hidden="true" class="lucide lucide-arrow-up-right settings-overview__next-arrow" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                      <button class="settings-overview__next-tile" type="button">
+                        <span aria-hidden="true" class="settings-overview__next-icon">
+                          <svg aria-hidden="true" class="lucide lucide-sparkles" fill="none" height="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" viewBox="0 0 24 24" width="17" xmlns="http://www.w3.org/2000/svg"></svg>
+                        </span>
+                        <span class="settings-overview__next-text">
+                          <strong>
+                            再看一遍新手引导
+                          </strong>
+                          <span>
+                            在真的岛上一步步演示怎么用。
+                          </span>
+                        </span>
+                        <svg aria-hidden="true" class="lucide lucide-arrow-up-right settings-overview__next-arrow" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </section>
+  </main>
+</body>

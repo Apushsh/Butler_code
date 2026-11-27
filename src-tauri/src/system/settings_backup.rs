@@ -1,0 +1,126 @@
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::{Path, PathBuf},
+};
+
+use tauri::AppHandle;
+
+use crate::user_error::UserError;
+
+const MAX_BACKUP_BYTES: usize = 2 * 1024 * 1024;
+const MAX_NAME_TRIES: u32 = 50;
+const BACKUP_NAME_PREFIXES: [&str; 4] = ["fuyu-settings-", "fuyu-theme-", "fly-island-settings-", "fly-island-theme-"];
+const BACKUP_APP_NAMES: [&str; 2] = ["fuyu", "fly-island"];
+
+pub(crate) fn is_backup_file_name(file_name: &str) -> bool {
+    BACKUP_NAME_PREFIXES
+        .iter()
+        .find_map(|prefix| file_name.strip_prefix(prefix))
+        .and_then(|rest| rest.strip_suffix(".json"))
+        .is_some_and(|stamp| !stamp.is_empty() && stamp.chars().all(|c| c.is_ascii_digit() || c == '-'))
+}
+
+pub(crate) fn is_backup_content(content: &str) -> bool {
+    content.len() <= MAX_BACKUP_BYTES
+        && serde_json::from_str::<serde_json::Value>(content).is_ok_and(|value| {
+            value["app"].as_str().is_some_and(|app| BACKUP_APP_NAMES.contains(&app))
+                && (value["keys"].is_object() || (value["kind"] == "theme" && value["appearance"].is_object()))
+        })
+}
+
+pub(crate) fn write_new_file(dir: &Path, file_name: &str, content: &str) -> Result<PathBuf, UserError> {
+    let stem = file_name.trim_end_matches(".json");
+    for attempt in 1..=MAX_NAME_TRIES {
+        let path = if attempt == 1 {
+            dir.join(file_name)
+        } else {
+            dir.join(format!("{stem} ({attempt}).json"))
+        };
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(mut file) => {
+                file.write_all(content.as_bytes()).map_err(|error| {
+                    UserError::new("file.write", format!("Could not write {}.", path.display()))
+                        .arg("path", path.display().to_string())
+                        .detail(error)
+                })?;
+                return Ok(path);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(UserError::new("file.create", format!("Could not create {}.", path.display()))
+                    .arg("path", path.display().to_string())
+                    .detail(error));
+            }
+        }
+    }
+    Err(UserError::new("settingsBackup.tooManyNames", format!("Too many files named {stem} in {}.", dir.display()))
+        .arg("name", stem)
+        .arg("dir", dir.display().to_string()))
+}
+
+#[tauri::command]
+pub fn save_settings_backup(file_name: String, content: String) -> Result<String, UserError> {
+    if !is_backup_file_name(&file_name) {
+        return Err(UserError::new("settingsBackup.badName", "Not a settings backup file name."));
+    }
+    if !is_backup_content(&content) {
+        return Err(UserError::new("settingsBackup.badContent", "Not a settings or theme backup."));
+    }
+    let dir = crate::system::downloads_dir().ok_or_else(|| UserError::new("file.noDownloads", "The Downloads folder was not found."))?;
+    fs::create_dir_all(&dir).map_err(|error| {
+        UserError::new("file.create", format!("Could not create {}.", dir.display()))
+            .arg("path", dir.display().to_string())
+            .detail(error)
+    })?;
+    write_new_file(&dir, &file_name, &content).map(|path| path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn restart_island(app: AppHandle) {
+    app.restart();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_backup_names_and_contents_are_accepted() {
+        assert!(is_backup_file_name("fuyu-settings-2026-11-22-0930.json"));
+        assert!(is_backup_file_name("fuyu-theme-2026-11-22-0930.json"));
+        assert!(!is_backup_file_name("fuyu-settings-.json"));
+        assert!(!is_backup_file_name("fuyu-notes-2026-11-22-0930.json"));
+        assert!(is_backup_content(r#"{"app":"fuyu","version":1,"keys":{}}"#));
+        assert!(is_backup_content(r#"{"app":"fuyu","kind":"theme","version":1,"appearance":{}}"#));
+        assert!(is_backup_file_name("fly-island-settings-2026-11-06-1430.json"));
+        assert!(!is_backup_file_name("fly-island-settings-.json"));
+        assert!(!is_backup_file_name(r"..\fly-island-settings-1.json"));
+        assert!(!is_backup_file_name("fly-island-settings-1.json.exe"));
+        assert!(is_backup_content(r#"{"app":"fly-island","version":1,"keys":{}}"#));
+        assert!(!is_backup_content(r#"{"app":"other","keys":{}}"#));
+        assert!(!is_backup_content("not json"));
+        assert!(is_backup_file_name("fly-island-theme-2026-11-08-0905.json"));
+        assert!(!is_backup_file_name("fly-island-theme-dark.json"));
+        assert!(is_backup_content(r#"{"app":"fly-island","kind":"theme","version":1,"appearance":{}}"#));
+        assert!(!is_backup_content(r#"{"app":"fly-island","kind":"theme","appearance":"x"}"#));
+        assert_eq!(save_settings_backup("bad.json".into(), "{}".into()).unwrap_err().code(), "settingsBackup.badName");
+        assert_eq!(
+            save_settings_backup("fuyu-settings-1.json".into(), "{}".into()).unwrap_err().code(),
+            "settingsBackup.badContent"
+        );
+    }
+
+    #[test]
+    fn saving_twice_keeps_both_files() {
+        let dir = std::env::temp_dir().join(format!("focusd-settings-backup-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let first = write_new_file(&dir, "fly-island-settings-1.json", "a").unwrap();
+        let second = write_new_file(&dir, "fly-island-settings-1.json", "b").unwrap();
+        assert_eq!(first.file_name().unwrap(), "fly-island-settings-1.json");
+        assert_eq!(second.file_name().unwrap(), "fly-island-settings-1 (2).json");
+        assert_eq!(fs::read_to_string(&first).unwrap(), "a");
+        let _ = fs::remove_dir_all(&dir);
+    }
+}

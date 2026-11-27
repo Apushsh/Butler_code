@@ -1,0 +1,243 @@
+<body>
+  <div id="page">
+    <section class="settings-group">
+      <div class="settings-group__header">
+        <h2 class="settings-group__title">
+          SSH 代理隧道
+        </h2>
+        <span class="settings-switch">
+          <input aria-label="SSH 代理隧道" checked="" id="_id1_" role="switch" type="checkbox">
+          <span aria-hidden="true" class="settings-switch__track"></span>
+        </span>
+      </div>
+      <div class="settings-group__card">
+        <div class="settings-row">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                本地代理
+              </span>
+              <span class="settings-row__description">
+                自动检测依次看 Clash Verge 的设置、正在运行的 v2rayN 的设置和系统代理（Windows 的 Internet 设置、Mac 的网络代理），再试两者的默认端口，用第一个真有程序在监听的；之后每 15 秒再看一次，端口变了隧道跟着换。选 Clash Verge 或 v2rayN 时也先读它们的设置，读不到才用默认端口（7897、10808）。
+              </span>
+            </div>
+            <div class="settings-row__control">
+              <div class="settings-select">
+                <div class="select-control">
+                  <button aria-controls="_id2_" aria-expanded="false" aria-haspopup="listbox" aria-label="本地代理" class="select-control__trigger" role="combobox" type="button">
+                    <span>
+                      自定义端口
+                    </span>
+                    <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row settings-row--indent">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <label class="settings-row__title" for="_id3_">
+                本地端口
+              </label>
+            </div>
+            <div class="settings-row__control">
+              <input class="settings-input settings-input--number" id="_id3_" inputmode="numeric" max="65535" min="1" spellcheck="false" type="number" value="7897">
+            </div>
+          </div>
+        </div>
+        <div class="settings-row" data-search="off">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                当前转发到
+              </span>
+              <span class="settings-row__description">
+                <span class="ssh-tunnel__proxy-status">
+                  <code class="ssh-tunnel__proxy-code">
+                    127.0.0.1:7897
+                  </code>
+                  ·
+                  <span>
+                    端口来自 Clash Verge 的设置
+                    ，代理正在监听。
+                  </span>
+                </span>
+              </span>
+            </div>
+            <div class="settings-row__control">
+              <button class="settings-link-button" type="button">
+                <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+                复制
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group__footer">
+        <p class="settings-footnote">
+          把这台电脑的代理借给 SSH 服务器：为下面打开的每台主机常驻一条 ssh 反向隧道（服务器上的 127.0.0.1:端口 → 这里的本地代理），服务器上设好 http_proxy 就能经这里上网。
+          <button aria-expanded="false" class="settings-footnote__toggle" type="button">
+            了解更多
+          </button>
+        </p>
+      </div>
+    </section>
+    <section class="settings-group">
+      <div class="settings-group__header">
+        <h2 class="settings-group__title">
+          隧道主机
+        </h2>
+      </div>
+      <div class="settings-group__card">
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id4_">
+              zcm6
+            </label>
+            <input aria-invalid="false" aria-label="zcm6 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="10089">
+            <span class="settings-switch">
+              <input checked="" id="_id4_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--connected">
+            已连接
+          </p>
+          <div class="ssh-tunnel__export">
+            <code>
+              export http_proxy=http://127.0.0.1:10089 https_proxy=http://127.0.0.1:10089 HTTPS_PROXY=http://127.0.0.1:10089
+            </code>
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+              复制
+            </button>
+          </div>
+        </div>
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id5_">
+              a6
+            </label>
+            <input aria-invalid="false" aria-label="a6 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="40404">
+            <span class="settings-switch">
+              <input id="_id5_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--off">
+            未开启
+          </p>
+        </div>
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id6_">
+              lab
+            </label>
+            <input aria-invalid="false" aria-label="lab 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="10089">
+            <span class="settings-switch">
+              <input id="_id6_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--connecting">
+            连接中…
+          </p>
+          <div class="ssh-tunnel__export">
+            <code>
+              export http_proxy=http://127.0.0.1:10089 https_proxy=http://127.0.0.1:10089 HTTPS_PROXY=http://127.0.0.1:10089
+            </code>
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+              复制
+            </button>
+          </div>
+        </div>
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id7_">
+              nas
+            </label>
+            <input aria-invalid="false" aria-label="nas 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="30089">
+            <span class="settings-switch">
+              <input checked="" id="_id7_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--error">
+            连接失败，稍后重试
+            <span class="ssh-tunnel__reason">
+              ssh exited with 255: Permission denied (publickey).
+            </span>
+          </p>
+          <div class="ssh-tunnel__export">
+            <code>
+              export http_proxy=http://127.0.0.1:30089 https_proxy=http://127.0.0.1:30089 HTTPS_PROXY=http://127.0.0.1:30089
+            </code>
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+              复制
+            </button>
+          </div>
+        </div>
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id8_">
+              gpu
+            </label>
+            <input aria-invalid="false" aria-label="gpu 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="37897">
+            <span class="settings-switch">
+              <input checked="" id="_id8_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--portInUse">
+            端口被占用，等待中
+          </p>
+          <div class="ssh-tunnel__export">
+            <code>
+              export http_proxy=http://127.0.0.1:37897 https_proxy=http://127.0.0.1:37897 HTTPS_PROXY=http://127.0.0.1:37897
+            </code>
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+              复制
+            </button>
+          </div>
+        </div>
+        <div class="ssh-tunnel__host">
+          <div class="ssh-tunnel__head">
+            <label for="_id9_">
+              old
+            </label>
+            <input aria-invalid="false" aria-label="old 服务器端口" class="settings-input ssh-tunnel__port" inputmode="numeric" placeholder="服务器端口" spellcheck="false" value="40089">
+            <span class="settings-switch">
+              <input checked="" id="_id9_" role="switch" type="checkbox">
+              <span aria-hidden="true" class="settings-switch__track"></span>
+            </span>
+          </div>
+          <p class="ssh-tunnel__state ssh-tunnel__state--off">
+            插件开启后连接
+          </p>
+          <div class="ssh-tunnel__export">
+            <code>
+              export http_proxy=http://127.0.0.1:40089 https_proxy=http://127.0.0.1:40089 HTTPS_PROXY=http://127.0.0.1:40089
+            </code>
+            <button class="settings-link-button" type="button">
+              <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+              复制
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group__footer">
+        <p class="settings-footnote">
+          主机来自 ~/.ssh/config 和上面添加的主机。
+          <button aria-expanded="false" class="settings-footnote__toggle" type="button">
+            了解更多
+          </button>
+        </p>
+      </div>
+    </section>
+  </div>
+</body>

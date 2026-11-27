@@ -1,0 +1,416 @@
+use super::*;
+use windows::Win32::UI::WindowsAndMessaging::{GetWindowThreadProcessId, IsIconic};
+
+#[test]
+fn visible_main_is_preferred_and_login_windows_are_not_restored() {
+    let windows = [
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 1,
+            main_sized: true,
+            visible: false,
+        },
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 2,
+            main_sized: false,
+            visible: true,
+        },
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 3,
+            main_sized: true,
+            visible: true,
+        },
+    ];
+    assert_eq!(preferred_window(&windows).unwrap().started_at, 3);
+    assert_eq!(preferred_window(&windows[..2]).unwrap().started_at, 1);
+    assert!(preferred_window(&windows[1..2]).is_none());
+}
+
+#[test]
+#[ignore = "Activates the registered weixin protocol and verifies the original main process"]
+fn window_activation_reuses_the_existing_wechat_process() {
+    let executable = installed_executable().unwrap();
+    let before = existing_wechat_windows(&executable).unwrap();
+    let original = preferred_window(&before.found).expect("WeChat main window is required");
+    let mut expected_process = 0;
+    unsafe {
+        GetWindowThreadProcessId(original.handle, Some(&mut expected_process));
+    }
+    assert_ne!(expected_process, 0);
+    for _ in 0..2 {
+        assert!(activate_existing_wechat(&executable).unwrap());
+        let after = existing_wechat_windows(&executable).unwrap();
+        let window =
+            preferred_window(&after.found).expect("The existing main window must be visible");
+        let mut process_id = 0;
+        unsafe {
+            GetWindowThreadProcessId(window.handle, Some(&mut process_id));
+        }
+        assert_eq!(process_id, expected_process);
+        assert!(!unsafe { IsIconic(window.handle) }.as_bool());
+    }
+}
+
+#[test]
+fn repeated_flashes_create_one_reminder_and_activation_acknowledges_it() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    assert!(state.apply(generation, ReminderSignal::Attention, 1000));
+    assert!(!state.apply(generation, ReminderSignal::Attention, 2000));
+    assert_eq!(state.snapshot.last_attention_at, Some(1000));
+    assert!(state.apply(generation, ReminderSignal::Activated, 3000));
+    assert!(!state.snapshot.pending);
+    assert!(state.apply(generation, ReminderSignal::Attention, 4000));
+}
+
+#[test]
+fn clearing_the_list_also_ends_the_pending_reminder() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    assert!(state.apply(generation, ReminderSignal::Attention, 1000));
+    assert!(state.clear());
+    assert!(!state.snapshot.pending && state.snapshot.items.is_empty());
+    assert!(!state.clear(), "clearing twice changes nothing");
+    assert!(state.apply(generation, ReminderSignal::Attention, 2000), "the next flash is news again");
+}
+
+#[test]
+fn disabling_clears_pending_state_and_rejects_old_listener_events() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let old = state.generation;
+    state.apply(old, ReminderSignal::Attention, 1000);
+    state.set_enabled(false);
+    assert!(!state.snapshot.pending);
+    assert!(!state.apply(old, ReminderSignal::Attention, 2000));
+    state.set_enabled(true);
+    assert!(!state.apply(old, ReminderSignal::Attention, 3000));
+    assert!(state.apply(state.generation, ReminderSignal::Attention, 4000));
+}
+
+#[test]
+fn activating_wechat_forgets_only_what_arrived_before_it_when_auto_clear_is_on() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    let message = |chat: &str, at| ChatMessage {
+        chat: chat.into(),
+        contact: chat.into(),
+        preview: "hi".into(),
+        unread: None,
+        at,
+    };
+    assert!(state.receive(generation, message("a", 1000)));
+    assert!(state.apply(generation, ReminderSignal::Activated, 2000));
+    assert_eq!(state.snapshot.items.len(), 1, "nothing is forgotten while auto clear is off");
+    state.auto_clear = true;
+    assert!(state.receive(generation, message("b", 3000)));
+    assert!(state.apply(generation, ReminderSignal::Activated, 2500));
+    let left: Vec<_> = state.snapshot.items.iter().map(|item| item.at).collect();
+    assert_eq!(left, [3000], "a message that arrived after the activation stays");
+    assert!(!state.apply(generation, ReminderSignal::ActivatedElsewhere, 4000));
+    assert_eq!(state.snapshot.items.len(), 1, "another app coming forward is not a sign of reading");
+    assert!(!state.forget_seen(2999));
+    assert!(state.forget_seen(3000));
+    assert!(state.snapshot.items.is_empty());
+    assert!(!state.forget_seen(5000));
+}
+
+#[test]
+fn redraws_and_window_creation_are_not_messages() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    assert!(!state.apply(generation, ReminderSignal::Redraw, 1000));
+    assert!(!state.apply(generation, ReminderSignal::WindowCreated, 2000));
+    assert!(!state.snapshot.pending);
+}
+
+#[test]
+fn opening_wechat_prefers_main_window_over_an_older_login_window() {
+    let windows = [
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 10,
+            main_sized: false,
+            visible: true,
+        },
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 20,
+            main_sized: true,
+            visible: true,
+        },
+    ];
+    assert_eq!(preferred_window(&windows).unwrap().started_at, 20);
+}
+
+#[test]
+fn opening_wechat_reuses_the_older_main_window_instead_of_a_new_instance() {
+    let windows = [
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 20,
+            main_sized: true,
+            visible: true,
+        },
+        WeChatWindow {
+            handle: HWND::default(),
+            started_at: 10,
+            main_sized: true,
+            visible: true,
+        },
+    ];
+    assert_eq!(preferred_window(&windows).unwrap().started_at, 10);
+}
+
+#[test]
+#[ignore = "Requires a running WeChat desktop session; reads window metadata only"]
+fn finds_existing_wechat_main_window_without_launching() {
+    let search = existing_wechat_windows(&installed_executable().unwrap()).unwrap();
+    let selected = preferred_window(&search.found).expect("An existing WeChat window is required");
+    assert!(
+        selected.main_sized,
+        "The existing main window must be preferred over a login window"
+    );
+}
+
+#[test]
+fn every_message_read_from_the_list_is_published_while_the_reminder_is_pending() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    let message = |chat: &str, at| ChatMessage {
+        chat: chat.into(),
+        contact: chat.into(),
+        preview: "hi".into(),
+        unread: Some(1),
+        at,
+    };
+    assert!(state.receive(generation, message("a", 1000)));
+    assert!(state.receive(generation, message("b", 1001)));
+    assert!(state.snapshot.pending);
+    assert_eq!(state.snapshot.last_attention_at, Some(1000));
+    assert_eq!(state.snapshot.message.as_ref().map(|m| m.chat.as_str()), Some("b"));
+    assert!(!state.receive(generation + 1, message("c", 1002)));
+    state.set_enabled(false);
+    assert_eq!(state.snapshot.message, None);
+}
+
+#[test]
+fn the_list_keeps_each_message_and_one_row_per_plain_reminder() {
+    let mut state = ReminderState::default();
+    state.set_enabled(true);
+    let generation = state.generation;
+    let message = |chat: &str, at| ChatMessage {
+        chat: chat.into(),
+        contact: chat.into(),
+        preview: "hi".into(),
+        unread: None,
+        at,
+    };
+    assert!(state.remind(generation, 1000, Some(PlainReason::Tray)));
+    assert!(!state.remind(generation, 2000, Some(PlainReason::Tray)));
+    assert!(state.receive(generation, message("a", 3000)));
+    assert!(state.apply(generation, ReminderSignal::Activated, 4000));
+    assert!(state.apply(generation, ReminderSignal::Attention, 5000));
+    let rows: Vec<_> = state
+        .snapshot
+        .items
+        .iter()
+        .map(|item| {
+            (
+                item.at,
+                item.message.as_ref().map(|m| m.chat.as_str()),
+                item.reason,
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            (5000, None, None),
+            (3000, Some("a"), None),
+            (1000, None, Some(PlainReason::Tray))
+        ]
+    );
+    for at in 0..MAX_ITEMS as u64 + 5 {
+        state.receive(generation, message("b", 6000 + at));
+    }
+    assert_eq!(state.snapshot.items.len(), MAX_ITEMS);
+    assert_eq!(state.snapshot.items[0].at, 6000 + MAX_ITEMS as u64 + 4);
+    state.set_enabled(false);
+    assert!(state.snapshot.items.is_empty());
+}
+
+fn chat(key: &str, preview: &str, unread: u32) -> chats::Session {
+    chats::Session {
+        key: key.into(),
+        contact: key.into(),
+        preview: preview.into(),
+        unread: Some(unread),
+        muted: false,
+        mentioned: false,
+    }
+}
+
+#[test]
+fn the_users_own_message_is_not_news() {
+    let before = [chat("x", "早", 0), chat("a", "对方: 在吗", 0)];
+    let now = [chat("a", "我: 在", 0), chat("x", "早", 0)];
+    assert!(chats::new_messages(&before, &now).is_empty());
+    assert!(!chats::muted_changed(&before, &now));
+    let now = [chat("a", "对方: 好", 1), chat("x", "早", 0)];
+    assert_eq!(chats::new_messages(&before, &now).len(), 1);
+}
+
+#[test]
+fn a_reply_written_while_a_flash_was_being_read_is_not_news() {
+    use std::{cell::RefCell, collections::VecDeque, rc::Rc, time::Duration};
+    let looks = Rc::new(RefCell::new(VecDeque::from([Listing::Rows(vec![chat(
+        "a", "对方: 在吗", 0,
+    )])])));
+    let queue = looks.clone();
+    let mut reader = ChatReader::new(
+        move || queue.borrow_mut().pop_front().unwrap_or(Listing::Unreadable),
+        true,
+    );
+    let outcome = |reader: &mut ChatReader<_>, start: Instant| {
+        reader.flashed(start);
+        (1..20)
+            .find_map(|step| reader.tick(start + Duration::from_millis(250 * step)))
+            .expect("an outcome")
+    };
+    let start = Instant::now();
+    reader.flashed(start);
+    reader.activated(true, start);
+    reader.activated(false, start);
+    let replied = || Listing::Rows(vec![chat("a", "我: 在", 0)]);
+    looks.borrow_mut().extend([replied(), replied(), replied()]);
+    assert_eq!(
+        outcome(&mut reader, start),
+        Flash::Plain(Some(PlainReason::Unchanged))
+    );
+    looks
+        .borrow_mut()
+        .push_back(Listing::Rows(vec![chat("a", "对方: 好", 1)]));
+    assert!(matches!(
+        outcome(&mut reader, start + Duration::from_secs(10)),
+        Flash::Messages(_)
+    ));
+}
+
+#[test]
+fn shell_matcher_supports_exact_paths_and_case_insensitive_executable_lists() {
+    let exact = source::ShellMatcher::exact_path(r"\\?\C:/Program Files/Tencent/Weixin/Weixin.exe");
+    assert!(exact.matches_path(r"c:\program files\tencent\weixin\WEIXIN.EXE"));
+    assert!(!exact.matches_path(r"D:\Portable\Weixin.exe"));
+
+    let names = source::ShellMatcher::file_names(&["Feishu.exe", "Lark.exe"]);
+    assert!(names.matches_path(r"C:\Users\demo\AppData\Local\Feishu\feishu.exe"));
+    assert!(names.matches_path(r"D:/Apps/Lark/LARK.EXE"));
+    assert!(!names.matches_path(r"C:\Apps\MyFeishu.exe"));
+}
+
+#[test]
+fn multi_source_shell_routing_isolates_flash_suppression_and_activation() {
+    use source::{route_multi_signals, ShellMatcher, TargetWindow};
+
+    let wechat = ShellMatcher::exact_path(r"C:\Tencent\Weixin\Weixin.exe");
+    let telegram = ShellMatcher::file_names(&["Telegram.exe"]);
+    let feishu = ShellMatcher::file_names(&["Feishu.exe", "Lark.exe"]);
+    let matchers = [(0, &wechat), (1, &telegram), (2, &feishu)];
+
+    let tg_win = TargetWindow::Path(r"D:\Tools\Telegram\telegram.exe".into());
+    assert_eq!(
+        route_multi_signals(
+            ReminderSignal::Attention,
+            &tg_win,
+            Some(r"C:\Tencent\Weixin\Weixin.exe"),
+            matchers,
+        ),
+        vec![(1, ReminderSignal::Attention)]
+    );
+    assert!(
+        route_multi_signals(
+            ReminderSignal::Attention,
+            &tg_win,
+            Some(r"D:\Other\Telegram.exe"),
+            matchers,
+        )
+        .is_empty()
+    );
+    assert_eq!(
+        route_multi_signals(ReminderSignal::Activated, &tg_win, None, matchers),
+        vec![
+            (0, ReminderSignal::ActivatedElsewhere),
+            (1, ReminderSignal::Activated),
+            (2, ReminderSignal::ActivatedElsewhere),
+        ]
+    );
+    assert_eq!(
+        route_multi_signals(
+            ReminderSignal::Activated,
+            &TargetWindow::Invalid,
+            None,
+            matchers
+        ),
+        vec![
+            (0, ReminderSignal::ActivatedElsewhere),
+            (1, ReminderSignal::ActivatedElsewhere),
+            (2, ReminderSignal::ActivatedElsewhere),
+        ]
+    );
+    assert!(
+        route_multi_signals(
+            ReminderSignal::Activated,
+            &TargetWindow::Unreadable,
+            None,
+            matchers
+        )
+        .is_empty()
+    );
+}
+
+#[test]
+fn shared_shell_hub_starts_on_first_subscriber_and_stops_when_last_drops() {
+    assert!(!shell_hub::is_running());
+    let first = shell_hub::subscribe_executables(&["Telegram.exe"], |_| {}).unwrap();
+    assert!(shell_hub::is_running());
+    let second = shell_hub::subscribe_executables(&["Feishu.exe", "Lark.exe"], |_| {}).unwrap();
+    assert!(shell_hub::is_running());
+    drop(first);
+    assert!(shell_hub::is_running());
+    drop(second);
+    assert!(!shell_hub::is_running());
+}
+
+#[test]
+fn source_errors_carry_stable_error_codes() {
+    use source::SourceError;
+    assert_eq!(shell_hub::source_user_error(SourceError::NotInstalled).code(), "wechat.notInstalled");
+    assert_eq!(shell_hub::source_user_error(SourceError::Canonicalize("x".into())).code(), "wechat.verifyPath");
+    assert_eq!(shell_hub::source_user_error(SourceError::AlreadyRunning).code(), "shellAttention.alreadyRunning");
+    assert_eq!(shell_hub::source_user_error(SourceError::RegisterEvent("x".into())).code(), "shellAttention.registerEvent");
+    assert_eq!(shell_hub::source_user_error(SourceError::CreateReceiver("x".into())).code(), "shellAttention.createReceiver");
+    assert_eq!(shell_hub::source_user_error(SourceError::Listen("x".into())).code(), "shellAttention.listen");
+}
+
+#[test]
+fn a_chat_row_is_clicked_only_after_two_matching_sightings() {
+    use chats::{settled, Sighting};
+    assert_eq!(settled(None, Sighting::At(10, 20)), None);
+    assert_eq!(settled(Some(Sighting::At(10, 20)), Sighting::At(10, 20)), Some((10, 20)));
+    assert_eq!(settled(Some(Sighting::At(10, 20)), Sighting::At(10, 64)), None);
+    for previous in [Sighting::Unreadable, Sighting::Missing, Sighting::OutOfView] {
+        assert_eq!(settled(Some(previous), Sighting::At(10, 20)), None);
+        assert_eq!(settled(Some(Sighting::At(10, 20)), previous), None);
+    }
+    assert_eq!(Sighting::Unreadable.reason(), "the chat list is not readable");
+    assert_eq!(Sighting::Missing.reason(), "the chat is not in the list");
+    assert_eq!(Sighting::OutOfView.reason(), "the chat is scrolled out of view");
+}

@@ -1,0 +1,170 @@
+# Rust / Tauri 规则（src-tauri/）
+
+适用于 `src-tauri/` 下的所有文件，在根目录 [AGENTS.md](../AGENTS.md) 的基础上补充原生侧细则。各模块从旧位置迁到新位置的映射见 [docs/architecture/migration-map.md](../docs/architecture/history/migration-map.md)。
+
+## 目标结构
+
+```text
+src-tauri/src/
+├── main.rs                  # 只调用 fuyu_lib::run()
+├── lib.rs                   # 只有 mod 声明和 run()：插件、setup、托盘、collect_commands!（汇总各模块的 tauri_commands!）
+├── tray.rs                  # 托盘图标与事件：左键、右键都开关托盘卡片（tray_menu/），卡片窗口打不开时才弹原生精简菜单（显示 / 隐藏岛屿、设置、退出），文字跟随岛屿语言（命令 set_tray_language）；Mac 菜单栏图标跟随水母画风（命令 set_tray_mark，位图由 tray_mark.rs 核对尺寸后当模板图用，并存进数据目录的 tray-mark.bin 供下次启动直接用）
+├── tray_menu/               # 托盘卡片（C99.2）：窗口 tray-menu 的创建、显示、失焦关闭（window.rs），弹出位置的纯函数（place.rs），命令 tray_menu_state / tray_menu_action / tray_menu_resize；岛的右键菜单也借这个窗口显示（island_menu.rs，命令 island_menu_open / island_menu_rows / island_menu_action）；Mac 上的面板在 macos/tray_panel.rs
+├── tray_mark.rs             # 只在 macOS 上编译：菜单栏用的单色模板图，按 docs/assets/logo/menubar-template.svg 的水母剪影在代码里画
+├── tray_visibility.rs       # 托盘 / 菜单栏图标显示与否（tray-icon.json，建托盘时页面还没加载所以放原生侧）；隐藏后再次打开浮屿时显示岛并打开设置
+├── taskbar_host/            # 把窗口挂到 Win11 任务栏上（C154）：窗口所有者设成任务栏、加 NOACTIVATE | TOOLWINDOW；岛的预留槽位另由一个透明原生占位窗口（win32/taskbar_slot.rs）挂在任务栏上，岛的窗口挂在占位窗口下面（dock.rs，每 500ms 跟随任务栏位置、自动隐藏、全屏和 Explorer 重启，发 taskbar-dock-changed）；空白区域和排位的纯计算在 layout.rs，读任务栏在 snapshot.rs；命令 get_taskbar_layout / taskbar_dock / taskbar_undock；Mac 上是 unsupported.rs
+├── taskbar_lyrics/          # 任务栏歌词条窗口 taskbar-lyrics（C154.3）：命令 set_taskbar_lyrics（只在 Win11 建、关时取下并销毁）/ show_taskbar_lyrics（不抢焦点地显示或隐藏）；挂任务栏走 taskbar_host；Mac 上是 unsupported.rs
+├── island/                  # 主窗口：命令、窗口状态、几何计算、毛玻璃、鼠标穿透（banner_hit.rs：新消息横幅的可点区域）、贴边动画
+├── wallpaper/               # 读各显示器的桌面壁纸给岛的背景用（get_wallpapers，thumbnail.rs 缩成 JPEG），变了发 wallpaper-changed；Mac 上是 unsupported.rs
+├── todos/                   # 待办与每日笔记：todos.json 持久化、从旧版 localStorage 迁移、命令与插件/本地接口读写
+├── agent_approval/          # 在岛上审批（B6 第 2 期）：127.0.0.1 上的审批端点（标准库 TcpListener，挂起时能发现 Agent 断开）、按会话排队、等待上限、agent-approval.json；监听可以停下再绑回（`pause` / `resume`）；开发版只听自己的端口，在正式数据目录写 `agent-approval.lane-<编号>.json` 报地址、停下时删掉（lane_file.rs），不接手正式版的端口、不改正式版的文件，钩子脚本先试正式版再试 lane 文件
+├── agent_status/            # AI 代理状态：快照、运行标记、Codex / Claude Code hook 安装；hooks/ 为编入二进制的 hook 脚本；sound_packs.rs 为导入的音效包（应用数据目录的 sound-packs/）
+│                            #   reply_marker.rs：可选的回复状态标记（B9），增删 CLAUDE.md 里岛屿自己的那段说明、识别回复末行的标记
+├── phone_push/              # 手机推送（Bark）：设备 Key 凭据存取、发送推送、锁屏与空闲时间查询命令
+├── claude_usage/            # 用量环（内置插件 claude-usage）：可选的「直接向 Anthropic 查询」只读 Claude Code 凭据、经 http(s) 代理（插件配置 → HTTPS_PROXY → 系统代理：Windows 注册表、macOS `scutil --proxy`，从不直连）请求 oauth/usage，后台轮询与退避（background.rs 把轮询登记成插件的后台 poller，关掉插件就停）；结果由 agent_status 的 get_agent_usage 合并（source.rs 为取数与解析）；plan.rs 是 GLM、Kimi 的用量和 Key（命令 get_plan_usage、set_plan_key、has_plan_key）
+├── ssh_tunnel/              # SSH 代理隧道（第 3 版内置插件 ssh-tunnel，background.rs 把本地代理探测和反向隧道登记成后台 tunnels，关掉插件就停）：ssh-tunnels.json（config.rs），每台主机一条常驻 ssh -R、作业对象、退避重连（tunnel.rs），服务器端口占用检查，本地代理端口自动检测（local_proxy.rs）
+├── cc_connect/              # cc-connect 手机连接（第 3 版内置插件 cc-connect，background.rs 把看护线程登记成后台 runner，关掉插件就停）：找程序（插件设置 → 正在运行 → PATH → 岛下载的 → C/D 盘 Program Files，locate.rs）、下载并核对发布包（install.rs）、只读会话列表（chats.rs）、检查机器人 token（bots.rs）、往 config.toml 追加项目（config_file.rs）、飞书扫码（feishu.rs）、看护岛启动的 cc-connect（runner.rs）、经 cc-connect send 发消息
+├── system/                  # 开机自启（注册表；从 MSIX 包启动时改用 StartupTask，msix.rs 判断是不是商店版，D116）、更新代理与配置、待办 Markdown 导出；update_runtime.rs 为跨窗口更新状态与互斥，update_notifications.rs 为更新系统通知与白名单诊断
+├── sync/                    # 跨设备同步：每台设备只写自己的远端目录、读全部再在本地逐条合并（engine.rs、merge.rs、clock.rs 的 HLC），后端是文件夹（backend_folder.rs）、WebDAV（webdav/）和局域网直连（lan/：配对、钉证书的 TLS、mDNS、剪贴板互传），端到端加密（crypto/），各类数据在 categories/（待办、设置、片段、链接、剪贴板收藏）；数据文件见 docs/architecture/data-storage.md
+├── theme_market.rs          # 设置 → 主题市场：经下载镜像读 TixXin/fuyu-plugins 的 themes.json（命令 get_theme_market）
+├── rename_migration/        # 改名迁移（D17）：首次启动时把改名前的数据目录、凭据、开机自启、hook 迁移到 com.tixxin.fuyu，并静默卸载旧安装；各处旧名兼容的清单见 docs/architecture/contracts.md「改名兼容（D17）」
+├── uninstall_cleanup.rs     # 卸载前清理：带卸载参数启动时 lib.rs 先走这里（maybe_run_from_args），同步移除 Agent 钩子、凭据和受管的数据文件后直接退出，不建 WebView、不占单实例锁
+├── clipboard_history/
+├── coexist/                 # 开发版和正式版抢系统资源时谁让谁（F39.4）：state.rs 纯判断，mod.rs 轮询对方在不在（开发版探测单实例互斥量，正式版探测开发版持有的 dev-first 互斥量，放手后持有 release-yielded；正式版只在本机有开发版数据目录时才起线程）、`yielding()`、命令 get_dev_priority / set_dev_priority、状态翻转时让五处快捷键重新注册、正式版让出时停下审批监听（F39.5）；让出时提醒不弹横幅（`banner_visible`）；Mac 上是 unsupported.rs
+├── file_shelf/              # 文件中转：路径列表（file-shelf.json）与命令；拖出调用 win32/ole.rs
+├── screenshot/              # 截图（C41）：快捷键线程（hotkeys.rs，主键盘 RegisterHotKey、小键盘交给 win32/win_key_hook.rs），每个显示器先截图再给它一个常驻隐藏的选区窗口 screenshot-<n>（session.rs，截屏在 win32/screen_capture.rs），复制到剪贴板（output.rs、clipboard.rs）；系统调用经 capture.rs，Mac 上换成 `*_macos.rs`（ScreenCaptureKit、NSPanel、global-hotkey）
+├── recording/               # 录屏（C41.11）：命令、倒计时、暂停计时和浮屿窗口排除在录像外（control.rs，状态在 state.rs，发 recording-state / recording-finished 给岛），录制线程（session.rs：WGC 帧经有界队列交给编码线程，满了丢帧计数）、帧节奏（pacing.rs，静止 3 个间隔才补重复帧，暂停扣时长）、尺寸码率和文件名（format.rs）、声音（audio.rs 接采集、按视频时间轴放；mixer.rs 混成 48 kHz 立体声）、GIF（gif.rs：每 1/15 秒挑一帧读回内存交给 gifski 线程）；声音采集在 win32/audio_capture.rs，画面采集在 win32/graphics_capture.rs，编码写 MP4 在 win32/video_writer.rs
+├── pets/                    # Codex Pets（petdex）：只读列出 ~/.codex/pets 与 <app data>/pets，校验后以 data URL 返回图集
+├── local_api/               # 本地接口（第 3 版内置插件 local-api，background.rs 把 HTTP 服务登记成后台 server，关掉插件就停）：127.0.0.1 HTTP（tiny_http）、鉴权与路由、转给 main 窗口的桥、local-api.json；switches.rs 让转给待办、Agent、剪贴板、消息的请求在那个插件关着时回 503；notify.rs 是 POST /v1/notify 的字段校验和按来源限频；settings.rs 是设置页的命令（令牌只由 Rust 复制）
+├── plugin_kernel/           # 插件平台第 3 版的宿主：默认启动（设 FUYU_PLUGINS_V3=0 关掉），正式安装包用资源目录里的宿主；找 Node（找下载的状态和重试在 node_status.rs）、在数据目录的 plugins-v3/ 下拉起 packages/plugin-base 的宿主，用 platform::job 管住它（containment.rs）；keybindings.rs 同步第 3 版插件全局热键，plugin_windows.rs 管理实验独立窗口（plugin-window-<n>）。看管宿主的通用部分在 crates/plugin-base
+├── media_control/
+├── calendar/                # 日历：CalDAV（caldav.rs）和 ICS 订阅链接，iCalendar 解析和重复日程展开（ics.rs，rrule），会议链接识别（meeting_link.rs），来源配置与凭据（sources.rs）
+├── lyrics/                  # 音乐页歌词：本地 .lrc 文件夹（local.rs）、LRCLIB（lrclib.rs，用户开启才联网）、按歌名歌手时长匹配（matching.rs），在线结果缓存在 lyrics-cache/
+├── system_levels/           # 音量、亮度变化提示：后台线程读默认输出的音量和静音、屏幕亮度（win32/brightness.rs 的 WMI、win32/monitor_ddc.rs 的 DDC/CI，macos/brightness.rs），变化时发 system-level-changed 事件；命令 get_system_levels / set_system_volume / set_system_brightness 给面板的音量亮度组件
+├── system_widgets/          # 面板的系统组件：命令 get_system_stats（CPU 占用、内存、网速、电池；CPU 和网速是和上一次调用的差，stats.rs 是纯计算）、launch_quick_app（内置四项 files、terminal、calculator、settings，launch.rs）、quick_app_info / launch_quick_app_path（用户自己加的应用，只认存在的 .exe / .lnk 或 .app 绝对路径，apps.rs）；读数在 win32/、macos/ 的 system_stats.rs
+├── device_events/           # 设备提示：后台线程列出在用的耳机和蓝牙音频输出（win32/audio_outputs.rs）、读蓝牙电量（win32/devnode.rs）和电源（win32/power.rs）、罗技接收器后面键鼠的电量（logitech/，经 hidapi 发 HID++，两个平台共用），变化时发 device-alert 事件；判断规则在 tracker.rs
+├── device_use/              # 摄像头、麦克风正在被哪些程序使用（读注册表 CapabilityAccessManager\ConsentStore），打开系统隐私设置；Mac 上整个模块换成 device_use/macos.rs
+├── mail/                    # 邮箱（命令名仍为 *_qq_mail）：附件（attachments.rs）、命令、每个邮箱一个后台服务（accounts.rs）及其崩溃后重启（supervisor.rs）、IMAP 会话、正文与内嵌图片解析、凭据
+├── qq_notifications/        # QQ 通知监听；repair-qq-notification-registration.ps1 编入二进制，也可手动运行
+├── wechat_reminders/        # 提醒服务与命令；source.rs 为托盘闪烁监听（examples 通过 #[path] 复用）
+├── messages_plugin.rs       # 内置插件 messages：各消息来源的名字、从插件配置读开关（source_on），把每个来源的后台 worker 登记到插件内核
+├── im_sources/              # 7 款聊天软件（Telegram、Discord、WhatsApp、TIM、飞书、钉钉、企业微信）的消息提醒：来源表（specs.rs）、快照（state.rs），Windows 读系统通知和任务栏闪烁（windows.rs），Mac 读程序坞角标（macos.rs），变化发 im-sources-changed
+├── toast_notifications/     # Windows 系统通知的共用读取：单线程轮询 UserNotificationListener（poller.rs）、按通知缓存来源应用（cache.rs）、分给订阅的来源（router.rs）
+├── translation/             # 快捷翻译：窗口、全局快捷键、凭据与翻译请求（mod.rs）
+├── voice_input/             # 语音输入：快捷键、录音（capture.rs）、下载识别组件和模型并核对 SHA-256（download.rs、packs.rs）、经 crates/sherpa-runtime 离线识别（engine.rs）；Mac 上换成 `*_macos.rs`
+├── timer/                   # 内置插件 timer 的全局快捷键（默认 Ctrl+Alt+K，配置在 plugins.yml），按下时打开岛的计时器页；Mac 上是 hotkey_macos.rs
+├── settings_window/         # 设置窗口：按需创建与显示（mod.rs）
+├── app_identity/            # 只在 macOS 上编译：应用菜单栏（menu.rs）、Dock 上的应用名和设置窗口标题，都跟岛的语言（set_tray_language）走；设置窗口开着时应用进 Dock（settings_window/dock_icon.rs），改名用 macos/display_name.rs 的 LaunchServices 私有接口，失败时退回包里按系统语言的名字
+├── onboarding_window/       # 新手引导：按需创建的透明遮罩，铺满岛所在屏幕的工作区（mod.rs）；跟着真岛发位置、只在卡片上接住鼠标（overlay.rs）
+├── webview_gpu.rs           # Windows WebView2 图形兼容模式（D123）：建 WebView2 前读家目录 webview-gpu.json / FUYU_GPU_MODE / --software-rendering，按需拼 --use-angle=warp 并清理损坏 GPU 着色器缓存；命令 get_webview_gpu_state / set_webview_gpu_mode / clear_webview_gpu_cache_and_restart
+├── webview_recovery.rs      # 窗口的 WebView2 渲染进程崩溃或无响应后自动重载（D66），以及 GPU 进程 60 秒内连崩 3 次自动切 WARP 软渲染重启、不稳定态退回原生托盘菜单（D123）：on_page_load 时给每个 WebView 挂一次，记 webview-crashes.log；Mac 上是 webview_recovery_unsupported.rs
+├── webview_memory.rs        # 隐藏的翻译、剪贴板、托盘卡片与截图选区窗口把 WebView2 的 MemoryUsageTargetLevel 设成 Low、显示前改回 Normal（D48，默认开，设 FUYU_WEBVIEW_LOW_MEMORY=0 可关闭）；Mac 上是 webview_memory_unsupported.rs
+├── webview_visibility.rs    # 窗口隐藏、显示时同步 WebView2 控制器的 IsVisible（D117、D124.6）：Tauri 的 hide() 不设它，隐藏窗口里的页面一直是 visible，动画帧和定时器照跑、缓存不释放；on_page_load 时给每个 WebView 挂一次（窗口子类在 win32/webview_visibility.rs），主岛 main 跳过首次同步但在托盘隐藏/恢复时跟随；Mac 上是 webview_visibility_unsupported.rs
+├── webview_scale.rs         # 把每个 WebView2 的缩放（RasterizationScale）固定成窗口的显示器缩放，不跟系统「文本大小」（D122）：WebView2 默认按显示器缩放 × 文本大小画，而窗口尺寸都按「CSS 像素 × scale_factor()」算，文本大小不是 100% 时内容会比窗口大；on_page_load 时给每个 WebView 设一次（含主岛 main），ScaleFactorChanged 时再设；接口在 win32/webview_scale.rs；Mac 上是 webview_scale_unsupported.rs
+├── emit_diagnostics.rs      # 只在调试和测试构建编译，设 FUYU_EMIT_DIAGNOSTICS=1 才开：统计各事件发了多少次、多少次载荷没变，排查事件发得太频繁（docs/investigations/emit-frequency-audit.md）
+├── settings_file.rs         # 数据目录里的 settings.json（D30.2）：BACKUP_KEYS 设置的文件镜像，格式同设置备份；命令 read_settings_file / write_settings_file
+├── shortcut_capture.rs      # 设置窗口录快捷键期间（命令 set_shortcut_capture）：浮屿自己的全局快捷键被按下不执行，改发 shortcut-captured 给录制按钮；Mac 在 macos/hotkeys.rs 的分发里拦，Windows 在各模块的 WM_HOTKEY 里拦
+├── home_dir.rs              # 家目录（#50，D30）：浮屿的数据目录只从这里取 fuyu_home(app.path())，不要直接调 app_data_dir()；FUYU_HOME → home.json 指针 → ~/.fuyu；home_dir/migration.rs 为升级时复制旧数据、重装钩子、复制待办 Markdown，见 docs/features/data-home.md；home_dir/frontend_log.rs 是命令 report_frontend_error，把窗口界面的错误记进 frontend-errors.log
+├── fs_write.rs              # 整份替换应用数据目录里的文件：先写旁边的 .tmp 再改名；别的程序暂时占着（拒绝访问、共享冲突）时稍等重试
+├── dev_lane.rs              # 开发版的独立身份（F38、F39）：调试构建默认是 `com.tixxin.fuyu.lane-1`（`FUYU_DEV_LANE` 换编号，`FUYU_DEV_SHARED_IDENTITY=1` 用回正式身份），岛的默认位置，凭据服务名（`service`），不改用户的链接和自启，「安装/修复」装的是正式版的 hook（脚本进正式数据目录，审批用正式版的端口和 token，agent_approval 的 `hook_url`）；dev_lane/seed.rs 在启动时复制一次正式版的凭据和数据（记在 dev-copy.json），dev_lane/data_copy.rs 是复制数据的清单和设置里要关掉的提醒
+├── messenger_activation.rs
+├── notification_diagnostics.rs
+├── user_error.rs            # 用户看到的错误：错误码、文案参数和外部原话（D15），前端按界面语言显示；凭据管理器的通用错误；
+│                            #   Mac 上的 unsupported()（错误码 platform.unsupported）和批量生成「暂不支持」命令的 unsupported_commands!
+├── user_error_codes.json    # 全部错误码的清单：新 code 要加进来；Rust 测试核对它和代码里 UserError::new 用到的一致（code 只能写字面量），tests/unit/native-error.test.mjs 核对它和 errors.ts 的文案一致
+├── platform_support.rs      # 命令 get_platform_support：当前系统和它还不支持的功能，前端据此在设置和岛上隐藏
+├── platform.rs              # 两个平台都有的平台层模块（icon、job、process、process_env、process_times、process_tree、session）：Windows 上取 win32/，macOS 上取 macos/
+├── macos/                   # macOS 平台层（G1，决定 M10），和 win32/ 一样是允许 unsafe 的地方：和 win32/ 同名同签名的平台模块（process、session、icon、job 等），以及 Mac 独有的实现（岛和托盘的 NSPanel、刘海、系统通知、毛玻璃、程序坞角标、辅助功能、热键、截屏、OCR 等），各功能在 Mac 上的支持情况见 docs/architecture/platforms.md
+└── win32/                   # Win32 / COM 的安全封装，和 macos/ 一起是 crate 中允许 unsafe 的地方：window（窗口查询、枚举、前台切换）、
+                             # message_window（隐藏消息窗口与安全的窗口过程）、named_mutex（探测、持有命名互斥量）、hotkey、win_key_hook、clipboard、shell_hook、input、
+                             # com（COM / WinRT 初始化守卫）、audio、ole（文件拖出）、process / process_times / process_env /
+                             # process_memory / process_tree、registry、credentials、dwm、icon、ocr、chinese、screen_capture、
+                             # capture_targets、taskbar、taskbar_shell / taskbar_uia（找任务栏、设所有者；UIA 读任务栏按钮和托盘的范围）、taskbar_slot（任务栏里的透明占位窗口，自带消息循环线程）、uia_list / uia_tabs、brightness、
+                             # notification_state（前台是否有全屏程序）、webview_crash（订阅 WebView2 的 ProcessFailed，D66）、webview_memory（MemoryUsageTargetLevel，D48）、webview_visibility（窗口隐藏、显示时设 IsVisible，D117）、webview_scale（关掉 WebView2 的缩放自动检测、设 RasterizationScale，D122）、webview_shared_buffer（PostSharedBufferToScript 共享内存投递截图帧）、
+                             # job（插件宿主进程的作业对象与挂起启动）、known_folder（下载文件夹等已知文件夹）、
+                             # session（是否锁屏与键鼠空闲时间，和 macos/session.rs 同签名）、session_end（关机注销时先收到 WM_QUERYENDSESSION，插件宿主据此停下、不再重启 node）、audio_outputs（在用的音频输出及类型）、
+                             # devnode（设备节点属性：容器、蓝牙电量）、power（电源与电池）、graphics_capture（D3D11 设备与 WGC 显示器采集，帧留在 GPU）、
+                             # video_writer（Media Foundation Sink Writer：硬件 H.264 写 MP4，失败换软件；可带 AAC 声音）、
+                             # audio_capture（WASAPI 录系统声音和麦克风，系统声音同时开一路静音播放流，防止没声音时断包）
+```
+
+`src-tauri/crates/` 放和 `src-tauri` 同在一个 Cargo 工作区（`src-tauri/Cargo.toml` 的 `[workspace]`，构建目录仍是 `src-tauri/target`）的独立 crate，`cargo test`、clippy 默认连它们一起跑：
+
+- `crates/plugin-base`：插件平台第 3 版基座的 Rust 部分（找 Node、和宿主之间的 JSON-RPC、看管宿主：就绪、心跳、退避重启、停止）。不能依赖 `src-tauri` 的任何模块，也不写 `unsafe`：作业对象和进程组由使用方经 `Containment` 提供（浮屿的在 `src/plugin_kernel/containment.rs`）。协议见 [v3-boundary.md](../docs/architecture/plugins/v3-boundary.md)。
+- `crates/plugin-base-macros`：过程宏 `#[host_service("<方法>")]`，经 `plugin_base::host_service` 使用，把领域函数登记成插件宿主能调的 Rust 方法；参数和返回值的类型要在测试构建里派生 `ts_rs::TS`，写法见 [v3-services.md](../docs/architecture/plugins/v3-services.md)「Rust 那条路」。
+- `crates/sherpa-runtime`：语音输入（C80）在运行时用 `libloading` 加载下载来的 sherpa-onnx 2.0.1 C API 动态库，只包了离线识别（SenseVoice）用到的几个函数和配置结构体（布局按 2.0.1 的 `c-api.h`，有测试核对大小和偏移）。这是 `win32/`、`macos/` 之外唯一允许 `unsafe` 的地方（2026-11-15 用户定），对外只暴露安全的 `Runtime` / `Recognizer`；升级 sherpa-onnx 版本时要同时改这里的结构体、`VERSION` 和 `voice_input/packs.rs` 的下载地址和 SHA-256。
+
+## lib.rs 与模块组织
+
+- `lib.rs` 只做组装：`mod` 声明、插件注册、`setup`、托盘创建、命令注册。不写业务逻辑、不定义命令。
+- 命令清单不写在 `lib.rs`：每个有命令的模块在自己的 `mod.rs` 里用 `tauri_commands!` 宏列出命令（写 `crate::` 开头的完整路径，例如 `crate::mail::refresh_qq_mail`，子模块的命令也列在顶层模块里），`lib.rs` 的 `collect_commands!` 把各模块的清单串成一个 `generate_handler!`。新增命令只改所在模块的 `tauri_commands!`；新增一个有命令的模块时，才在 `collect_commands!([] ...)` 里加上模块名。`tauri_commands!` 要放在内联测试模块之前（clippy `items_after_test_module`）。
+- 文件超过 800 行或承担多个职责时，改成目录模块 `foo/mod.rs` 加子文件。常见的拆法：
+
+  | 文件 | 内容 |
+  |---|---|
+  | `mod.rs` | `#[tauri::command]` 薄层、`init()`、对外类型 |
+  | `service.rs` / `state.rs` | 后台线程、全局状态、事件推送 |
+  | 领域文件（如 `content.rs`、`geometry.rs`） | 纯逻辑，便于单测 |
+  | `tests.rs` | 测试模块，超过 150 行时从源文件中移出 |
+
+- 模块对外只暴露命令、`init()` 和前端需要的类型，其余用 `pub(crate)` 或保持私有。
+- 不新建 `utils.rs`、`common.rs` 这类杂物模块。确实有通用代码时，按用途命名（例如 `win32/registry.rs`、`fs_write.rs`）。
+
+## 命令
+
+- 命令的错误用 `user_error::UserError`：`UserError::new("<模块>.<情况>", "英文原文")`，需要填值用 `.arg`，外部程序、服务、系统的原话用 `.detail`；新 code 同时在 `src/i18n/sections/errors.ts` 写中英文文案，测试断言 `code()` 而不是文字。还没迁移的模块返回 `Result<T, String>`（英文、让用户能读懂），`?` 会把字符串转成 `UserError`（code `plain`，前端原样显示）。
+- 会阻塞的命令，或调用窗口、COM、Windows UI 的命令，声明为 `async`，避免阻塞 IPC 线程（在 Windows 上可能死锁，见 `settings_window/mod.rs`）。
+- 命令函数保持薄：只做参数校验，然后调用服务或领域函数。
+- 命令名就是函数名，属于对外契约。纯重构中可以移动函数所在模块，但不能改函数名或参数名。
+- 事件名定义为模块内的 `const`，向特定窗口发事件时使用窗口 label 常量（例如 `settings_window::WINDOW_LABEL`），不写字面量。
+- **命令和事件不返回密钥明文**（E36.3.7）：返回值和事件里不放密码、令牌、API 密钥、授权码，前端只拿 `has_xxx → bool` 这类状态；要用密钥的请求在 Rust 里拼好发出去。带密钥的网址发请求时，错误里去掉网址（reqwest 错误先 `without_url()`，或 `redact`）再 `.detail`。`pnpm check:secrets`（`scripts/check-secret-fields.mjs`）扫带 `Serialize` 的结构体，字段名像密钥、类型是字符串或 `Value` 的会报错；只写文件、不交给窗口的配置和例外登记在 `scripts/secret-fields-allowlist.json`，每条写理由，新增要在 PR 正文说明。规则和例外名单见 [v3-secrets.md](../docs/architecture/plugins/v3-secrets.md)。
+- 新增命令后，同步更新前端对应的 `api.ts`；用到插件权限时更新 `capabilities/default.json`。新窗口的 label 必须加入 capabilities 的 `windows` 列表。
+
+## 错误处理
+
+- 生产代码禁止使用 `unwrap()` 和 `expect()`。只有在能证明不会失败时才允许使用（例如字面量常量的解析），用 `#[allow(clippy::unwrap_used)]` 放行，理由写在提交说明里，不写注释。测试代码不受此限。
+- `Mutex` 加锁使用 `lock().map_err(...)` 或 `unwrap_or_else(PoisonError::into_inner)`，不要因为锁中毒导致整个应用崩溃。
+- `let _ = ...` 忽略错误只用于尽力而为的操作，例如推送事件、清理临时文件。
+- 错误转换就近写 `map_err(|error| error.to_string())` 或带上下文的 `format!`，不吞掉原始错误信息。
+
+## 平台（Windows 与 macOS）
+
+- 做法见 [overview.md](../docs/architecture/overview.md)「平台层」，计划与迁移表见 [macos-port-plan.md](../docs/architecture/macos-port-plan.md)。
+- `windows`、`windows-future`、`webview2-com`、`clipboard-win` 在 `Cargo.toml` 的 `[target.'cfg(windows)'.dependencies]` 里，只在 Windows 上编译；用到它们的代码必须在 `cfg(windows)` 下。
+- 只在 Windows 上有的模块（或子模块）用 `#[cfg_attr(not(windows), path = "<名字>_unsupported.rs")]`（目录模块用 `<目录>/unsupported.rs`）换成 Mac 上的空实现：保留同样的命令名和参数、`tauri_commands!` 清单，以及其他模块用到的函数；命令用 `crate::user_error::unsupported_commands!` 生成，返回 `platform.unsupported`；开关类命令写成空函数。Windows 上的原文件不为 Mac 改动。
+- 两个平台都要用的系统能力放在 `win32/` 和 `macos/` 的同名模块里，签名一致，业务代码写 `crate::platform::<模块>`。
+- 只在 Windows 上用到、Mac 上因此成了「未使用」的纯函数，用 `#[cfg(any(windows, test))]` 或 `#[cfg_attr(not(windows), allow(dead_code))]`；依赖 Windows 路径、程序或 API 的测试加 `#[cfg(windows)]`。
+- 写的时候就避开这类「未使用」：只给 Windows 模块用的辅助函数放进那个 `cfg(windows)` 的模块里，不放在两个平台都编译的文件中；Mac 上的空实现（`unsupported.rs`）参数照旧，但不为它定义只有 Windows 才读字段的结构体，要共用的结构体定义在两边都用得到的地方，或在空实现里加上一条的属性。
+- 改动后两个平台都要过 clippy：Windows 上照常跑；在 Mac 上跑 `cargo clippy --all-targets -- -D warnings` 和 `cargo test`，CI 的 `rust-macos` job 也会跑。在 Windows 上没法交叉检查 Mac（2026-11-14 试过 `--target aarch64-apple-darwin`：`objc2-exception-helper`、`aws-lc-sys` 要面向 macOS 的 C 编译器和苹果的 SDK），Mac 上的编译错误只能由 CI 的 `rust-macos` 发现。在 Mac 上交叉检查 Windows：`brew install mingw-w64`、`rustup target add x86_64-pc-windows-gnu` 后 `cargo clippy --target x86_64-pc-windows-gnu --all-targets -- -D warnings`（只检查，不能运行测试）。
+
+## unsafe 与 Windows API
+
+- **`unsafe` 只能写在 `win32/` 和 `macos/` 中**（工作区里另有 `crates/sherpa-runtime` 一处例外，见上），对外暴露安全函数，参数尽量用 Rust 类型（`&str`、`u32`），不让调用方传裸指针。生产代码中这两个目录以外没有 `unsafe`；窗口过程实现 `win32::message_window::WindowMessages`，枚举窗口用 `win32::window::for_each_top_level_window` 的闭包。
+- `wechat_reminders/source.rs` 及它用到的 `win32/` 文件也被 `examples/wechat_reminder_probe.rs` 通过 `#[path]` 编译，这些文件只能依赖 `windows` crate，不能引用 crate 内其他模块。
+- `unsafe` 块不写 `// SAFETY:` 注释（代码不写注释，见根目录 AGENTS.md），前置条件靠 `win32/` 对外的安全函数签名保证，有特殊前提时写进提交说明。
+- 句柄、COM 对象等资源用 RAII 类型包装，在 `Drop` 中释放，不手动配对 close。
+- COM 初始化与反初始化在同一线程中配对完成。
+- 开机自启只使用当前用户注册表路径 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，遵循最小权限。
+- 写文件（例如 Markdown 导出）必须校验目录和文件名，禁止写入不受控的路径。
+- 新增 `windows` crate feature 时只加实际需要的项，`dev-dependencies` 中同样如此。
+
+## 状态与线程
+
+- 全局状态（`OnceLock`、`static`）封装在所属模块内部，通过访问函数使用，不跨模块直接引用。
+- 后台线程和 worker 在对应功能关闭时必须能退出或暂停；长循环要检查停止信号，不能空转轮询。
+- 跨线程推送事件统一走 `AppHandle::emit` / `emit_to`，不在后台线程直接操作窗口，必要时切换到主线程执行。
+
+## 测试
+
+- 纯逻辑（几何计算、解析、状态机、配置合并）必须有单元测试。
+- 测试模块超过 150 行时移到 `<模块>/tests.rs`，在 `mod.rs` 中通过 `#[cfg(test)] mod tests;` 引入。
+- 依赖真实桌面环境（运行中的 QQ / 微信、通知权限）的测试必须标注 `#[ignore = "原因"]`，不得进入默认测试集。
+- `examples/` 中的探测程序用 `cargo run --example <name>` 手动运行，用于排查兼容性问题，不放生产逻辑。
+
+## 配置与构建
+
+- 修改 `tauri.conf.json` 中的窗口配置时，同步检查 `capabilities/default.json`、前端 `main.tsx` 的窗口分发，以及 Rust 中的 label 常量。
+- `agent_status/hooks/fuyu-agent-*.{cmd,ps1}` 和 `qq_notifications/repair-qq-notification-registration.ps1` 通过 `include_str!` 编入二进制，修改后需要完整的 Rust 验证。
+- clippy lint 在 `Cargo.toml` 的 `[lints.clippy]` 中声明（`unwrap_used`、`expect_used` 为 deny），测试代码的放行写在 `clippy.toml`；不要在源文件中用 `#![warn]` / `#[allow]` 重复声明这些 lint。`cargo clippy --all-targets` 保持 0 告警；个别确实无法消除的默认 lint（例如参数即 IPC 契约的命令触发 `too_many_arguments`）在该项上用带 `reason` 的 `#[expect(...)]`。
+- 验证（提交前 `pnpm test:changed` 会跑改到的模块的测试，全量推 PR 前用 `pnpm mq:verify`，见根 `AGENTS.md`「验证」）：`cargo test --manifest-path src-tauri/Cargo.toml` + `pnpm build:exe`。涉及窗口、托盘、注册表行为的改动，在风险需要时请用户在 `pnpm tauri dev` 里手动检查折叠态、展开态、贴边收起和托盘隐藏。
+- 成功生成 release 可执行文件后，桌面快捷方式按根目录规则处理（默认不动）。

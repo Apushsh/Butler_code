@@ -1,0 +1,57 @@
+import qqIcon from "../../assets/brands/qq.png";
+import wechatIcon from "../../assets/brands/wechat.png";
+import telegramIcon from "../../assets/brands/telegram.svg";
+import discordIcon from "../../assets/brands/discord.svg";
+import whatsappIcon from "../../assets/brands/whatsapp.svg";
+import timIcon from "../../assets/brands/tim.png";
+import feishuIcon from "../../assets/brands/feishu.svg";
+import dingtalkIcon from "../../assets/brands/dingtalk.png";
+import wecomIcon from "../../assets/brands/wecom.png";
+import mailIcon from "../../assets/brands/mail.png";
+import qqMailIcon from "../../assets/brands/mail-qq.png";
+import neteaseMailIcon from "../../assets/brands/mail-netease.png";
+import gmailIcon from "../../assets/brands/mail-gmail.png";
+import outlookIcon from "../../assets/brands/mail-outlook.png";
+import { Puzzle } from "lucide-react";
+import { mailProviderOf, type MailProvider } from "./mail/mailProvider";
+import type { MessageSource, PreviewSource } from "./messagePreview";
+import "./MessageSourceIcon.css";
+
+const SOURCE_ICONS: Record<MessageSource, string> = {
+  qq: qqIcon,
+  wechat: wechatIcon,
+  qqMail: mailIcon,
+  telegram: telegramIcon,
+  discord: discordIcon,
+  whatsapp: whatsappIcon,
+  tim: timIcon,
+  feishu: feishuIcon,
+  dingtalk: dingtalkIcon,
+  wecom: wecomIcon,
+};
+
+const MAIL_PROVIDER_ICONS: Record<MailProvider, string> = {
+  qq: qqMailIcon,
+  netease: neteaseMailIcon,
+  gmail: gmailIcon,
+  outlook: outlookIcon,
+};
+
+export function MessageSourceIcon({ source, size = 16, account, mailProvider, iconUrl }: {
+  source: PreviewSource;
+  size?: number;
+  account?: string | null;
+  mailProvider?: MailProvider | null;
+  iconUrl?: string | null;
+}) {
+  if (source === "plugin" && iconUrl) {
+    return <img className="message-brand-icon message-brand-icon--app" src={iconUrl} alt="" aria-hidden="true" width={size} height={size} draggable={false} />;
+  }
+  if (source === "plugin") {
+    return <Puzzle className="message-brand-icon message-brand-icon--plugin" size={size} strokeWidth={2.2} aria-hidden="true" />;
+  }
+  const provider = source === "qqMail" ? mailProvider ?? mailProviderOf(account) : null;
+  const src = provider ? MAIL_PROVIDER_ICONS[provider] : SOURCE_ICONS[source];
+  const className = `message-brand-icon message-brand-icon--${source}${provider ? ` message-brand-icon--mail-${provider}` : ""}`;
+  return <img className={className} src={src} alt="" aria-hidden="true" width={size} height={size} draggable={false} />;
+}

@@ -1,0 +1,302 @@
+use std::collections::HashMap;
+
+use super::tracker::{AudioKind, DeviceAlert, Output, OutputTracker, PowerTracker, BATTERY_WAIT_POLLS};
+
+fn output(id: &str, form_factor: u32, enumerator: &str, device: &str) -> Output {
+    Output::classify(id.into(), format!("name {id}"), form_factor, enumerator, Some(device.into())).expect("announced")
+}
+
+fn levels(pairs: &[(&str, u8)]) -> HashMap<String, u8> {
+    pairs.iter().map(|(device, level)| (device.to_string(), *level)).collect()
+}
+
+#[test]
+fn speakers_and_hdmi_are_ignored_but_headphones_and_bluetooth_are_not() {
+    assert!(Output::classify("a".into(), "Speakers".into(), 1, "HDAUDIO", None).is_none());
+    assert!(Output::classify("a".into(), "Monitor".into(), 9, "HDAUDIO", None).is_none());
+    assert_eq!(output("a", 3, "HDAUDIO", "x").kind, AudioKind::Headphones);
+    assert_eq!(output("a", 5, "USB", "x").kind, AudioKind::Headset);
+    let speaker = output("a", 1, "BTHENUM", "x");
+    assert_eq!((speaker.kind, speaker.bluetooth), (AudioKind::Speaker, true));
+    let alone = Output::classify("id".into(), "n".into(), 3, "USB", None).expect("announced");
+    assert_eq!(alone.device, "id");
+}
+
+#[test]
+fn what_is_there_at_the_start_is_not_news() {
+    let mut tracker = OutputTracker::default();
+    assert!(tracker.update(vec![output("a", 3, "USB", "x")], &HashMap::new()).is_empty());
+    assert!(tracker.update(vec![output("a", 3, "USB", "x")], &HashMap::new()).is_empty());
+}
+
+#[test]
+fn wired_headphones_connect_and_disconnect_at_once() {
+    let mut tracker = OutputTracker::default();
+    tracker.update(Vec::new(), &HashMap::new());
+    let plugged = tracker.update(vec![output("a", 3, "HDAUDIO", "x")], &HashMap::new());
+    assert_eq!(plugged, [DeviceAlert::AudioConnected { name: "name a".into(), device: AudioKind::Headphones, battery: None }]);
+    let pulled = tracker.update(Vec::new(), &HashMap::new());
+    assert_eq!(pulled, [DeviceAlert::AudioDisconnected { name: "name a".into(), device: AudioKind::Headphones }]);
+}
+
+#[test]
+fn a_bluetooth_headset_is_announced_once_with_its_battery() {
+    let mut tracker = OutputTracker::default();
+    tracker.update(Vec::new(), &HashMap::new());
+    let both = vec![output("hands-free", 5, "BTHHFENUM", "x"), output("stereo", 3, "BTHENUM", "x")];
+    assert!(tracker.update(both.clone(), &HashMap::new()).is_empty());
+    assert!(tracker.wants_batteries());
+    let alerts = tracker.update(both.clone(), &levels(&[("x", 80)]));
+    assert_eq!(alerts, [DeviceAlert::AudioConnected { name: "name stereo".into(), device: AudioKind::Headphones, battery: Some(80) }]);
+    assert!(!tracker.wants_batteries());
+    let gone = tracker.update(Vec::new(), &HashMap::new());
+    assert_eq!(gone.len(), 1);
+}
+
+#[test]
+fn a_bluetooth_device_without_a_battery_is_announced_after_waiting() {
+    let mut tracker = OutputTracker::default();
+    tracker.update(Vec::new(), &HashMap::new());
+    let speaker = vec![output("s", 1, "BTHENUM", "x")];
+    for _ in 0..BATTERY_WAIT_POLLS {
+        assert!(tracker.update(speaker.clone(), &HashMap::new()).is_empty());
+    }
+    let alerts = tracker.update(speaker.clone(), &HashMap::new());
+    assert_eq!(alerts, [DeviceAlert::AudioConnected { name: "name s".into(), device: AudioKind::Speaker, battery: None }]);
+}
+
+#[test]
+fn a_device_that_leaves_while_waiting_says_nothing() {
+    let mut tracker = OutputTracker::default();
+    tracker.update(Vec::new(), &HashMap::new());
+    assert!(tracker.update(vec![output("s", 3, "BTHENUM", "x")], &HashMap::new()).is_empty());
+    assert!(tracker.update(Vec::new(), &HashMap::new()).is_empty());
+    assert!(!tracker.wants_batteries());
+}
+
+#[test]
+fn low_battery_warns_once_per_level_and_again_after_charging() {
+    let mut tracker = OutputTracker::default();
+    let headset = vec![output("h", 3, "BTHENUM", "x")];
+    tracker.update(headset.clone(), &levels(&[("x", 50)]));
+    assert!(tracker.update(headset.clone(), &levels(&[("x", 21)])).is_empty());
+    let low = tracker.update(headset.clone(), &levels(&[("x", 20)]));
+    assert_eq!(low, [DeviceAlert::BatteryLow { name: "name h".into(), battery: 20 }]);
+    assert!(tracker.update(headset.clone(), &levels(&[("x", 15)])).is_empty());
+    assert_eq!(tracker.update(headset.clone(), &levels(&[("x", 10)])).len(), 1);
+    assert!(tracker.update(headset.clone(), &levels(&[("x", 5)])).is_empty());
+    assert!(tracker.update(headset.clone(), &levels(&[("x", 90)])).is_empty());
+    assert_eq!(tracker.update(headset.clone(), &levels(&[("x", 18)])).len(), 1);
+}
+
+#[test]
+fn connecting_already_low_does_not_also_warn_about_the_higher_level() {
+    let mut tracker = OutputTracker::default();
+    tracker.update(Vec::new(), &HashMap::new());
+    let headset = vec![output("h", 3, "BTHENUM", "x")];
+    let alerts = tracker.update(headset.clone(), &levels(&[("x", 15)]));
+    assert_eq!(alerts, [DeviceAlert::AudioConnected { name: "name h".into(), device: AudioKind::Headphones, battery: Some(15) }]);
+    assert!(tracker.update(headset.clone(), &levels(&[("x", 12)])).is_empty());
+    assert_eq!(tracker.update(headset, &levels(&[("x", 10)])).len(), 1);
+}
+
+#[test]
+fn the_charger_alerts_on_change_only() {
+    let mut tracker = PowerTracker::default();
+    assert_eq!(tracker.update(Some(false), Some(60)), None);
+    assert_eq!(tracker.update(Some(false), Some(59)), None);
+    assert_eq!(tracker.update(Some(true), Some(59)), Some(DeviceAlert::PowerConnected { battery: Some(59) }));
+    assert_eq!(tracker.update(None, None), None);
+    assert_eq!(tracker.update(Some(false), Some(80)), Some(DeviceAlert::PowerDisconnected { battery: Some(80) }));
+    let mut tracker = PowerTracker::default();
+    assert_eq!(tracker.update(Some(true), None), None);
+}
+
+#[test]
+fn alerts_reach_the_island_as_tagged_json() {
+    let value = serde_json::to_value(DeviceAlert::AudioConnected { name: "AirPods".into(), device: AudioKind::Headphones, battery: Some(80) })
+        .expect("json");
+    assert_eq!(value, serde_json::json!({ "kind": "audioConnected", "name": "AirPods", "device": "headphones", "battery": 80 }));
+    let value = serde_json::to_value(DeviceAlert::PowerDisconnected { battery: None }).expect("json");
+    assert_eq!(value, serde_json::json!({ "kind": "powerDisconnected", "battery": null }));
+}
+
+mod peripherals {
+    use super::super::{
+        peripherals::{kind_from_appearance, kind_from_minor_type, Peripheral, PeripheralKind, PeripheralTracker, QUIET_RECONNECT_POLLS},
+        tracker::DeviceAlert,
+    };
+
+    fn mouse(battery: Option<u8>) -> Peripheral {
+        Peripheral { device: "m".into(), name: "Magic Mouse".into(), kind: PeripheralKind::Mouse, battery }
+    }
+
+    fn connected(battery: u8) -> DeviceAlert {
+        DeviceAlert::PeripheralConnected { name: "Magic Mouse".into(), device: PeripheralKind::Mouse, battery }
+    }
+
+    fn low(battery: u8) -> DeviceAlert {
+        DeviceAlert::BatteryLow { name: "Magic Mouse".into(), battery }
+    }
+
+    #[test]
+    fn appearance_and_minor_type_pick_out_mice_keyboards_and_trackpads() {
+        assert_eq!(kind_from_appearance(0x03C2), Some(PeripheralKind::Mouse));
+        assert_eq!(kind_from_appearance(0x03C1), Some(PeripheralKind::Keyboard));
+        assert_eq!(kind_from_appearance(0x03C0), None);
+        assert_eq!(kind_from_appearance(0x03C4), None);
+        assert_eq!(kind_from_appearance(0x0941), None);
+        assert_eq!(kind_from_minor_type("Trackpad"), Some(PeripheralKind::Trackpad));
+        assert_eq!(kind_from_minor_type("Keyboard"), Some(PeripheralKind::Keyboard));
+        assert_eq!(kind_from_minor_type("Mouse"), Some(PeripheralKind::Mouse));
+        assert_eq!(kind_from_minor_type("Headphones"), None);
+    }
+
+    #[test]
+    fn devices_there_at_the_start_are_quiet_but_new_ones_say_their_battery() {
+        let mut tracker = PeripheralTracker::default();
+        assert!(tracker.update(vec![mouse(Some(80))]).is_empty());
+        assert!(tracker.update(vec![mouse(Some(80))]).is_empty());
+        let mut tracker = PeripheralTracker::default();
+        assert!(tracker.update(Vec::new()).is_empty());
+        assert_eq!(tracker.update(vec![mouse(Some(80))]), vec![connected(80)]);
+        assert!(tracker.update(vec![mouse(Some(80))]).is_empty());
+    }
+
+    #[test]
+    fn a_device_without_a_battery_level_is_never_announced() {
+        let mut tracker = PeripheralTracker::default();
+        tracker.update(Vec::new());
+        for _ in 0..10 {
+            assert!(tracker.update(vec![mouse(None)]).is_empty());
+        }
+    }
+
+    #[test]
+    fn a_late_battery_level_is_waited_for_a_little() {
+        let mut tracker = PeripheralTracker::default();
+        tracker.update(Vec::new());
+        assert!(tracker.update(vec![mouse(None)]).is_empty());
+        assert_eq!(tracker.update(vec![mouse(Some(60))]), vec![connected(60)]);
+    }
+
+    #[test]
+    fn low_battery_warns_once_at_each_level_and_again_after_charging() {
+        let mut tracker = PeripheralTracker::default();
+        tracker.update(Vec::new());
+        assert_eq!(tracker.update(vec![mouse(Some(40))]), vec![connected(40)]);
+        assert_eq!(tracker.update(vec![mouse(Some(19))]), vec![low(19)]);
+        assert!(tracker.update(vec![mouse(Some(18))]).is_empty());
+        assert_eq!(tracker.update(vec![mouse(Some(9))]), vec![low(9)]);
+        assert!(tracker.update(vec![mouse(Some(5))]).is_empty());
+        assert!(tracker.update(vec![mouse(Some(90))]).is_empty());
+        assert_eq!(tracker.update(vec![mouse(Some(15))]), vec![low(15)]);
+    }
+
+    #[test]
+    fn connecting_already_low_does_not_warn_twice() {
+        let mut tracker = PeripheralTracker::default();
+        tracker.update(Vec::new());
+        assert_eq!(tracker.update(vec![mouse(Some(15))]), vec![connected(15)]);
+        assert!(tracker.update(vec![mouse(Some(14))]).is_empty());
+    }
+
+    #[test]
+    fn a_short_sleep_and_wake_is_not_a_new_connection() {
+        let mut tracker = PeripheralTracker::default();
+        tracker.update(Vec::new());
+        assert_eq!(tracker.update(vec![mouse(Some(70))]), vec![connected(70)]);
+        assert!(tracker.update(Vec::new()).is_empty());
+        assert!(tracker.update(vec![mouse(Some(70))]).is_empty());
+        assert!(tracker.update(Vec::new()).is_empty());
+        for _ in 0..QUIET_RECONNECT_POLLS {
+            tracker.update(Vec::new());
+        }
+        assert_eq!(tracker.update(vec![mouse(Some(70))]), vec![connected(70)]);
+    }
+}
+
+#[test]
+fn the_watcher_is_the_background_listed_for_device_events() {
+    let catalog = crate::plugin_kernel::builtins::catalog();
+    let plugin = catalog.iter().find(|plugin| plugin.id == super::PLUGIN_ID).expect("device-events is a built-in plugin");
+    assert_eq!(plugin.background.as_deref(), Some(&[super::WATCHER.to_owned()][..]));
+}
+
+#[test]
+fn battery_list_keeps_every_device_with_a_reading_once() {
+    use super::batteries::collect;
+    use super::peripherals::{Peripheral, PeripheralKind};
+    let outputs = vec![output("buds-out", 3, "BTHENUM", "buds"), output("buds-mic", 5, "BTHENUM", "buds"), output("usb", 5, "USB", "usb")];
+    let peripheral = |device: &str, name: &str, battery| Peripheral { device: device.into(), name: name.into(), kind: PeripheralKind::Mouse, battery };
+    let list = collect(&outputs, &levels(&[("buds", 140), ("gone", 50)]), &[peripheral("m", "Mouse", Some(30)), peripheral("k", "Keys", None)]);
+    let found: Vec<(&str, u8)> = list.iter().map(|item| (item.id.as_str(), item.battery)).collect();
+    assert_eq!(found, vec![("m", 30), ("buds", 100)]);
+    let json = serde_json::to_value(&list).expect("serializes");
+    assert_eq!(json[0]["kind"], "mouse");
+    assert_eq!(json[1]["kind"], "headphones");
+    assert_eq!(json[1]["name"], "name buds-out");
+}
+
+#[test]
+fn battery_list_is_only_published_when_it_changes() {
+    use super::batteries::{collect, latest, publish, Published};
+    let guard = Published;
+    let list = collect(&[output("a", 3, "BTHENUM", "a")], &levels(&[("a", 60)]), &[]);
+    assert!(publish(&list));
+    assert!(!publish(&list));
+    assert_eq!(latest().map(|items| items.len()), Some(1));
+    drop(guard);
+    assert_eq!(latest(), None);
+}
+
+mod windows_matching {
+    use super::super::{
+        batteries::{address_in_instance_id, bluetooth_address, is_device_root, kind_from_hid, merge_peripherals},
+        peripherals::{Peripheral, PeripheralKind},
+    };
+
+    #[test]
+    fn the_bluetooth_address_comes_from_the_property_or_the_instance_id() {
+        assert_eq!(bluetooth_address("a4c13810f2e1"), Some("A4C13810F2E1".into()));
+        assert_eq!(bluetooth_address("A4:C1:38:10:F2:E1"), Some("A4C13810F2E1".into()));
+        assert_eq!(bluetooth_address("000000000000"), None);
+        assert_eq!(bluetooth_address("A4C13810F2"), None);
+        assert_eq!(address_in_instance_id(r"BTHLE\DEV_E1A2B3C4D5E6\7&1A2B3C4D&0&BLUETOOTHDEVICE_E1A2B3C4D5E6"), Some("E1A2B3C4D5E6".into()));
+        assert_eq!(
+            address_in_instance_id(r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_VID&0001004C_PID&200E\7&2C6F1E5&0&9C3E53A1B2C4_C00000000"),
+            Some("9C3E53A1B2C4".into())
+        );
+        assert_eq!(
+            address_in_instance_id(r"BTHLEDEVICE\{00001812-0000-1000-8000-00805F9B34FB}_DEV_VID&02046D_PID&B023_REV&0011_E1A2B3C4D5E6\9&2F1E&0&0016"),
+            Some("E1A2B3C4D5E6".into())
+        );
+        assert_eq!(address_in_instance_id(r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_LOCALMFG&0000\7&1&0&000000000000_00000000"), None);
+    }
+
+    #[test]
+    fn the_device_root_node_carries_the_name() {
+        assert!(is_device_root(r"BTHLE\Dev_e1a2b3c4d5e6\7&1&0&BluetoothDevice_e1a2b3c4d5e6"));
+        assert!(is_device_root(r"BTHENUM\DEV_9C3E53A1B2C4\7&2&0&BLUETOOTHDEVICE_9C3E53A1B2C4"));
+        assert!(!is_device_root(r"BTHENUM\{0000111E-0000-1000-8000-00805F9B34FB}_VID&0001004C\7&2&0&9C3E53A1B2C4_C00000000"));
+    }
+
+    #[test]
+    fn hid_classes_tell_mice_from_keyboards_and_leave_phones_out() {
+        assert_eq!(kind_from_hid("Pixel 8", false, false), None);
+        assert_eq!(kind_from_hid("MX Keys", true, false), Some(PeripheralKind::Keyboard));
+        assert_eq!(kind_from_hid("M650", false, true), Some(PeripheralKind::Mouse));
+        assert_eq!(kind_from_hid("Gaming Mouse", true, true), Some(PeripheralKind::Mouse));
+        assert_eq!(kind_from_hid("K400 Keyboard", true, true), Some(PeripheralKind::Keyboard));
+        assert_eq!(kind_from_hid("罗技键盘", true, true), Some(PeripheralKind::Keyboard));
+        assert_eq!(kind_from_hid("Combo", true, true), Some(PeripheralKind::Mouse));
+    }
+
+    #[test]
+    fn one_device_read_two_ways_is_listed_once_with_the_system_number() {
+        let item = |device: &str, battery| Peripheral { device: device.into(), name: device.into(), kind: PeripheralKind::Mouse, battery };
+        let merged = merge_peripherals(vec![item("A", Some(80)), item("B", None)], vec![item("A", Some(75)), item("B", Some(40)), item("C", Some(10))]);
+        let found: Vec<(&str, Option<u8>)> = merged.iter().map(|p| (p.device.as_str(), p.battery)).collect();
+        assert_eq!(found, vec![("A", Some(80)), ("B", Some(40)), ("C", Some(10))]);
+    }
+}

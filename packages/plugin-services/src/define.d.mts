@@ -1,0 +1,2 @@
+export { DEFAULT_TIMEOUT_MS, MEMBER_NAME, RESERVED_MEMBERS, SERVICE_NAME, defineService, isServiceDefinition, type EventTable, type MethodTable, type ProgressTable, type ServiceDefinition, type ServiceSpec } from "@fuyu/plugin-base/services";
+export type { Caller, CallOptions, EventOptions, EventsOf, Json, MethodOptions, MethodsOf, ProgressOf, ServiceClient, ServiceErrorCode, ServiceErrorShape, ServiceImpl, ServiceProvider } from "@fuyu/plugin-base/services";

@@ -1,0 +1,110 @@
+import { clamp } from "../../utils/number.ts";
+import { getCollapsedTextUnits } from "../../utils/text.ts";
+import { MAX_TOP_FILLET_RADIUS } from "../../lib/settings/settingsLimits.ts";
+import { maxPanelHeightFor, maxPanelWidthFor, STAGE_WINDOW_WIDTH } from "../../lib/settings/panelRoom.ts";
+
+export const MIN_COLLAPSED_ISLAND_WIDTH = 280;
+export const MIN_BARE_COLLAPSED_WIDTH = 72;
+export const MAX_COLLAPSED_ISLAND_WIDTH = 340;
+export const MIN_COLLAPSED_TEXT_UNITS = 2;
+export const MAX_COLLAPSED_TEXT_UNITS = 12;
+export const BASE_EXPANDED_ISLAND_HEIGHT = 306;
+export const EXPANDED_ISLAND_WIDTH = 560;
+export const POPUP_ISLAND_WIDTH = 400;
+
+export function maxExpandedIslandWidth(scale: number, roomWidth?: number) {
+  return Math.max(EXPANDED_ISLAND_WIDTH, maxPanelWidthFor(scale, roomWidth));
+}
+
+export function maxExpandedIslandHeight(scale: number, roomHeight?: number) {
+  return maxPanelHeightFor(scale, roomHeight);
+}
+
+export const MAX_FITTED_COLLAPSED_WIDTH = 520;
+export const COLLAPSED_ISLAND_HEIGHT = 38;
+export const MAX_GROWN_COLLAPSED_HEIGHT = 140;
+
+export function grownCollapsedHeight(height: number) {
+  return Number.isFinite(height) ? clamp(Math.ceil(height), COLLAPSED_ISLAND_HEIGHT, MAX_GROWN_COLLAPSED_HEIGHT) : COLLAPSED_ISLAND_HEIGHT;
+}
+
+export function maxCollapsedIslandWidth(scale: number) {
+  const stage = scale > 0 ? Math.floor((STAGE_WINDOW_WIDTH - 4) / scale) - 2 * MAX_TOP_FILLET_RADIUS : MAX_FITTED_COLLAPSED_WIDTH;
+  return Math.min(MAX_FITTED_COLLAPSED_WIDTH, stage);
+}
+
+export function panelIslandWidth(panelWidth: number, scale: number) {
+  return Math.min(panelWidth, maxExpandedIslandWidth(scale));
+}
+export const POPUP_HEADER_SAVING = 58;
+export const TODO_ROW_HEIGHT = 34;
+export const TODO_GROW_START_ROWS = 2;
+export function getCollapsedIslandWidth(text: string, extraWidth = 0, widthExtra = 0) {
+  const visualUnits = getCollapsedTextUnits(text);
+  const widthProgress =
+    (clamp(
+      visualUnits,
+      MIN_COLLAPSED_TEXT_UNITS,
+      MAX_COLLAPSED_TEXT_UNITS,
+    ) -
+      MIN_COLLAPSED_TEXT_UNITS) /
+    (MAX_COLLAPSED_TEXT_UNITS - MIN_COLLAPSED_TEXT_UNITS);
+
+  return Math.min(
+    MAX_COLLAPSED_ISLAND_WIDTH,
+    Math.round(
+      MIN_COLLAPSED_ISLAND_WIDTH +
+        widthProgress * (MAX_COLLAPSED_ISLAND_WIDTH - MIN_COLLAPSED_ISLAND_WIDTH) +
+        Math.max(0, extraWidth),
+    ),
+  ) + Math.round(widthExtra);
+}
+
+const MAX_NOTICE_ISLAND_WIDTH = 460;
+const NOTICE_UNIT_WIDTH = 13.5;
+
+export function getNoticeIslandWidth(text: string, chromeWidth: number, widthExtra = 0) {
+  const width = Math.round(getCollapsedTextUnits(text) * NOTICE_UNIT_WIDTH + Math.max(0, chromeWidth));
+  return Math.min(MAX_NOTICE_ISLAND_WIDTH, Math.max(MIN_COLLAPSED_ISLAND_WIDTH, width)) + Math.round(widthExtra);
+}
+
+const MAX_ALIGNMENT_NUDGE = 4;
+
+export function alignCollapsedIslandWidth(
+  width: number,
+  stageWidth: number,
+  devicePixelRatio: number,
+  widthExtra = 0,
+  maxWidth = MAX_COLLAPSED_ISLAND_WIDTH + widthExtra,
+  minWidth = MIN_COLLAPSED_ISLAND_WIDTH + widthExtra,
+) {
+  const isAligned = (candidate: number) => {
+    const left = ((stageWidth - candidate) / 2) * devicePixelRatio;
+    return Math.abs(left - Math.round(left)) < 0.001;
+  };
+
+  for (let nudge = 0; nudge <= MAX_ALIGNMENT_NUDGE; nudge++) {
+    for (const candidate of [width - nudge, width + nudge]) {
+      if (
+        candidate >= minWidth &&
+        candidate <= maxWidth &&
+        isAligned(candidate)
+      ) {
+        return candidate;
+      }
+    }
+  }
+
+  return width;
+}
+
+export function getBareCollapsedWidth(contentWidth: number, widthExtra = 0) {
+  return Math.max(MIN_BARE_COLLAPSED_WIDTH, Math.ceil(contentWidth) + Math.max(0, Math.round(widthExtra)));
+}
+
+export function getTodoScrollStartRows(maxPanelHeight: number) {
+  return (
+    TODO_GROW_START_ROWS +
+    Math.max(0, Math.floor((maxPanelHeight - BASE_EXPANDED_ISLAND_HEIGHT) / TODO_ROW_HEIGHT))
+  );
+}

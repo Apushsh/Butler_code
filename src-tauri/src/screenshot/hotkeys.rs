@@ -1,0 +1,284 @@
+use std::sync::{
+    atomic::{AtomicBool, AtomicIsize, Ordering},
+    Mutex, OnceLock, PoisonError,
+};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+
+use tauri::{AppHandle, Emitter};
+use windows::Win32::{
+    Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+    UI::WindowsAndMessaging::{WM_APP, WM_HOTKEY, WM_QUIT},
+};
+
+use super::session;
+use super::shortcuts::{default_shortcuts, plan, Binding, ShortcutAction, ShortcutConfig, ShortcutStatus, MAX_BINDINGS, STATUS_EVENT};
+use crate::win32::{
+    self,
+    message_window::{self, WindowMessages},
+};
+
+const HOTKEY_BASE: i32 = 0x5300;
+const REFRESH_MESSAGE: u32 = WM_APP + 0x61;
+const NUMPAD_MESSAGE: u32 = WM_APP + 0x62;
+const PRINT_MESSAGE: u32 = WM_APP + 0x63;
+const MOD_CONTROL_SHIFT: u32 = 0x0002 | 0x0004;
+const CLASS_NAME: &str = "FuyuScreenshotShortcuts";
+const READY_WAIT: Duration = Duration::from_secs(2);
+
+pub(crate) fn numpad_digit(binding: &Binding) -> Option<u32> {
+    let digit = binding.key_code.checked_sub(u32::from(b'0')).filter(|digit| *digit <= 9)?;
+    (binding.modifiers == MOD_CONTROL_SHIFT).then_some(digit)
+}
+
+static APP: OnceLock<AppHandle> = OnceLock::new();
+static WINDOW: AtomicIsize = AtomicIsize::new(0);
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static PRINT_SCREEN: AtomicBool = AtomicBool::new(false);
+static CONFIG: Mutex<Option<Vec<ShortcutConfig>>> = Mutex::new(None);
+static BOUND: Mutex<Vec<Binding>> = Mutex::new(Vec::new());
+static STATUS: Mutex<Vec<ShortcutStatus>> = Mutex::new(Vec::new());
+static THREAD: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
+
+pub(super) fn init(app: &AppHandle) {
+    let _ = APP.set(app.clone());
+}
+
+pub(super) fn start() -> Result<(), String> {
+    let mut slot = THREAD.lock().unwrap_or_else(PoisonError::into_inner);
+    if slot.as_ref().is_some_and(|handle| !handle.is_finished()) {
+        return Ok(());
+    }
+    let handle = thread::Builder::new()
+        .name("screenshot-hotkeys".into())
+        .spawn(|| {
+            if let Err(error) = run() {
+                eprintln!("screenshot shortcuts are unavailable: {error}");
+            }
+        })
+        .map_err(|error| format!("Could not start the screenshot shortcuts: {error}"))?;
+    *slot = Some(handle);
+    Ok(())
+}
+
+pub(super) fn stop() {
+    let Some(handle) = THREAD.lock().unwrap_or_else(PoisonError::into_inner).take() else {
+        return;
+    };
+    let started = Instant::now();
+    while !handle.is_finished() {
+        let window = WINDOW.load(Ordering::SeqCst);
+        if window != 0 {
+            let _ = message_window::post_message(HWND(window as *mut core::ffi::c_void), WM_QUIT);
+            break;
+        }
+        if started.elapsed() >= READY_WAIT {
+            eprintln!("the screenshot shortcut thread did not get ready, so it is left to finish on its own");
+            return;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    let _ = handle.join();
+}
+
+pub(super) fn running() -> bool {
+    THREAD.lock().unwrap_or_else(PoisonError::into_inner).as_ref().is_some_and(|handle| !handle.is_finished())
+}
+
+pub(super) fn is_enabled() -> bool {
+    ENABLED.load(Ordering::SeqCst)
+}
+
+pub(super) fn configure(enabled: bool, shortcuts: Option<Vec<ShortcutConfig>>, print_screen: Option<bool>) {
+    if let Some(shortcuts) = shortcuts {
+        *CONFIG.lock().unwrap_or_else(PoisonError::into_inner) = Some(shortcuts);
+    }
+    if let Some(print_screen) = print_screen {
+        PRINT_SCREEN.store(print_screen, Ordering::SeqCst);
+    }
+    ENABLED.store(enabled, Ordering::SeqCst);
+    let window = WINDOW.load(Ordering::SeqCst);
+    if window != 0 {
+        let _ = message_window::post_message(HWND(window as *mut core::ffi::c_void), REFRESH_MESSAGE);
+    }
+}
+
+pub(super) fn coexist_refresh() {
+    let window = WINDOW.load(Ordering::SeqCst);
+    if window != 0 {
+        let _ = message_window::post_message(HWND(window as *mut core::ffi::c_void), REFRESH_MESSAGE);
+    }
+}
+
+pub(super) fn status() -> Vec<ShortcutStatus> {
+    STATUS.lock().unwrap_or_else(PoisonError::into_inner).clone()
+}
+
+fn run() -> Result<(), String> {
+    let instance = message_window::module_instance().map_err(|error| error.to_string())?;
+    message_window::register_class::<ShortcutWindow>(instance, CLASS_NAME).map_err(|error| error.to_string())?;
+    let window = match message_window::create_message_only_window(instance, CLASS_NAME, "Fuyu Screenshot Shortcuts") {
+        Ok(window) => window,
+        Err(error) => {
+            let _ = message_window::unregister_class(instance, CLASS_NAME);
+            return Err(error.to_string());
+        }
+    };
+    WINDOW.store(window.0 as isize, Ordering::SeqCst);
+    refresh(window);
+    message_window::run_message_loop();
+    WINDOW.store(0, Ordering::SeqCst);
+    release(window);
+    report(Vec::new());
+    let _ = message_window::destroy_window(window);
+    let _ = message_window::unregister_class(instance, CLASS_NAME);
+    Ok(())
+}
+
+fn report(problems: Vec<ShortcutStatus>) {
+    *STATUS.lock().unwrap_or_else(PoisonError::into_inner) = problems.clone();
+    if let Some(app) = APP.get() {
+        let _ = app.emit(STATUS_EVENT, problems);
+    }
+}
+
+fn release(window: HWND) {
+    let _ = win32::win_key_hook::set_numpad(None);
+    let _ = win32::win_key_hook::set_print_screen(None);
+    for index in 0..MAX_BINDINGS {
+        let _ = win32::hotkey::unregister(window, HOTKEY_BASE + index as i32);
+    }
+    BOUND.lock().unwrap_or_else(PoisonError::into_inner).clear();
+}
+
+fn refresh(window: HWND) {
+    release(window);
+    let mut problems = Vec::new();
+    if ENABLED.load(Ordering::SeqCst) && !crate::coexist::yielding() {
+        let config = CONFIG.lock().unwrap_or_else(PoisonError::into_inner).clone().unwrap_or_else(default_shortcuts);
+        let (bindings, invalid) = plan(&config);
+        problems = invalid;
+        let mut numpad = 0;
+        for (index, binding) in bindings.iter().enumerate() {
+            if win32::hotkey::register(window, HOTKEY_BASE + index as i32, binding.modifiers, binding.key_code).is_err() {
+                problems.push(ShortcutStatus { action: binding.action, problem: "taken" });
+            }
+            if let Some(digit) = numpad_digit(binding) {
+                numpad |= 1 << digit;
+            }
+        }
+        *BOUND.lock().unwrap_or_else(PoisonError::into_inner) = bindings;
+        if numpad != 0 {
+            if let Err(error) = win32::win_key_hook::set_numpad(Some((window, NUMPAD_MESSAGE, numpad))) {
+                eprintln!("the numpad screenshot shortcuts are unavailable: {error}");
+            }
+        }
+        if PRINT_SCREEN.load(Ordering::SeqCst) {
+            if let Err(error) = win32::win_key_hook::set_print_screen(Some((window, PRINT_MESSAGE))) {
+                eprintln!("PrintScreen cannot be taken over: {error}");
+            }
+        }
+    }
+    report(problems);
+}
+
+fn bound_action(found: impl Fn(&Binding) -> bool) -> Option<ShortcutAction> {
+    BOUND.lock().unwrap_or_else(PoisonError::into_inner).iter().find(|binding| found(binding)).map(|binding| binding.action)
+}
+
+fn run_action(action: ShortcutAction) {
+    let Some(app) = APP.get() else { return };
+    if !ENABLED.load(Ordering::SeqCst) {
+        return;
+    }
+    if action == ShortcutAction::Record && crate::recording::is_busy() {
+        crate::recording::stop_in_background(app);
+        return;
+    }
+    if action == ShortcutAction::Delayed {
+        if !super::delay::cancel(app) {
+            super::delay::start(app, None);
+        }
+        return;
+    }
+    match action.mode() {
+        Some(mode) => {
+            super::delay::cancel(app);
+            session::start(app, mode);
+        }
+        None => super::pin::toggle_all(app),
+    }
+}
+
+struct ShortcutWindow;
+
+impl WindowMessages for ShortcutWindow {
+    fn handle(window: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> Option<LRESULT> {
+        if message == WM_HOTKEY && crate::shortcut_capture::capture_hotkey_message(lparam.0) {
+            return Some(LRESULT(0));
+        }
+        let action = match message {
+            WM_HOTKEY => {
+                let index = wparam.0.checked_sub(HOTKEY_BASE as usize);
+                index.and_then(|index| BOUND.lock().unwrap_or_else(PoisonError::into_inner).get(index).map(|binding| binding.action))
+            }
+            NUMPAD_MESSAGE => u32::try_from(wparam.0).ok().and_then(|digit| bound_action(|binding| numpad_digit(binding) == Some(digit))),
+            PRINT_MESSAGE => Some(ShortcutAction::Region),
+            REFRESH_MESSAGE => {
+                refresh(window);
+                return Some(LRESULT(0));
+            }
+            _ => return None,
+        };
+        if let Some(action) = action {
+            run_action(action);
+        }
+        Some(LRESULT(0))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::session::Mode;
+    use super::*;
+
+    fn entry(action: ShortcutAction, shortcut: &str) -> ShortcutConfig {
+        ShortcutConfig { action, shortcut: shortcut.to_string() }
+    }
+
+    #[test]
+    fn the_defaults_are_ctrl_shift_digits_and_reach_the_numpad_too() {
+        let (bindings, problems) = plan(&default_shortcuts());
+        assert!(problems.is_empty());
+        let digits: Vec<_> = bindings.iter().map(|binding| (binding.action, numpad_digit(binding))).collect();
+        assert_eq!(digits, [
+            (ShortcutAction::Region, Some(1)),
+            (ShortcutAction::Copy, Some(2)),
+            (ShortcutAction::Text, Some(3)),
+            (ShortcutAction::Translate, Some(4)),
+            (ShortcutAction::Long, Some(5)),
+            (ShortcutAction::Record, Some(6)),
+            (ShortcutAction::Fullscreen, Some(7)),
+        ]);
+        assert_eq!(ShortcutAction::Pins.mode(), None);
+        assert_eq!(ShortcutAction::Fullscreen.mode(), Some(Mode::Fullscreen));
+    }
+
+    #[test]
+    fn empty_shortcuts_are_off_and_bad_or_repeated_ones_are_reported() {
+        let config = [
+            entry(ShortcutAction::Region, "Alt+Q"),
+            entry(ShortcutAction::Copy, ""),
+            entry(ShortcutAction::Text, "Q"),
+            entry(ShortcutAction::Translate, "alt+q"),
+            entry(ShortcutAction::Pins, "Ctrl+Alt+P"),
+        ];
+        let (bindings, problems) = plan(&config);
+        assert_eq!(bindings.iter().map(|binding| binding.action).collect::<Vec<_>>(), [ShortcutAction::Region, ShortcutAction::Pins]);
+        assert_eq!(problems, [
+            ShortcutStatus { action: ShortcutAction::Text, problem: "invalid" },
+            ShortcutStatus { action: ShortcutAction::Translate, problem: "duplicate" },
+        ]);
+        assert!(bindings.iter().all(|binding| numpad_digit(binding).is_none()), "only Ctrl+Shift+digit listens on the numpad");
+    }
+}

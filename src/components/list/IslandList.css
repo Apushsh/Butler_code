@@ -1,0 +1,419 @@
+.island-list-page {
+  --list-ink: var(--island-ink-rgb, 241, 240, 246);
+  --list-accent: var(--color-accent);
+  --text-1: rgba(var(--list-ink), 0.95);
+  --text-2: rgba(var(--list-ink), 0.68);
+  --text-3: rgba(var(--list-ink), 0.48);
+  --list-accent-text: color-mix(in srgb, var(--list-accent) 62%, rgb(var(--list-ink)));
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding: 2px 0 0;
+  color: var(--text-1);
+}
+
+.island-light .island-list-page {
+  --text-3: rgba(var(--list-ink), 0.6);
+}
+
+.island-list-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.island-list-chips {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.island-list-chip {
+  flex: none;
+  max-width: 120px;
+  padding: 4px 10px;
+  overflow: hidden;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease), color var(--motion-base) var(--motion-ease);
+}
+
+.island-list-chip:hover {
+  color: var(--text-1);
+}
+
+.island-list-chip[aria-pressed="true"] {
+  color: var(--text-1);
+  font-weight: 600;
+  background: rgba(var(--list-ink), 0.09);
+}
+
+.island-list-chip--tag {
+  color: var(--list-accent-text);
+}
+
+.island-list-count {
+  flex: none;
+  margin-right: 4px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.island-list-notice {
+  flex: none;
+  margin-right: 6px;
+  color: var(--list-accent-text);
+  font-size: 12px;
+  animation: islandListNotice 2.4s var(--motion-ease) both;
+}
+
+@keyframes islandListNotice {
+  0%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.island-list-icon-button {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text-3);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--motion-base) var(--motion-ease), color var(--motion-base) var(--motion-ease);
+}
+
+.island-list-icon-button:hover:not(:disabled),
+.island-list-icon-button--open {
+  color: var(--text-1);
+  background: rgba(var(--list-ink), 0.08);
+}
+
+.island-list-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.island-list-icon-button--on {
+  color: var(--list-accent-text);
+}
+
+.island-list-search {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  color: var(--text-3);
+  background: rgba(var(--list-ink), 0.06);
+  border-radius: 10px;
+}
+
+.island-list-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.island-list-search input::placeholder {
+  color: var(--text-3);
+}
+
+.island-list-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.island-list-search kbd {
+  flex: none;
+  padding: 2px 5px;
+  font: 600 10px/1.2 var(--font-mono, ui-monospace, Consolas, monospace);
+  background: rgba(var(--list-ink), 0.08);
+  border-radius: 4px;
+}
+
+.island-list-search > button {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.island-list {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 1px;
+  margin-right: -6px;
+  padding-right: 6px;
+  overflow-y: auto;
+  scrollbar-color: rgba(var(--list-ink), 0.2) transparent;
+  scrollbar-width: thin;
+}
+
+.island-list-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  transition: background var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease);
+}
+
+.island-list-row:hover,
+.island-list-row:focus-within,
+.island-list-row--menu {
+  background: rgba(var(--list-ink), 0.07);
+  box-shadow: inset 0 0 0 1px rgba(var(--list-ink), 0.09);
+}
+
+.island-list-row:hover {
+  transition-delay: 80ms;
+}
+
+.island-list-row--selected,
+.island-list-row--selected:hover {
+  background: color-mix(in srgb, var(--list-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--list-accent) 45%, transparent);
+}
+
+.island-list-row__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+
+.island-list-row__hit:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--list-accent) 80%, transparent);
+  outline-offset: -2px;
+}
+
+.island-list-row__lead,
+.island-list-row__text,
+.island-list-row__mark {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.island-list-row__lead {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--text-2);
+  background: rgba(var(--list-ink), 0.07);
+  border-radius: 7px;
+}
+
+.island-list-row__lead img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.island-list-row__lead--plain {
+  background: transparent;
+}
+
+.island-list-row__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.island-list-row__main {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.island-list-row__main--mono {
+  font-family: var(--font-mono, ui-monospace, Consolas, monospace);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.island-list-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.island-list-row__meta > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.island-list-row__meta--accent {
+  color: var(--list-accent-text);
+  font-weight: 600;
+}
+
+.island-list-row__warn {
+  color: var(--warning-text, #e0a43a);
+}
+
+.island-list-tag {
+  flex: none;
+  padding: 0 6px;
+  color: inherit;
+  font: inherit;
+  color: var(--text-1);
+  background: color-mix(in srgb, var(--list-accent) 22%, transparent);
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.island-list-row__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  color: var(--list-accent-text);
+}
+
+.island-list-row__actions {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  display: none;
+  gap: 2px;
+}
+
+.island-list-row:hover .island-list-row__actions,
+.island-list-row:focus-within .island-list-row__actions,
+.island-list-row--menu .island-list-row__actions,
+.island-list-row--selected .island-list-row__actions {
+  display: flex;
+}
+
+.island-list-row:hover .island-list-row__mark,
+.island-list-row:focus-within .island-list-row__mark,
+.island-list-row--menu .island-list-row__mark,
+.island-list-row--selected .island-list-row__mark {
+  display: none;
+}
+
+.island-list-row__actions .island-list-icon-button {
+  width: 26px;
+  height: 26px;
+}
+
+.island-list-row__editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.island-list-row__editor input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  color: var(--text-1);
+  font: inherit;
+  font-size: 12px;
+  background: rgba(var(--list-ink), 0.08);
+  border: 1px solid color-mix(in srgb, var(--list-accent) 50%, transparent);
+  border-radius: 6px;
+  outline: none;
+}
+
+.island-list-empty {
+  flex: 1;
+  min-height: 120px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.island-list-empty__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--list-accent-text);
+  background: color-mix(in srgb, var(--list-accent) 12%, transparent);
+  border-radius: 14px;
+}
+
+.island-list-empty strong {
+  color: var(--text-1);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.island-list-empty small {
+  max-width: 36ch;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-list-notice {
+    animation: none;
+  }
+}

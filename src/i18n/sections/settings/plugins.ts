@@ -1,0 +1,1106 @@
+import { isMacOS } from "../../../lib/platform.ts";
+
+export type SettingsPluginsText = {
+  allowThirdParty: string;
+  folder: string;
+  brokenState: (backup: string) => string;
+  openFolder: string;
+  reload: string;
+  feedback: {
+    checking: string;
+    upToDate: string;
+    found: (count: number) => string;
+    reloaded: (count: number) => string;
+    folderOpened: string;
+    folderOpenedMac: string;
+    dataCleared: string;
+    saved: string;
+    commandSent: string;
+  };
+  empty: string;
+  groupBuiltin: (count: number) => string;
+  groupThirdParty: (count: number) => string;
+  overview: {
+    search: string;
+    filter: Record<"all" | "running" | "updates" | "attention", string>;
+    filterLabel: string;
+    noMatches: string;
+    dockTitle: (count: number) => string;
+    dockRunning: (running: number) => string;
+    dockAttention: (running: number, attention: number) => string;
+    dockOpen: (name: string) => string;
+  };
+  enable: string;
+  by: (author: string) => string;
+  homepage: string;
+  needsApproval: string;
+  keybindingConflict: (shortcuts: string) => string;
+  notAllowed: string;
+  describedOnly: string;
+  invalid: string;
+  log: string;
+  noLog: string;
+  calls: {
+    title: string;
+    hint: string;
+    none: string;
+    outcome: Record<"ok" | "denied" | "unknown" | "error", string>;
+  };
+  status: Record<"stopped" | "starting" | "running" | "restarting" | "crashed" | "idle", string>;
+  run: {
+    onDemand: string;
+    memory: (megabytes: string) => string;
+    highCpu: string;
+    keepAlive: (reason: string) => string;
+    onDemandShort: string;
+    keepAliveShort: string;
+  };
+  dev: {
+    title: string;
+    badge: string;
+    mode: string;
+    modeHint: string;
+    path: string;
+    pathPlaceholder: string;
+    load: string;
+    pick: string;
+    reload: string;
+    reloaded: string;
+    unload: string;
+    noPlugins: string;
+    recent: string;
+    recentRestores: string;
+    loadAgain: string;
+    forget: string;
+    trace: (id: string) => string;
+    traceEmpty: string;
+    event: string;
+    payload: string;
+    send: string;
+    badJson: string;
+  };
+  uninstall: string;
+  confirmUninstall: string;
+  builtin: string;
+  runtimeBuiltIn: string;
+  runtimeNode: string;
+  nodeMissing: string;
+  getNode: string;
+  powershellMissing: string;
+  getPowershell: string;
+  notForMac: string;
+  notForWindows: string;
+  webviewNotOnMac: string;
+  needsNode: string;
+  needsPowershell: string;
+  nodeMissingCount: (count: number) => string;
+  powershellMissingCount: (count: number) => string;
+  describedOnlyShort: string;
+  moreNotes: (count: number) => string;
+  detail: {
+    open: string;
+    back: string;
+    info: string;
+    infoWhenRunning: string;
+    settings: string;
+    noSettings: string;
+    actions: string;
+    copy: string;
+    copied: string;
+    notifications: string;
+    showNotifications: string;
+    windows: string;
+    windowsNoTopmost: string;
+    windowsNoClickThrough: string;
+    windowsHidden: string;
+    windowsHint: string;
+    memoryLimit: string;
+    memoryLimitOption: (megabytes: number) => string;
+    memoryLimitHint: string;
+    data: string;
+    dataHint: string;
+    clearData: string;
+    confirmClearData: string;
+  };
+  market: {
+    title: string;
+    hint: string;
+    refresh: string;
+    loading: string;
+    empty: string;
+    loadFailed: string;
+    loadFailedMac: string;
+    installFailed: (name: string) => string;
+    install: string;
+    installing: string;
+    update: (version: string) => string;
+    installed: string;
+    incompatible: string;
+    search: string;
+    summary: (installed: number, updates: number, favorites: number) => string;
+    noMatches: string;
+    allCategories: string;
+    spotlight: string;
+    category: Record<"productivity" | "todos" | "developer" | "media" | "messages" | "information" | "utilities" | "sounds", string>;
+    official: string;
+    publisher: (name: string) => string;
+    trustAndInstall: string;
+    confirmTrust: string;
+    trustHint: (publisher: string) => string;
+    signed: string;
+    keyChanged: (keyId: string) => string;
+    signatureDropped: string;
+    updateAnyway: string;
+    confirmKeyChange: string;
+    cancel: string;
+    revoked: string;
+    repository: string;
+    reportIssue: string;
+    readme: string;
+    changelog: string;
+    customUi: string;
+    customUiNotOnMac: string;
+    status: (count: number, time: string) => string;
+    statusCount: (count: number) => string;
+    refreshing: string;
+    groupInstallable: (count: number) => string;
+    groupInstalled: (count: number) => string;
+    groupUpdates: (count: number) => string;
+    favorites: (count: number) => string;
+    noFavorites: string;
+    request: {
+      title: (name: string) => string;
+      titleUnknown: string;
+      hint: string;
+      loading: string;
+      missing: (id: string) => string;
+      failed: string;
+      dismiss: string;
+    };
+    favorite: (name: string) => string;
+    unfavorite: (name: string) => string;
+    like: (name: string, count: number) => string;
+    sortLabel: string;
+    sortIndex: string;
+    sortLikes: string;
+    manage: string;
+    verified: string;
+    noPermissions: string;
+    runtime: Record<"node" | "powershell" | "exe", string>;
+  };
+  updates: {
+    title: string;
+    autoUpdate: string;
+    autoUpdateHint: string;
+    check: string;
+    trusted: string;
+    noTrusted: string;
+    untrust: string;
+    available: (version: string) => string;
+    keyChanged: (version: string) => string;
+    autoUpdated: (version: string) => string;
+    autoUpdateFailed: (reason: string) => string;
+    revoked: (reason: string) => string;
+    preReleaseTitle: string;
+    preRelease: string;
+    preReleaseHint: string;
+    preReleaseAvailable: (version: string) => string;
+    preReleaseOffered: (version: string) => string;
+    autoUpdatedShort: (version: string) => string;
+    preReleaseShort: (version: string) => string;
+  };
+  ccConnect: {
+    group: string;
+    groupHint: string;
+    path: string;
+    pathHint: string;
+    run: string;
+    runHint: string;
+    title: string;
+    hint: string;
+    program: string;
+    notFound: string;
+    source: Record<"setting" | "running" | "path" | "downloaded" | "installed", string>;
+    state: string;
+    running: string;
+    notRunning: string;
+    noProjects: string;
+    noChats: string;
+    refresh: string;
+    download: string;
+    downloading: string;
+    downloadHint: string;
+    computer: string;
+    thisComputer: string;
+    reading: string;
+    remotePath: string;
+    remotePathHint: string;
+    remoteNotRunning: string;
+    remoteSetup: string;
+    runnerLabel: string;
+    runner: Record<"off" | "starting" | "running" | "external" | "noConfig" | "failed", string>;
+    platforms: Record<string, string>;
+    setup: {
+      title: string;
+      hint: string;
+      platform: string;
+      agent: string;
+      agentHint: string;
+      project: string;
+      projectHint: string;
+      workDir: string;
+      workDirHint: string;
+      steps: Record<"telegram" | "discord" | "feishu", string[]>;
+      token: string;
+      check: string;
+      find: string;
+      checking: string;
+      bot: (name: string) => string;
+      invite: string;
+      senders: string;
+      noSenders: string;
+      allowFrom: string;
+      allowFromHint: string;
+      allowFromInvalid: string;
+      add: string;
+      adding: string;
+      added: string;
+      feishuStart: string;
+      feishuWaiting: string;
+      feishuQr: string;
+      feishuOpen: string;
+      feishuCancel: string;
+      feishuRetry: string;
+      feishuDone: (allowFrom: string | null) => string;
+      feishuNoOwner: string;
+    };
+  };
+  sshTunnel: {
+    group: string;
+    groupHint: string;
+    localProxy: string;
+    localProxyHint: string;
+    localProxyOptions: Record<"auto" | "clash-verge" | "v2rayn" | "custom", string>;
+    customPort: string;
+    title: string;
+    hint: string;
+    empty: string;
+    port: string;
+    portInvalid: string;
+    needsPort: string;
+    checking: string;
+    state: Record<"off" | "connecting" | "connected" | "portInUse" | "error", string>;
+    waitingForPlugin: string;
+    confirm: (host: string, port: number) => string;
+    unchecked: (host: string, port: number, reason: string) => string;
+    yes: string;
+    no: string;
+    proxy: {
+      label: string;
+      current: string;
+      looking: string;
+      found: Record<"clashVerge" | "v2rayN" | "systemProxy" | "clashVergeDefault" | "v2rayNDefault" | "custom", string>;
+      listening: string;
+      notListening: string;
+    };
+  };
+  centerPattern: {
+    group: string;
+    groupHint: string;
+    pattern: string;
+    patterns: Record<"eyes" | "bird" | "orb" | "cat" | "mark" | "pet", string>;
+    pet: string;
+    petHint: string;
+    size: string;
+    sizeHint: string;
+    pets: { unset: string; none: string; failed: string; loading: string; missing: (id: string) => string; app: string };
+  };
+};
+
+export const zhCN: SettingsPluginsText = {
+  allowThirdParty: "允许运行第三方插件",
+  folder: "插件目录",
+  brokenState: (backup) => `插件设置文件读不出来，已按默认值重新开始：第三方插件的开关、授权、设置和信任的发布者都要重新设置。原文件备份在 ${backup}。`,
+  openFolder: "打开",
+  reload: "重新加载",
+  feedback: {
+    checking: "正在检查…",
+    upToDate: "已是最新（刚刚检查）",
+    found: (count) => `找到 ${count} 个更新`,
+    reloaded: (count) => `已重新加载，共 ${count} 个插件`,
+    folderOpened: "已在资源管理器中打开",
+    folderOpenedMac: "已在访达中打开",
+    dataCleared: "数据已清除",
+    saved: "已保存",
+    commandSent: "已发给插件",
+  },
+  empty: "还没有安装插件。把插件文件夹放进插件目录，再点“重新加载”。",
+  groupBuiltin: (count: number) => `内置（${count}）`,
+  groupThirdParty: (count: number) => `第三方（${count}）`,
+  overview: {
+    search: "搜索已安装的插件",
+    filter: { all: "全部", running: "运行中", updates: "可更新", attention: "需处理" },
+    filterLabel: "按状态筛选",
+    noMatches: "没有符合条件的插件。",
+    dockTitle: (count) => `装了 ${count} 个插件`,
+    dockRunning: (running) => (running > 0 ? `${running} 个正在运行，一切正常` : "现在没有插件在运行"),
+    dockAttention: (running, attention) => `${running} 个正在运行，${attention} 个需要你看一下`,
+    dockOpen: (name) => `打开 ${name} 的设置`,
+  },
+  enable: "启用",
+  by: (author: string) => `作者：${author}`,
+  homepage: "主页",
+  needsApproval: "新版本需要更多权限，已暂停。关掉再打开开关即可授权。",
+  keybindingConflict: (shortcuts: string) => `快捷键已被其他程序占用：${shortcuts}`,
+  notAllowed: "先在上面打开“允许运行第三方插件”。",
+  describedOnly: "这个插件没有需要运行的程序。",
+  invalid: "无法加载",
+  log: "日志",
+  noLog: "暂无日志",
+  calls: {
+    title: "调用记录",
+    hint: "插件最近 200 次调用了岛屿的哪些接口、结果如何，最新的在最上面。只记接口名称，不记读写的内容；岛屿重启后清空。",
+    none: "还没有调用",
+    outcome: { ok: "成功", denied: "没有权限", unknown: "没有这个接口", error: "出错" },
+  },
+  status: {
+    stopped: "未运行",
+    starting: "启动中",
+    running: "运行中",
+    restarting: "重启中",
+    crashed: "已出错停止",
+    idle: "待命",
+  },
+  run: {
+    onDemand: "按需启动：用到时才运行，空闲 1 分钟后自动停止。",
+    memory: (megabytes: string) => `内存 ${megabytes} MB`,
+    highCpu: "这个插件过去 1 分钟一直占用较多 CPU。",
+    keepAlive: (reason: string) => `插件申请常驻：${reason}`,
+    onDemandShort: "按需启动",
+    keepAliveShort: "申请常驻",
+  },
+  dev: {
+    title: "开发者",
+    badge: "开发中",
+    mode: "开发模式",
+    modeHint: "可以加载任意文件夹里的插件来调试：不需要打开“允许第三方插件”，自动获得它申请的权限（敏感权限仍会询问），也可以使用实验 API。开发模式不保存，岛屿重启后要重新打开（开发版岛屿启动时自动打开）；加载过的文件夹会记住。命令行工具 fuyu-plugin dev 还需要打开“本地 API”插件。",
+    path: "插件文件夹",
+    pathPlaceholder: "插件文件夹的完整路径，里面要有 fuyu-plugin.json",
+    load: "加载",
+    pick: "选择文件夹",
+    reload: "重新加载",
+    reloaded: "已重新加载",
+    unload: "移除",
+    noPlugins: "还没有加载开发中的插件。",
+    recent: "最近加载过的",
+    recentRestores: "这是开发版：开发模式在启动时自动打开，上次没有移除的插件和环境变量 FUYU_DEV_PLUGINS 列出的插件会自动加载。",
+    loadAgain: "加载",
+    forget: "不再记住",
+    trace: (id: string) => `${id} 的 JSON-RPC 收发记录（最近 200 行）`,
+    traceEmpty: "还没有收发记录。插件运行后会显示在这里。",
+    event: "事件",
+    payload: "事件内容（JSON）",
+    send: "发送事件",
+    badJson: "事件内容不是有效的 JSON。",
+  },
+  uninstall: "卸载",
+  confirmUninstall: "确认卸载",
+  builtin: "内置",
+  runtimeBuiltIn: "无需另外安装",
+  runtimeNode: "需要 Node.js",
+  nodeMissing: "这台电脑上没有找到 Node.js，装好之后这个插件才能运行。",
+  getNode: "下载 Node.js",
+  powershellMissing: "这个插件用 PowerShell 写成，这台 Mac 上没有找到 PowerShell 7（pwsh），装好之后才能运行。",
+  getPowershell: "安装 PowerShell",
+  notForMac: "这个插件只支持 Windows，在 Mac 上不能运行。",
+  notForWindows: "这个插件只支持 macOS，在 Windows 上不能运行。",
+  webviewNotOnMac: "这个插件的页面用它自己的网页画，Mac 上暂不支持，打开是一行说明；收起条上的内容照常显示。",
+  needsNode: "需要 Node.js",
+  needsPowershell: "需要 PowerShell 7",
+  nodeMissingCount: (count: number) => `这台电脑上没有找到 Node.js，${count} 个插件装好它之后才能运行。`,
+  powershellMissingCount: (count: number) => `这台 Mac 上没有找到 PowerShell 7（pwsh），${count} 个用 PowerShell 写的插件装好它之后才能运行。`,
+  describedOnlyShort: "不运行程序",
+  moreNotes: (count: number) => `还有 ${count} 条`,
+  detail: {
+    open: "设置",
+    back: "关闭",
+    info: "运行信息",
+    infoWhenRunning: "插件运行后，会在这里显示它提供的信息。",
+    settings: "设置",
+    noSettings: "这个插件没有可以调整的设置。",
+    actions: "操作",
+    copy: "复制",
+    copied: "已复制",
+    notifications: "通知",
+    showNotifications: "在岛上显示这个插件的通知",
+    windows: "窗口",
+    windowsNoTopmost: "不允许置顶",
+    windowsNoClickThrough: "不允许点击穿透",
+    windowsHidden: "隐藏这个插件的全部窗口",
+    windowsHint: "插件在岛屿之外新建的窗口。这里的设置优先于插件自己的设置；隐藏后插件建不了新窗口，再打开才行。",
+    memoryLimit: "内存上限",
+    memoryLimitOption: (megabytes: number) => (megabytes >= 1024 ? `${megabytes / 1024} GB` : `${megabytes} MB`) + (megabytes === 512 ? "（默认）" : ""),
+    memoryLimitHint: "插件自己（连同它启动的程序）占用的内存超过上限时，岛屿会结束它并显示原因。和插件卡片上的内存一样，不算 PowerShell、Node.js 本身固定的那部分占用。一般不需要改；插件说明里要求更多内存时再调高。",
+    data: "数据",
+    dataHint: "删除插件保存的数据和凭据，插件会重新启动。卸载插件不会删除这些数据。",
+    clearData: "清除数据",
+    confirmClearData: "确认清除",
+  },
+  market: {
+    title: "插件市场",
+    hint: "从这里安装的插件会先核对校验值，确认文件完整、没被改动过。装好后默认是关闭的，打开时再决定给它哪些权限。",
+    refresh: "刷新",
+    loading: "正在加载插件列表…",
+    empty: "市场里暂时还没有插件。",
+    loadFailed: "暂时获取不到插件列表。请检查网络或 Windows 系统代理，然后点「刷新」重试。",
+    loadFailedMac: "暂时获取不到插件列表。请检查网络或代理设置，然后点「刷新」重试。",
+    installFailed: (name: string) => `「${name}」没有装上，已有的插件不受影响。`,
+    install: "安装",
+    installing: "正在安装…",
+    update: (version: string) => `更新到 v${version}`,
+    installed: "已安装",
+    incompatible: "不兼容",
+    search: "搜索名称、说明或发布者",
+    summary: (installed: number, updates: number, favorites: number) =>
+      [`已装 ${installed} 个`, updates > 0 ? `${updates} 个可更新` : "", favorites > 0 ? `收藏 ${favorites} 个` : ""].filter(Boolean).join(" · "),
+    noMatches: "没有符合条件的插件。",
+    allCategories: "全部",
+    spotlight: "大家都在装",
+    category: {
+      productivity: "效率",
+      todos: "待办",
+      developer: "开发",
+      media: "媒体",
+      messages: "消息",
+      information: "资讯",
+      utilities: "工具",
+      sounds: "音效包",
+    },
+    official: "官方",
+    publisher: (name: string) => `发布者 ${name}`,
+    trustAndInstall: "信任并安装",
+    confirmTrust: "确认信任并安装",
+    signed: "作者已签名",
+    keyChanged: (keyId: string) => `这个版本的签名密钥变了（现在是 ${keyId}），和已安装的版本不同。可能是作者换了密钥，也可能是插件仓库被人盗用。确认是作者本人发布的再更新。`,
+    signatureDropped: "这个版本没有作者签名，而已安装的版本有。可能是作者停用了签名，也可能是插件仓库被人盗用。确认是作者本人发布的再更新。",
+    updateAnyway: "仍然更新",
+    confirmKeyChange: "确认更新",
+    cancel: "取消",
+    trustHint: (publisher: string) => `第一次安装 ${publisher} 发布的插件，需要先信任这个发布者。插件以你的身份运行，能访问你能访问的文件和保存的密码，只信任你了解的发布者。信任后它的插件可以安装和自动更新，可在 插件 → 更新 中取消。`,
+    revoked: "已下架",
+    repository: "源码仓库",
+    reportIssue: "报告问题",
+    readme: "插件说明",
+    changelog: "版本历史",
+    customUi: "自定义界面",
+    customUiNotOnMac: "自定义界面 · Mac 暂不支持",
+    status: (count: number, time: string) => `共 ${count} 个插件 · 索引更新于 ${time}`,
+    statusCount: (count: number) => `共 ${count} 个插件`,
+    refreshing: "正在刷新插件列表…",
+    groupInstallable: (count: number) => `可安装（${count}）`,
+    groupInstalled: (count: number) => `已安装（${count}）`,
+    groupUpdates: (count: number) => `可更新（${count}）`,
+    favorites: (count: number) => (count > 0 ? `收藏 ${count}` : "收藏"),
+    noFavorites: "还没有收藏的插件。点卡片右侧的星标收藏，收藏只保存在这台电脑上。",
+    request: {
+      title: (name) => `官网请你安装「${name}」`,
+      titleUnknown: "官网请你安装一个插件",
+      hint: "确认是你自己点的，再点下面的「安装」。不点就什么都不会装。",
+      loading: "正在读取插件市场……",
+      missing: (id) => `插件市场里没有 ${id}，可能已经下架，或者链接写错了。`,
+      failed: "插件市场读不出来，检查网络后点右上角的刷新再试。",
+      dismiss: "不装了",
+    },
+    favorite: (name: string) => `收藏 ${name}`,
+    unfavorite: (name: string) => `取消收藏 ${name}`,
+    like: (name: string, count: number) => `${name}：${count} 个赞，在 GitHub 上点赞`,
+    sortLabel: "排序",
+    sortIndex: "默认顺序",
+    sortLikes: "按点赞数",
+    manage: "管理",
+    verified: "已验证",
+    noPermissions: "无需权限",
+    runtime: { node: "Node.js", powershell: "PowerShell", exe: "程序" },
+  },
+  updates: {
+    title: "更新",
+    autoUpdate: "自动更新插件",
+    autoUpdateHint: "岛屿每 6 小时在后台检查一次插件市场（只在允许第三方插件时）。打开后，作者签了名（并且密钥没变）、不需要新权限、发布者已受信任的更新会自动安装；其他更新只提示。",
+    check: "立即检查",
+    trusted: "受信任的发布者",
+    noTrusted: "还没有信任其他发布者（官方插件总是受信任）。",
+    untrust: "取消信任",
+    available: (version: string) => `有新版本 v${version}，可在插件市场更新。`,
+    keyChanged: (version: string) => `v${version} 的签名密钥和已安装的版本不同，不会自动更新；到插件市场确认后再更新。`,
+    autoUpdated: (version: string) => `已自动更新到 v${version}。`,
+    autoUpdateFailed: (reason: string) => `自动更新没成功，下次检查会再试：${reason}`,
+    revoked: (reason: string) => `这个版本已从插件市场下架，已停用：${reason}`,
+    preReleaseTitle: "预发布版本",
+    preRelease: "接收这个插件的预发布版本",
+    preReleaseHint: "预发布版本是作者还在测试的新版本，可能不稳定。关掉后不会退回旧版本，等正式版比当前版本新时再更新。",
+    preReleaseAvailable: (version: string) => `插件市场里有预发布版本 v${version}。`,
+    preReleaseOffered: (version: string) => `有预发布版本 v${version}，可在插件设置里选择接收。`,
+    autoUpdatedShort: (version: string) => `已自动更新到 v${version}`,
+    preReleaseShort: (version: string) => `有预发布版 v${version}`,
+  },
+  ccConnect: {
+    group: "cc-connect 手机连接",
+    groupHint: "让手机推送经 cc-connect 的机器人发到 Telegram、Discord 或飞书：Agent 等你时把问题、计划或回复连同接管命令发到手机，在手机上回 /cd、/switch 就能接着这个会话答。没装 cc-connect 也行：这里可以下载它、一步步建好机器人，并由岛让它一直运行。关掉这一节的开关，推送的 cc-connect 通道一起停用。",
+    path: "cc-connect 程序路径",
+    pathHint: isMacOS
+      ? "留空自动找：正在运行的 cc-connect、PATH（npm i -g cc-connect 装在这里）、这里下载的那份，再看 ~/.local/bin、/opt/homebrew/bin、/usr/local/bin 和登录 shell 的 PATH。不搜全盘。"
+      : "留空自动找：正在运行的 cc-connect、PATH（npm i -g cc-connect 装在这里）、这里下载的那份，再看 C、D 盘 Program Files 和 Program Files (x86) 下的 cc-connect 文件夹。不搜全盘。",
+    run: "由岛启动 cc-connect",
+    runHint: "岛开着时让 cc-connect 在后台一直运行（不弹窗口，退出岛时一起退出）。已经在别处运行的 cc-connect 不接管。",
+    title: "找到的 cc-connect",
+    hint: "推送经下面列出的聊天发到手机：在上面的「手机推送」里把通道选成 cc-connect，再勾选聊天。",
+    program: "程序",
+    notFound: "没找到 cc-connect。点下面的「下载 cc-connect」，或在上面填它的路径。",
+    source: { setting: "插件设置", running: "正在运行", path: "PATH", downloaded: "岛下载的", installed: "安装目录" },
+    state: "状态",
+    running: "正在运行",
+    notRunning: "没在运行：推送要 cc-connect 在运行。打开上面的「由岛启动 cc-connect」，或自己启动它。",
+    noProjects: "还没有聊天：先在下面建一个机器人，或给已有的机器人发一句话。",
+    noChats: "还没有聊天",
+    refresh: "刷新",
+    download: "下载 cc-connect",
+    downloading: "正在下载…",
+    downloadHint: "从 GitHub 下载最新正式版，按发布的校验值核对后放在岛的数据文件夹里。",
+    computer: "电脑",
+    thisComputer: "本机",
+    reading: "正在经 SSH 读取…",
+    remotePath: "程序路径",
+    remotePathHint: "留空自动找：正在运行的那个，或登录 shell 的 PATH 里的。改了点刷新",
+    remoteNotRunning: "没在运行：推送要那台电脑上的 cc-connect 在运行，请在那台电脑上启动它。",
+    remoteSetup: "远程电脑的机器人在那台电脑上用 cc-connect 自己配置，岛只读取和经它发送。",
+    runnerLabel: "由岛启动",
+    runner: {
+      off: "未开启",
+      starting: "正在启动…",
+      running: "运行中",
+      external: "已有别处启动的 cc-connect，不接管",
+      noConfig: "等配置：先在下面建一个机器人",
+      failed: "启动失败",
+    },
+    platforms: { telegram: "Telegram", discord: "Discord", feishu: "飞书", lark: "Lark", weixin: "微信", qqbot: "QQ", qq: "QQ", slack: "Slack", dingtalk: "钉钉", wecom: "企业微信" },
+    setup: {
+      title: "新建机器人",
+      hint: "一个机器人对应 cc-connect 里的一个项目：在手机上和它聊，就是在这台电脑的工作文件夹里用 Claude Code 或 Codex，Claude Code 每次用工具都要你在手机上同意。",
+      platform: "平台",
+      agent: "Agent",
+      agentHint: "一个机器人只接一种 Agent，也只能接管这种 Agent 的会话。Codex 从只读模式开始（它没法在手机上问你），要改文件时在手机上用 /mode 切换。",
+      project: "项目名",
+      projectHint: "只用字母、数字、- 和 _。",
+      workDir: "工作文件夹",
+      workDirHint: "默认是岛建的一个空文件夹。Claude Code 读这个文件夹里的文件不会问你，所以别换成整个用户文件夹。在手机上开的会话从这里开始，之后可以用 /cd 换。",
+      steps: {
+        telegram: [
+          "在 Telegram 里找 @BotFather，发 /newbot，按提示给机器人起名，复制它最后给的 token。",
+          "把 token 粘到下面，用 Telegram 给你的新机器人随便发一句话，再点「识别」。",
+          "在列出的人里点选你自己，ID 就填进「谁能用」。",
+        ],
+        discord: [
+          "打开 Discord 开发者门户（discord.com/developers/applications），New Application → Bot → Reset Token，复制 token；同一页打开 Message Content Intent。",
+          "把 token 粘到下面点「检查」，再用出现的邀请链接把机器人拉进你的服务器。",
+          "Discord 设置 → 高级 → 打开开发者模式，右键自己的头像 →「复制用户 ID」，填进「谁能用」。",
+        ],
+        feishu: [
+          "点「扫码创建」，用飞书 App 扫出现的二维码，飞书会自动建好机器人并开通需要的权限。",
+          "扫码的人就是能用这个机器人的人；建好后在飞书里给机器人发一句话。",
+        ],
+      },
+      token: "机器人 token",
+      check: "检查",
+      find: "识别",
+      checking: "正在检查…",
+      bot: (name: string) => `机器人 ${name} 可用。`,
+      invite: "邀请进服务器",
+      senders: "给机器人发过消息的人，点选你自己：",
+      noSenders: "还没人给它发消息：用 Telegram 给机器人发一句话，再点「识别」。",
+      allowFrom: "谁能用（你的用户 ID）",
+      allowFromHint: "只有这些人能通过机器人使用这台电脑；多个 ID 用英文逗号隔开。",
+      allowFromInvalid: "ID 只能是字母、数字、- 和 _，多个用英文逗号隔开，不能是 *。",
+      add: "添加到 cc-connect",
+      adding: "正在添加…",
+      added:
+        "已加进 cc-connect 的配置。打开上面的「由岛启动 cc-connect」让它运行（已经开着的会自动重启；自己运行的 cc-connect 要重启一次），然后给机器人发一句话，聊天就会出现在上面。",
+      feishuStart: "扫码创建",
+      feishuWaiting: "正在准备二维码…",
+      feishuQr: "飞书扫码创建机器人的二维码",
+      feishuOpen: "在浏览器打开",
+      feishuCancel: "取消",
+      feishuRetry: "重新开始",
+      feishuDone: (allowFrom: string | null) =>
+        `飞书机器人建好了${allowFrom ? `，能用它的人：${allowFrom}` : ""}。打开「由岛启动 cc-connect」让它运行，再在飞书里给机器人发一句话。`,
+      feishuNoOwner:
+        "没拿到你的飞书用户 ID，现在组织里谁都能用这个机器人：给它发 /whoami，把得到的 User ID 填进 ~/.cc-connect/config.toml 里这个项目的 allow_from，再重启 cc-connect。",
+    },
+  },
+  sshTunnel: {
+    group: "SSH 代理隧道",
+    groupHint: "把这台电脑的代理借给 SSH 服务器：为下面打开的每台主机常驻一条 ssh 反向隧道（服务器上的 127.0.0.1:端口 → 这里的本地代理），服务器上设好 http_proxy 就能经这里上网。只用密钥登录，断开后自动重连；关掉这一节的开关或退出岛屿时，隧道一起结束。",
+    localProxy: "本地代理",
+    localProxyHint: "自动检测依次看 Clash Verge 的设置、正在运行的 v2rayN 的设置和系统代理（Windows 的 Internet 设置、Mac 的网络代理），再试两者的默认端口，用第一个真有程序在监听的；之后每 15 秒再看一次，端口变了隧道跟着换。选 Clash Verge 或 v2rayN 时也先读它们的设置，读不到才用默认端口（7897、10808）。",
+    localProxyOptions: {
+      auto: "自动检测",
+      "clash-verge": "Clash Verge（默认 7897）",
+      v2rayn: "v2rayN（默认 10808）",
+      custom: "自定义端口",
+    },
+    customPort: "本地端口",
+    title: "隧道主机",
+    hint: "主机来自 ~/.ssh/config 和上面添加的主机。每台填一个服务器上的端口（1024–65535，别和别人的隧道重复），打开后在服务器上运行下面那行 export 就能用这里的代理。",
+    empty: "没有主机：在 ~/.ssh/config 里写 Host，或在上面添加一台。",
+    port: "服务器端口",
+    portInvalid: "端口要是 1024–65535 的整数",
+    needsPort: "先填服务器端口",
+    checking: "正在检查服务器上的端口…",
+    state: {
+      off: "未开启",
+      connecting: "连接中…",
+      connected: "已连接",
+      portInUse: "端口被占用，等待中",
+      error: "连接失败，稍后重试",
+    },
+    waitingForPlugin: "插件开启后连接",
+    confirm: (host: string, port: number) => `${host} 上的端口 ${port} 已被占用（可能是另一个隧道），仍要搭建隧道吗？`,
+    unchecked: (host: string, port: number, reason: string) =>
+      `没能检查 ${host} 上的端口 ${port} 是否被占用（${reason}），仍要搭建隧道吗？`,
+    yes: "是",
+    no: "否",
+    proxy: {
+      label: "本地代理",
+      current: "当前转发到",
+      looking: "正在查找本地代理…",
+      found: {
+        clashVerge: "端口来自 Clash Verge 的设置",
+        v2rayN: "端口来自 v2rayN 的设置",
+        systemProxy: "端口来自系统代理",
+        clashVergeDefault: "Clash Verge 的默认端口",
+        v2rayNDefault: "v2rayN 的默认端口",
+        custom: "自定义端口",
+      },
+      listening: "，代理正在监听。",
+      notListening: "，但现在没有程序在监听这个端口：请打开代理软件。",
+    },
+  },
+  centerPattern: {
+    group: "中心图案",
+    groupHint: "收起的岛上没有文字时，在中间显示一个小动画（只有剩余待办数时排在待办数前面）；显示 Agent 标题时，宠物或水母站在标题前代替 Agent 图标。关掉这一节的开关可停用。",
+    pattern: "图案",
+    patterns: {
+      eyes: "眼睛",
+      bird: "小鸟",
+      orb: "光点",
+      cat: "小猫",
+      mark: "水母",
+      pet: "宠物",
+    },
+    pet: "宠物",
+    petHint: "图案选「宠物」时显示哪一只，默认小八（xiaoba）。宠物包（pet.json + spritesheet）放在 ~/.codex/pets 或应用数据目录的 pets 文件夹里；找不到时显示眼睛。",
+    size: "大小（像素）",
+    sizeHint: "图案的高度，默认 24，和收起条上的环一样高；水母量的是整只的高度，宠物比它高 4。",
+    pets: {
+      unset: "未选择（显示眼睛）",
+      none: "没有找到宠物（显示眼睛）",
+      failed: "读不到宠物列表（显示眼睛）",
+      loading: "正在读取宠物…",
+      missing: (id) => `${id}（已找不到）`,
+      app: "本应用",
+    },
+  },
+};
+
+export const en: SettingsPluginsText = {
+  allowThirdParty: "Allow third-party plugins",
+  folder: "Plugins folder",
+  brokenState: (backup) => `The plugin settings file could not be read, so plugins started over with the defaults: third-party plugins, permissions, settings and trusted publishers need setting up again. The original file is kept at ${backup}.`,
+  openFolder: "Open",
+  reload: "Reload",
+  feedback: {
+    checking: "Checking…",
+    upToDate: "Up to date (just checked)",
+    found: (count) => `${count} update${count === 1 ? "" : "s"} found`,
+    reloaded: (count) => `Reloaded, ${count} plugin${count === 1 ? "" : "s"}`,
+    folderOpened: "Opened in File Explorer",
+    folderOpenedMac: "Opened in Finder",
+    dataCleared: "Data cleared",
+    saved: "Saved",
+    commandSent: "Sent to the plugin",
+  },
+  empty: "No plugins installed. Put a plugin folder in the plugins folder, then click Reload.",
+  groupBuiltin: (count: number) => `Built in (${count})`,
+  groupThirdParty: (count: number) => `Third-party (${count})`,
+  overview: {
+    search: "Search installed plugins",
+    filter: { all: "All", running: "Running", updates: "Updates", attention: "Needs attention" },
+    filterLabel: "Filter by state",
+    noMatches: "No plugins match.",
+    dockTitle: (count) => (count === 1 ? "1 plugin installed" : `${count} plugins installed`),
+    dockRunning: (running) => (running > 0 ? `${running} running, all is well` : "No plugin is running right now"),
+    dockAttention: (running, attention) => `${running} running, ${attention} need a look`,
+    dockOpen: (name) => `Open ${name}'s settings`,
+  },
+  enable: "Enabled",
+  by: (author: string) => `by ${author}`,
+  homepage: "Homepage",
+  needsApproval: "The new version asks for more permissions, so it is paused. Switch it off and on to allow them.",
+  keybindingConflict: (shortcuts: string) => `Shortcut already in use by another app: ${shortcuts}`,
+  notAllowed: "Turn on “Allow third-party plugins” above first.",
+  describedOnly: "This plugin has nothing to run.",
+  invalid: "Cannot load",
+  log: "Log",
+  noLog: "No log yet",
+  calls: {
+    title: "Calls",
+    hint: "The island APIs the plugin called in its last 200 calls and how each ended, newest first. Only the API names are kept, not what was read or written; cleared when the island restarts.",
+    none: "No calls yet",
+    outcome: { ok: "ok", denied: "no permission", unknown: "no such API", error: "error" },
+  },
+  status: {
+    stopped: "Not running",
+    starting: "Starting",
+    running: "Running",
+    restarting: "Restarting",
+    crashed: "Stopped after errors",
+    idle: "Idle",
+  },
+  run: {
+    onDemand: "Starts on demand: runs only when needed and stops after a minute with nothing to do.",
+    memory: (megabytes: string) => `Memory ${megabytes} MB`,
+    highCpu: "This plugin has used a lot of CPU for the last minute.",
+    keepAlive: (reason: string) => `Keeps running: ${reason}`,
+    onDemandShort: "On demand",
+    keepAliveShort: "Keeps running",
+  },
+  dev: {
+    title: "Developer",
+    badge: "In development",
+    mode: "Development mode",
+    modeHint: "Load a plugin from any folder to debug it: it needs no “Allow third-party plugins”, gets the permissions it asks for (sensitive ones are still confirmed) and may use experimental APIs. Development mode is not saved; turn it on again after the island restarts (a development build turns it on by itself). Folders you loaded are remembered. The fuyu-plugin dev command also needs the Local API plugin on.",
+    path: "Plugin folder",
+    pathPlaceholder: "Full path of a folder with fuyu-plugin.json",
+    load: "Load",
+    pick: "Choose folder",
+    reload: "Reload",
+    reloaded: "Reloaded",
+    unload: "Remove",
+    noPlugins: "No plugins in development loaded yet.",
+    recent: "Loaded before",
+    recentRestores: "This is a development build: development mode turns on at startup and loads the plugins you did not remove last time and those listed in FUYU_DEV_PLUGINS.",
+    loadAgain: "Load",
+    forget: "Forget",
+    trace: (id: string) => `JSON-RPC messages of ${id} (last 200 lines)`,
+    traceEmpty: "No messages yet. They show up here once the plugin runs.",
+    event: "Event",
+    payload: "Event payload (JSON)",
+    send: "Send event",
+    badJson: "The payload is not valid JSON.",
+  },
+  uninstall: "Uninstall",
+  confirmUninstall: "Confirm uninstall",
+  builtin: "Built in",
+  runtimeBuiltIn: "Nothing else to install",
+  runtimeNode: "Needs Node.js",
+  nodeMissing: "Node.js was not found on this computer; this plugin runs once it is installed.",
+  getNode: "Get Node.js",
+  powershellMissing: "This plugin is written in PowerShell, and PowerShell 7 (pwsh) was not found on this Mac; it runs once that is installed.",
+  getPowershell: "Install PowerShell",
+  notForMac: "This plugin is for Windows only and does not run on a Mac.",
+  notForWindows: "This plugin is for macOS only and does not run on Windows.",
+  webviewNotOnMac: "This plugin draws its page with its own web page, which is not supported on a Mac yet; the page shows a note instead. Its items on the collapsed bar still show.",
+  needsNode: "Needs Node.js",
+  needsPowershell: "Needs PowerShell 7",
+  nodeMissingCount: (count: number) => `Node.js was not found on this computer; ${count === 1 ? "1 plugin runs" : `${count} plugins run`} once it is installed.`,
+  powershellMissingCount: (count: number) => `PowerShell 7 (pwsh) was not found on this Mac; ${count === 1 ? "1 PowerShell plugin runs" : `${count} PowerShell plugins run`} once it is installed.`,
+  describedOnlyShort: "Nothing to run",
+  moreNotes: (count: number) => `${count} more`,
+  detail: {
+    open: "Settings",
+    back: "Close",
+    info: "Info",
+    infoWhenRunning: "Once the plugin runs, what it shares appears here.",
+    settings: "Settings",
+    noSettings: "This plugin has no settings.",
+    actions: "Actions",
+    copy: "Copy",
+    copied: "Copied",
+    notifications: "Notifications",
+    showNotifications: "Show this plugin's notifications on the island",
+    windows: "Windows",
+    windowsNoTopmost: "Don't allow always on top",
+    windowsNoClickThrough: "Don't allow clicks to pass through",
+    windowsHidden: "Hide all of this plugin's windows",
+    windowsHint: "Windows the plugin opens outside the island. These settings win over the plugin's own; while hidden, the plugin cannot open new windows.",
+    memoryLimit: "Memory limit",
+    memoryLimitOption: (megabytes: number) => (megabytes >= 1024 ? `${megabytes / 1024} GB` : `${megabytes} MB`) + (megabytes === 512 ? " (default)" : ""),
+    memoryLimitHint: "When the plugin, with the programs it starts, uses more memory than this, the island stops it and says why. Like the memory on the plugin card, the fixed share PowerShell or Node.js takes by itself is not counted. Leave it unless the plugin's description asks for more.",
+    data: "Data",
+    dataHint: "Deletes what the plugin saved, including its secrets, and restarts it. Uninstalling keeps this data.",
+    clearData: "Clear data",
+    confirmClearData: "Confirm clear",
+  },
+  market: {
+    title: "Plugin market",
+    hint: "Plugins installed from here are checked first to make sure the files are complete and unchanged. They start off, and you choose what they may access when you turn one on.",
+    refresh: "Refresh",
+    loading: "Loading plugins…",
+    empty: "No plugins in the market yet.",
+    loadFailed: "Could not load the plugin list. Check your network or the Windows proxy settings, then click Refresh.",
+    loadFailedMac: "Could not load the plugin list. Check your network or proxy settings, then click Refresh.",
+    installFailed: (name: string) => `${name} was not installed. Your other plugins are unaffected.`,
+    install: "Install",
+    installing: "Installing…",
+    update: (version: string) => `Update to v${version}`,
+    installed: "Installed",
+    incompatible: "Not compatible",
+    search: "Search names, descriptions or publishers",
+    summary: (installed: number, updates: number, favorites: number) =>
+      [`${installed} installed`, updates > 0 ? `${updates} to update` : "", favorites > 0 ? `${favorites} starred` : ""].filter(Boolean).join(" · "),
+    noMatches: "No plugins match.",
+    allCategories: "All",
+    spotlight: "Most liked",
+    category: {
+      productivity: "Productivity",
+      todos: "Todos",
+      developer: "Developer",
+      media: "Media",
+      messages: "Messages",
+      information: "Information",
+      utilities: "Utilities",
+      sounds: "Sound packs",
+    },
+    official: "Official",
+    publisher: (name: string) => `Published by ${name}`,
+    trustAndInstall: "Trust and install",
+    confirmTrust: "Confirm and install",
+    signed: "Signed by author",
+    keyChanged: (keyId: string) => `This version is signed with a different key (${keyId}) than the installed one. The author may have changed keys, or the plugin's repository may have been taken over. Update only if you are sure the author published it.`,
+    signatureDropped: "This version has no author signature, but the installed one had. The author may have stopped signing, or the plugin's repository may have been taken over. Update only if you are sure the author published it.",
+    updateAnyway: "Update anyway",
+    confirmKeyChange: "Confirm update",
+    cancel: "Cancel",
+    trustHint: (publisher: string) => `This is the first plugin from ${publisher}. Trust the publisher to install it. Plugins run as you and can reach your files and saved passwords, so only trust publishers you know. Its plugins can then be installed and updated automatically. You can undo this under Plugins > Updates.`,
+    revoked: "Taken down",
+    repository: "Source code",
+    reportIssue: "Report a problem",
+    readme: "About this plugin",
+    changelog: "Version history",
+    customUi: "Custom UI",
+    customUiNotOnMac: "Custom UI · not on Mac yet",
+    status: (count: number, time: string) => `${count} ${count === 1 ? "plugin" : "plugins"} · index updated ${time}`,
+    statusCount: (count: number) => `${count} ${count === 1 ? "plugin" : "plugins"}`,
+    refreshing: "Refreshing the plugin list…",
+    groupInstallable: (count: number) => `Available (${count})`,
+    groupInstalled: (count: number) => `Installed (${count})`,
+    groupUpdates: (count: number) => `Updates (${count})`,
+    favorites: (count: number) => (count > 0 ? `Starred ${count}` : "Starred"),
+    noFavorites: "No starred plugins yet. Use the star on a card; stars are kept on this computer only.",
+    request: {
+      title: (name) => `The website asks you to install “${name}”`,
+      titleUnknown: "The website asks you to install a plugin",
+      hint: "If you clicked it yourself, press Install below. Nothing is installed unless you do.",
+      loading: "Reading the plugin market…",
+      missing: (id) => `${id} is not in the plugin market. It may have been taken down, or the link is wrong.`,
+      failed: "The plugin market could not be read. Check the connection and press refresh above.",
+      dismiss: "Don't install",
+    },
+    favorite: (name: string) => `Star ${name}`,
+    unfavorite: (name: string) => `Unstar ${name}`,
+    like: (name: string, count: number) => `${name}: ${count} ${count === 1 ? "like" : "likes"}, like it on GitHub`,
+    sortLabel: "Sort",
+    sortIndex: "Default order",
+    sortLikes: "Most liked",
+    manage: "Manage",
+    verified: "Verified",
+    noPermissions: "No permissions",
+    runtime: { node: "Node.js", powershell: "PowerShell", exe: "Program" },
+  },
+  updates: {
+    title: "Updates",
+    autoUpdate: "Update plugins automatically",
+    autoUpdateHint: "The island checks the plugin market every 6 hours in the background (only while third-party plugins are allowed). When this is on, updates signed by their author (with an unchanged key) from trusted publishers that need no new permissions install by themselves; other updates are only offered.",
+    check: "Check now",
+    trusted: "Trusted publishers",
+    noTrusted: "No other publishers trusted yet (official plugins always are).",
+    untrust: "Stop trusting",
+    available: (version: string) => `Version ${version} is available in the plugin market.`,
+    keyChanged: (version: string) => `${version} is signed with a different key than the installed version, so it does not update by itself; confirm it in the plugin market.`,
+    autoUpdated: (version: string) => `Updated to ${version} automatically.`,
+    autoUpdateFailed: (reason: string) => `The automatic update failed; the next check will try again: ${reason}`,
+    revoked: (reason: string) => `This version was taken off the plugin market and is switched off: ${reason}`,
+    preReleaseTitle: "Pre-releases",
+    preRelease: "Get pre-releases of this plugin",
+    preReleaseHint: "Pre-releases are new versions the author is still testing and may be unstable. Turning this off does not roll back; the plugin updates again once a release is newer than what is installed.",
+    preReleaseAvailable: (version: string) => `Pre-release ${version} is in the plugin market. `,
+    preReleaseOffered: (version: string) => `Pre-release ${version} is available; you can opt in from the plugin's settings.`,
+    autoUpdatedShort: (version: string) => `Updated to ${version}`,
+    preReleaseShort: (version: string) => `Pre-release ${version}`,
+  },
+  ccConnect: {
+    group: "cc-connect phone link",
+    groupHint: "Sends the phone push through cc-connect's bots on Telegram, Discord or Feishu: when an agent waits for you, its question, plan or reply goes to your phone with the commands to take the session over there (/cd, /switch). No cc-connect yet? Download it here, set a bot up step by step, and the island keeps it running. Switching this group off turns the push's cc-connect channel off too.",
+    path: "cc-connect program",
+    pathHint: isMacOS
+      ? "Leave empty to find it: the running cc-connect, PATH (where npm i -g cc-connect puts it), the one downloaded here, then ~/.local/bin, /opt/homebrew/bin, /usr/local/bin and a login shell's PATH. The disk is not searched."
+      : "Leave empty to find it: the running cc-connect, PATH (where npm i -g cc-connect puts it), the one downloaded here, then a cc-connect folder in Program Files or Program Files (x86) on C: and D:. The disks are not searched.",
+    run: "Keep cc-connect running",
+    runHint: "While the island runs, cc-connect runs in the background too (no window, it ends with the island). A cc-connect started elsewhere is left alone.",
+    title: "cc-connect found",
+    hint: "Pushes go to your phone through the chats below: under Phone push above, pick cc-connect as the channel and tick the chats.",
+    program: "Program",
+    notFound: "cc-connect was not found. Use Download cc-connect below, or enter its path above.",
+    source: { setting: "plugin setting", running: "running", path: "PATH", downloaded: "downloaded here", installed: "install folder" },
+    state: "State",
+    running: "Running",
+    notRunning: "Not running: pushes need cc-connect running. Turn on Keep cc-connect running above, or start it yourself.",
+    noProjects: "No chats yet: set a bot up below, or send an existing bot a message.",
+    noChats: "No chats yet",
+    refresh: "Refresh",
+    download: "Download cc-connect",
+    downloading: "Downloading…",
+    downloadHint: "Gets the latest release from GitHub, checks it against the published checksum, and keeps it in the island's data folder.",
+    computer: "Computer",
+    thisComputer: "This computer",
+    reading: "Reading over SSH…",
+    remotePath: "Program path",
+    remotePathHint: "Leave empty to find it: the one running, or the one on a login shell's PATH. Refresh after a change",
+    remoteNotRunning: "Not running: pushes need cc-connect running on that computer; start it there.",
+    remoteSetup: "A remote computer's bots are set up with cc-connect on that computer; the island only reads them and sends through it.",
+    runnerLabel: "Run by the island",
+    runner: {
+      off: "Off",
+      starting: "Starting…",
+      running: "Running",
+      external: "A cc-connect started elsewhere runs; left alone",
+      noConfig: "Waiting for a config: set a bot up below",
+      failed: "Failed to start",
+    },
+    platforms: { telegram: "Telegram", discord: "Discord", feishu: "Feishu", lark: "Lark", weixin: "WeChat", qqbot: "QQ", qq: "QQ", slack: "Slack", dingtalk: "DingTalk", wecom: "WeCom" },
+    setup: {
+      title: "Set up a bot",
+      hint: "One bot is one project in cc-connect: chatting with it on your phone is using Claude Code or Codex in the work folder on this computer; Claude Code asks you on the phone before every tool use.",
+      platform: "Platform",
+      agent: "Agent",
+      agentHint: "A bot drives one agent, and takes over only that agent's sessions. Codex starts read-only (it cannot ask you on the phone); switch with /mode on the phone when it should change files.",
+      project: "Project name",
+      projectHint: "Letters, digits, - and _ only.",
+      workDir: "Work folder",
+      workDirHint: "By default an empty folder the island makes. Claude Code reads what is in it without asking, so do not switch to your whole user folder. Sessions started from the phone begin here; /cd changes it later.",
+      steps: {
+        telegram: [
+          "In Telegram, open @BotFather, send /newbot, name the bot as it asks, and copy the token it gives you last.",
+          "Paste the token below, send your new bot any message in Telegram, then press Find me.",
+          "Pick yourself among the people listed; your ID goes into Who may use it.",
+        ],
+        discord: [
+          "Open the Discord Developer Portal (discord.com/developers/applications): New Application → Bot → Reset Token, and copy the token; on the same page turn on Message Content Intent.",
+          "Paste the token below and press Check, then invite the bot to your server with the link that appears.",
+          "Discord settings → Advanced → turn on Developer Mode, right-click your own avatar → Copy User ID, and put it into Who may use it.",
+        ],
+        feishu: [
+          "Press Create by QR code and scan the code with the Feishu app: Feishu makes the bot and grants what it needs.",
+          "Whoever scans may use the bot; once it is made, send it a message in Feishu.",
+        ],
+      },
+      token: "Bot token",
+      check: "Check",
+      find: "Find me",
+      checking: "Checking…",
+      bot: (name: string) => `Bot ${name} works.`,
+      invite: "Invite to a server",
+      senders: "People who wrote to the bot; pick yourself:",
+      noSenders: "Nobody has written to it yet: send the bot a message in Telegram, then press Find me.",
+      allowFrom: "Who may use it (your user ID)",
+      allowFromHint: "Only these people can use this computer through the bot; separate several IDs with commas.",
+      allowFromInvalid: "IDs are letters, digits, - and _, separated by commas, and never *.",
+      add: "Add to cc-connect",
+      adding: "Adding…",
+      added:
+        "Added to cc-connect's config. Turn on Keep cc-connect running above (a running one restarts by itself; restart a cc-connect you run yourself), then send the bot a message and the chat shows up above.",
+      feishuStart: "Create by QR code",
+      feishuWaiting: "Preparing the QR code…",
+      feishuQr: "QR code to create the Feishu bot",
+      feishuOpen: "Open in the browser",
+      feishuCancel: "Cancel",
+      feishuRetry: "Start over",
+      feishuDone: (allowFrom: string | null) =>
+        `The Feishu bot is ready${allowFrom ? `; it may be used by ${allowFrom}` : ""}. Turn on Keep cc-connect running, then send the bot a message in Feishu.`,
+      feishuNoOwner:
+        "Your Feishu user ID did not come back, so anyone in the organization can use this bot: send it /whoami, put the User ID into this project's allow_from in ~/.cc-connect/config.toml, and restart cc-connect.",
+    },
+  },
+  sshTunnel: {
+    group: "SSH proxy tunnel",
+    groupHint: "Lends this computer's proxy to SSH servers: for each host switched on below, a resident ssh reverse tunnel (127.0.0.1:port on the server to the local proxy here), so the server reaches the internet through here once http_proxy is set there. Key login only, and it reconnects after a drop; switching this group off or quitting the island ends the tunnels.",
+    localProxy: "Local proxy",
+    localProxyHint: "Auto looks in turn at Clash Verge's settings, a running v2rayN's settings and the system proxy (Internet settings on Windows, network proxies on a Mac), then tries both apps' default ports, and takes the first one something listens on; it looks again every 15 seconds and moves the tunnels when the port changes. Clash Verge and v2rayN also read the app's settings first, and use the default port (7897, 10808) only when there are none.",
+    localProxyOptions: {
+      auto: "Auto",
+      "clash-verge": "Clash Verge (7897 by default)",
+      v2rayn: "v2rayN (10808 by default)",
+      custom: "Custom port",
+    },
+    customPort: "Local port",
+    title: "Tunnel hosts",
+    hint: "Hosts come from ~/.ssh/config and the hosts added above. Give each a port on the server (1024–65535, not one another tunnel uses); once it is on, run the export line below on the server to use the proxy here.",
+    empty: "No hosts: add a Host to ~/.ssh/config, or add one above.",
+    port: "Server port",
+    portInvalid: "The port must be a whole number from 1024 to 65535",
+    needsPort: "Set the server port first",
+    checking: "Checking the port on the server…",
+    state: {
+      off: "Off",
+      connecting: "Connecting…",
+      connected: "Connected",
+      portInUse: "Port in use, waiting",
+      error: "Failed, retrying soon",
+    },
+    waitingForPlugin: "Connects once the plugin is on",
+    confirm: (host: string, port: number) => `Port ${port} on ${host} is already in use (maybe by another tunnel). Set up the tunnel anyway?`,
+    unchecked: (host: string, port: number, reason: string) =>
+      `Could not check whether port ${port} on ${host} is in use (${reason}). Set up the tunnel anyway?`,
+    yes: "Yes",
+    no: "No",
+    proxy: {
+      label: "Local proxy",
+      current: "Forwarding to",
+      looking: "Looking for the local proxy…",
+      found: {
+        clashVerge: "Port from Clash Verge's settings",
+        v2rayN: "Port from v2rayN's settings",
+        systemProxy: "Port from the system proxy",
+        clashVergeDefault: "Clash Verge's default port",
+        v2rayNDefault: "v2rayN's default port",
+        custom: "Custom port",
+      },
+      listening: "; the proxy is listening.",
+      notListening: ", but nothing listens on it now: start the proxy app.",
+    },
+  },
+  centerPattern: {
+    group: "Center pattern",
+    groupHint: "When the collapsed island shows no text, a small animation sits in its middle (ahead of an idle to-do count when that is all there is); while an agent title shows, the pet or the jellyfish stands before it in place of the agent icon. Switch this group off to turn it off.",
+    pattern: "Pattern",
+    patterns: {
+      eyes: "Eyes",
+      bird: "Bird",
+      orb: "Light",
+      cat: "Cat",
+      mark: "Jellyfish",
+      pet: "Pet",
+    },
+    pet: "Pet",
+    petHint: "Which pet the Pet pattern shows; xiaoba by default. Pet packs (pet.json + spritesheet) go in ~/.codex/pets or the pets folder of the app data directory; without one the eyes show.",
+    size: "Size (px)",
+    sizeHint: "How tall the pattern is; 24 by default, as tall as the rings on the collapsed bar. For the jellyfish it is the whole body; a pet is 4 taller.",
+    pets: {
+      unset: "None (shows the eyes)",
+      none: "No pets found (shows the eyes)",
+      failed: "Could not read the pets (shows the eyes)",
+      loading: "Reading pets…",
+      missing: (id) => `${id} (missing)`,
+      app: "this app",
+    },
+  },
+};

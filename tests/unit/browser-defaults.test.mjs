@@ -1,0 +1,68 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { blockedShortcut, macSelectionCopyText, quietTextChecking } from "../../src/lib/browserDefaults.ts";
+
+const keys = (key, mods = {}) => ({ key, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...mods });
+const mac = { mac: true, dev: false };
+const win = { mac: false, dev: false };
+
+test("browser shortcuts are blocked on each platform's primary key", () => {
+  for (const key of ["p", "f", "s", "u", "n", "=", "-", "0", "["]) {
+    assert.equal(blockedShortcut(keys(key, { metaKey: true }), mac), true, `⌘${key}`);
+    assert.equal(blockedShortcut(keys(key, { ctrlKey: true }), win), true, `Ctrl+${key}`);
+  }
+  assert.equal(blockedShortcut(keys("ArrowLeft", { altKey: true }), win), true);
+  assert.equal(blockedShortcut(keys("F7"), win), true);
+});
+
+test("reload and devtools stay available in dev only", () => {
+  assert.equal(blockedShortcut(keys("r", { metaKey: true }), mac), true);
+  assert.equal(blockedShortcut(keys("r", { metaKey: true }), { mac: true, dev: true }), false);
+  assert.equal(blockedShortcut(keys("F5"), win), true);
+  assert.equal(blockedShortcut(keys("F12"), { mac: false, dev: true }), false);
+  assert.equal(blockedShortcut(keys("i", { ctrlKey: true, shiftKey: true }), win), true);
+  assert.equal(blockedShortcut(keys("i", { metaKey: true, altKey: true }), mac), true);
+});
+
+test("typing and the app's own keys are left alone", () => {
+  assert.equal(blockedShortcut(keys("a"), mac), false);
+  assert.equal(blockedShortcut(keys("k", { metaKey: true }), mac), false);
+  assert.equal(blockedShortcut(keys("c", { metaKey: true }), mac), false);
+  assert.equal(blockedShortcut(keys("v", { ctrlKey: true }), win), false);
+  assert.equal(blockedShortcut(keys("h", { ctrlKey: true }), mac), false);
+  assert.equal(blockedShortcut(keys("ArrowLeft", { metaKey: true }), mac), false);
+});
+
+test("macOS selection copy only triggers on plain Cmd+C outside editable fields", () => {
+  assert.equal(macSelectionCopyText(keys("c", { metaKey: true }), mac, false, "验证码 356407"), "验证码 356407");
+  assert.equal(macSelectionCopyText(keys("C", { metaKey: true }), mac, false, "order-99"), "order-99");
+  assert.equal(macSelectionCopyText(keys("c", { metaKey: true }), mac, true, "in-input"), null);
+  assert.equal(macSelectionCopyText(keys("c", { metaKey: true }), mac, false, ""), null);
+  assert.equal(macSelectionCopyText(keys("c", { ctrlKey: true }), win, false, "windows"), null);
+  assert.equal(macSelectionCopyText(keys("c", { metaKey: true, shiftKey: true }), mac, false, "devtools"), null);
+});
+
+const field = (selector, attributes = {}) => {
+  const attrs = new Map(Object.entries(attributes));
+  return {
+    attrs,
+    matches: (query) => query.split(", ").includes(selector),
+    hasAttribute: (name) => attrs.has(name),
+    setAttribute: (name, value) => attrs.set(name, value),
+  };
+};
+
+test("text fields stop spell checking and auto-correcting unless they ask for it", () => {
+  const input = field("input");
+  quietTextChecking(input);
+  assert.deepEqual(Object.fromEntries(input.attrs), { spellcheck: "false", autocorrect: "off", autocapitalize: "off" });
+  const note = field("textarea", { spellcheck: "true" });
+  quietTextChecking(note);
+  assert.equal(note.attrs.get("spellcheck"), "true", "a field that turns spell checking on keeps it");
+  const editor = field("[contenteditable='true']");
+  quietTextChecking(editor);
+  assert.equal(editor.attrs.get("autocorrect"), "off");
+  const row = field("div");
+  quietTextChecking(row);
+  assert.equal(row.attrs.size, 0, "other elements are left alone");
+});

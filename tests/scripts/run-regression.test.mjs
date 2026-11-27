@@ -1,0 +1,91 @@
+import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { PAGES, pageOutcome, passedChecks } from "../../scripts/run-regression.mjs";
+
+test("each way a regression page reports its result is understood", () => {
+  assert.equal(pageOutcome({ testResult: "passed" }), "passed");
+  assert.equal(pageOutcome({ testResult: "failed" }), "failed");
+  assert.equal(pageOutcome({ dataResult: "passed" }), "passed");
+  assert.equal(pageOutcome({ text: "ALL PASS\nPASS a" }), "passed");
+  assert.equal(pageOutcome({ text: "SOME FAILED\nFAIL a" }), "failed");
+  assert.equal(pageOutcome({ text: "PASS a\nPASS b\n\n全部 2 项检查通过。" }), "passed");
+  assert.equal(pageOutcome({ text: "PASS a\nFAIL Error: b" }), "failed");
+});
+
+test("a page that is still running has no outcome yet", () => {
+  assert.equal(pageOutcome({}), null);
+  assert.equal(pageOutcome({ text: "准备消息动画检查…" }), null);
+  assert.equal(pageOutcome({ text: "PASS a\nPASS b" }), null);
+});
+
+test("passed checks are counted from PASS lines only", () => {
+  assert.equal(passedChecks("PASS a\nPASS b\nFAIL c\n  PASS not at line start"), 2);
+  assert.equal(passedChecks(""), 0);
+});
+
+test("every listed regression page exists", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  for (const page of PAGES) assert.ok(existsSync(path.join(root, "tests/regression", page.split("?")[0])), page);
+});
+
+test("each run gets free ports of its own", async () => {
+  const { freePort } = await import("../../scripts/run-regression.mjs");
+  const [a, b] = await Promise.all([freePort(), freePort()]);
+  assert.ok(Number.isInteger(a) && a > 0 && Number.isInteger(b) && b > 0);
+});
+
+test("profiles left by a killed run are removed after a day, fresh ones and other folders stay", async () => {
+  const { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { removeStaleProfiles } = await import("../../scripts/run-regression.mjs");
+  const dir = mkdtempSync(path.join(tmpdir(), "fuyu-profiles-"));
+  try {
+    const now = Date.now();
+    const old = new Date(now - 25 * 60 * 60 * 1000);
+    for (const name of ["fly-regression-old", "fly-regression-new", "other-old"]) {
+      mkdirSync(path.join(dir, name));
+      writeFileSync(path.join(dir, name, "Local State"), "{}");
+    }
+    utimesSync(path.join(dir, "fly-regression-old"), old, old);
+    utimesSync(path.join(dir, "other-old"), old, old);
+    assert.deepEqual(removeStaleProfiles(dir, now), ["fly-regression-old"]);
+    assert.equal(existsSync(path.join(dir, "fly-regression-old")), false);
+    assert.equal(existsSync(path.join(dir, "fly-regression-new")), true);
+    assert.equal(existsSync(path.join(dir, "other-old")), true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("DevTools pipe messages are split at NUL and a partial one waits for the rest", async () => {
+  const { splitFrames } = await import("../../scripts/regression/cdp.mjs");
+  assert.deepEqual(splitFrames('{"id":1}\0{"id":2}\0{"id'), { frames: ['{"id":1}', '{"id":2}'], rest: '{"id' });
+  assert.deepEqual(splitFrames('{"id'), { frames: [], rest: '{"id' });
+  assert.deepEqual(splitFrames('{"id":3}\0'), { frames: ['{"id":3}'], rest: "" });
+});
+
+test("each page starts from empty storage: its origin is cleared after leaving the last page and before loading it", async () => {
+  const { runPage } = await import("../../scripts/run-regression.mjs");
+  const calls = [];
+  const session = {
+    errors: ["left over from the last page"],
+    send: async (method, params) => {
+      calls.push([method, params]);
+      if (method !== "Runtime.evaluate") return {};
+      return { result: { value: JSON.stringify({ testResult: "passed" }) } };
+    },
+  };
+  const url = "http://127.0.0.1:5173/tests/regression/settings.html?test=1";
+  const { outcome, errors } = await runPage(session, url);
+  assert.equal(outcome, "passed");
+  assert.deepEqual(errors, []);
+  const navigations = calls.filter(([method]) => method === "Page.navigate").map(([, params]) => params.url);
+  assert.deepEqual(navigations, ["about:blank", url]);
+  const clearAt = calls.findIndex(([method, params]) => method === "Storage.clearDataForOrigin" && params.origin === "http://127.0.0.1:5173" && params.storageTypes === "all");
+  const blankAt = calls.findIndex(([, params]) => params?.url === "about:blank");
+  const loadAt = calls.findIndex(([, params]) => params?.url === url);
+  assert.ok(blankAt < clearAt && clearAt < loadAt, calls.map(([method]) => method).join(", "));
+});

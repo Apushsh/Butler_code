@@ -1,0 +1,464 @@
+use serde_json::{json, Value};
+use std::{
+    path::{Path, PathBuf},
+    time::{Duration, Instant},
+};
+use windows::Win32::Foundation::HWND;
+
+use crate::{
+    user_error::UserError,
+    win32::{
+        process,
+        process_memory::{self, ProcessMemory},
+        uia_list,
+    },
+};
+
+const CORE_STRING: &[u8] = b"qt.accessibility.core";
+const EXECUTE: u32 = 0x2000_0000;
+const WRITE: u32 = 0x8000_0000;
+const NEAR: u32 = 0x20000;
+const MAX_TRIES: usize = 1;
+const CHECK: Duration = Duration::from_secs(5);
+
+struct Gate {
+    process_id: u32,
+    address: usize,
+    original: u8,
+    marker: PathBuf,
+}
+
+impl Gate {
+    fn is_on(&self) -> bool {
+        ProcessMemory::open(self.process_id)
+            .is_some_and(|memory| memory.read_byte(self.address) == Some(1))
+    }
+
+    fn restore(&self) {
+        if self.original != 1 {
+            if let Some(memory) = ProcessMemory::open(self.process_id) {
+                if memory.read_byte(self.address) == Some(1) {
+                    memory.write_byte(self.address, self.original);
+                }
+            }
+        }
+        let _ = std::fs::remove_file(&self.marker);
+    }
+}
+
+pub(super) struct Keeper {
+    folder: PathBuf,
+    gate: Option<Gate>,
+    failed: Option<u32>,
+    next: Option<Instant>,
+    pub(super) status: Option<UserError>,
+}
+
+impl Keeper {
+    pub(super) fn new(folder: PathBuf) -> Self {
+        Self {
+            folder,
+            gate: None,
+            failed: None,
+            next: None,
+            status: None,
+        }
+    }
+
+    pub(super) fn tick(&mut self, on: bool, window: impl FnOnce() -> Option<HWND>) -> bool {
+        if !on {
+            return self.off();
+        }
+        if self.next.is_some_and(|next| Instant::now() < next) {
+            return false;
+        }
+        self.next = Some(Instant::now() + CHECK);
+        let status = self.keep_on(window());
+        self.set_status(Some(status))
+    }
+
+    pub(super) fn is_on(&self) -> bool {
+        self.gate.is_some()
+    }
+
+    pub(super) fn off(&mut self) -> bool {
+        if let Some(gate) = self.gate.take() {
+            gate.restore();
+        }
+        self.failed = None;
+        self.next = None;
+        self.set_status(None)
+    }
+
+    fn set_status(&mut self, status: Option<UserError>) -> bool {
+        let changed = self.status != status;
+        self.status = status;
+        changed
+    }
+
+    fn keep_on(&mut self, window: Option<HWND>) -> UserError {
+        let Some(window) = window else {
+            return UserError::new(
+                "wechat.exposeWaiting",
+                "WeChat main window not found; its UI will be exposed automatically once WeChat starts.",
+            );
+        };
+        let process_id = process::window_process_id(window);
+        if self.gate.is_none() {
+            self.gate = adopt(process_id, &self.folder);
+        }
+        if self
+            .gate
+            .as_ref()
+            .is_some_and(|gate| gate.process_id == process_id && gate.is_on())
+        {
+            return exposed_status();
+        }
+        self.gate = None;
+        if let Some(error) = self
+            .failed
+            .filter(|failed| *failed == process_id)
+            .and(self.status.clone())
+        {
+            return error;
+        }
+        if uia_list::shows_qt_controls(window) {
+            return UserError::new(
+                "wechat.exposeExternal",
+                "WeChat's UI is already exposed by another program (such as a screen reader).",
+            );
+        }
+        match activate(process_id, &self.folder, || {
+            uia_list::shows_qt_controls(window)
+        }) {
+            Ok(gate) => {
+                self.gate = Some(gate);
+                exposed_status()
+            }
+            Err(error) => {
+                self.failed = Some(process_id);
+                error
+            }
+        }
+    }
+}
+
+fn exposed_status() -> UserError {
+    UserError::new(
+        "wechat.exposeOn",
+        "WeChat's UI is exposed. The chat list cannot be read while WeChat is closed to the tray, though minimizing works.",
+    )
+}
+
+fn adopt(process_id: u32, folder: &Path) -> Option<Gate> {
+    let marker = folder.join("gate-on.json");
+    let left: Value = serde_json::from_slice(&std::fs::read(&marker).ok()?).ok()?;
+    let address = left["address"].as_u64()? as usize;
+    let same = left["pid"].as_u64() == Some(u64::from(process_id));
+    if !same || ProcessMemory::open(process_id)?.read_byte(address) != Some(1) {
+        let _ = std::fs::remove_file(&marker);
+        return None;
+    }
+    Some(Gate {
+        process_id,
+        address,
+        original: 0,
+        marker,
+    })
+}
+
+fn activate(process_id: u32, folder: &Path, exposed: impl Fn() -> bool) -> Result<Gate, UserError> {
+    let (base, dll) = process_memory::module(process_id, "Weixin.dll").ok_or_else(|| {
+        UserError::new(
+            "wechat.exposeNoDll",
+            "Could not expose WeChat's UI: Weixin.dll was not found in the WeChat process (not version 4.x?).",
+        )
+    })?;
+    let memory = ProcessMemory::open(process_id).ok_or_else(|| {
+        UserError::new(
+            "wechat.exposeOpenProcess",
+            "Could not expose WeChat's UI: could not open the WeChat process (if WeChat runs as administrator, run Fuyu as administrator too).",
+        )
+    })?;
+    let cache_path = folder.join("gate-cache.json");
+    let mut cache = std::fs::read(&cache_path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .filter(Value::is_object)
+        .unwrap_or_else(|| json!({}));
+    let identity = dll_identity(&dll);
+    let entry = &cache[&identity];
+    let verified = entry["verified"].as_u64().map(|rva| rva as u32);
+    let scanned: Vec<u32> = match entry["candidates"].as_array() {
+        Some(list) => list
+            .iter()
+            .filter_map(|rva| rva.as_u64().map(|rva| rva as u32))
+            .collect(),
+        None => {
+            let data = std::fs::read(&dll).map_err(|error| {
+                UserError::new("wechat.exposeReadDll", "Could not expose WeChat's UI: could not read Weixin.dll.").detail(error)
+            })?;
+            let found = scan(&data);
+            cache[&identity] = json!({ "candidates": found });
+            save(&cache_path, &cache);
+            found
+        }
+    };
+    let mut candidates: Vec<u32> = verified.into_iter().collect();
+    candidates.extend(
+        scanned
+            .into_iter()
+            .filter(|rva| Some(*rva) != verified)
+            .take(MAX_TRIES),
+    );
+    if candidates.is_empty() {
+        return Err(UserError::new(
+            "wechat.exposeNoSwitch",
+            "Could not expose WeChat's UI: could not find the accessibility switch in this WeChat version.",
+        ));
+    }
+    for rva in candidates {
+        let address = base + rva as usize;
+        let Some(original) = memory.read_byte(address) else {
+            continue;
+        };
+        if original != 1 && !memory.write_byte(address, 1) {
+            continue;
+        }
+        if wait_for(&exposed, Duration::from_secs(2)) {
+            cache[&identity]["verified"] = json!(rva);
+            save(&cache_path, &cache);
+            let marker = folder.join("gate-on.json");
+            if original != 1 {
+                save(&marker, &json!({ "pid": process_id, "address": address }));
+            }
+            return Ok(Gate {
+                process_id,
+                address,
+                original,
+                marker,
+            });
+        }
+        if original != 1 {
+            memory.write_byte(address, original);
+        }
+    }
+    Err(UserError::new(
+        "wechat.exposeStillHidden",
+        "Could not expose WeChat's UI: toggled the switch, yet WeChat's UI is still not exposed.",
+    ))
+}
+
+fn wait_for(done: &impl Fn() -> bool, limit: Duration) -> bool {
+    let start = Instant::now();
+    loop {
+        if done() {
+            return true;
+        }
+        if start.elapsed() >= limit {
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
+fn save(path: &Path, cache: &Value) {
+    if let Some(folder) = path.parent() {
+        let _ = std::fs::create_dir_all(folder);
+    }
+    if let Err(error) = std::fs::write(path, cache.to_string()) {
+        eprintln!("gate cache not saved: {error}");
+    }
+}
+
+fn dll_identity(dll: &Path) -> String {
+    let folder = dll
+        .parent()
+        .and_then(Path::file_name)
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let meta = std::fs::metadata(dll).ok();
+    let size = meta.as_ref().map_or(0, std::fs::Metadata::len);
+    let time = meta
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |time| time.as_secs());
+    format!("{folder}|{size}|{time}")
+}
+
+struct Section {
+    rva: u32,
+    size: u32,
+    raw: usize,
+    raw_size: usize,
+    flags: u32,
+}
+
+fn u16_at(data: &[u8], at: usize) -> Option<u16> {
+    Some(u16::from_le_bytes(data.get(at..at + 2)?.try_into().ok()?))
+}
+fn u32_at(data: &[u8], at: usize) -> Option<u32> {
+    Some(u32::from_le_bytes(data.get(at..at + 4)?.try_into().ok()?))
+}
+
+fn sections(data: &[u8]) -> Vec<Section> {
+    let parse = || -> Option<Vec<Section>> {
+        let pe = u32_at(data, 0x3C)? as usize;
+        if data.get(pe..pe + 4)? != b"PE\0\0" {
+            return None;
+        }
+        let count = u16_at(data, pe + 6)? as usize;
+        let first = pe + 24 + u16_at(data, pe + 20)? as usize;
+        (0..count)
+            .map(|i| {
+                let at = first + i * 40;
+                Some(Section {
+                    size: u32_at(data, at + 8)?,
+                    rva: u32_at(data, at + 12)?,
+                    raw_size: u32_at(data, at + 16)? as usize,
+                    raw: u32_at(data, at + 20)? as usize,
+                    flags: u32_at(data, at + 36)?,
+                })
+            })
+            .collect()
+    };
+    parse().unwrap_or_default()
+}
+
+fn scan(data: &[u8]) -> Vec<u32> {
+    let sections = sections(data);
+    let code = || {
+        sections
+            .iter()
+            .filter(|s| s.flags & EXECUTE != 0)
+            .filter_map(|s| {
+                let bytes = data.get(s.raw..(s.raw + s.raw_size).min(data.len()))?;
+                Some((s.rva, bytes))
+            })
+    };
+    let writable = |rva: u32| {
+        sections.iter().any(|s| {
+            s.flags & WRITE != 0 && (s.rva..s.rva + s.size.max(s.raw_size as u32)).contains(&rva)
+        })
+    };
+    let core = data
+        .windows(CORE_STRING.len())
+        .position(|window| window == CORE_STRING)
+        .and_then(|offset| {
+            sections
+                .iter()
+                .find(|s| (s.raw..s.raw + s.raw_size).contains(&offset))
+                .map(|s| s.rva + (offset - s.raw) as u32)
+        });
+    let mut xrefs = Vec::new();
+    if let Some(core) = core {
+        for (rva, bytes) in code() {
+            for i in 0..bytes.len().saturating_sub(6) {
+                if bytes[i] == 0x8D && bytes[i + 1] & 0xC7 == 0x05 {
+                    let disp = i32::from_le_bytes([
+                        bytes[i + 2],
+                        bytes[i + 3],
+                        bytes[i + 4],
+                        bytes[i + 5],
+                    ]);
+                    if (rva as i64 + i as i64 + 6 + disp as i64) == core as i64 {
+                        xrefs.push(rva + i as u32);
+                    }
+                }
+            }
+        }
+    }
+    let mut found: Vec<(u32, u32)> = Vec::new();
+    for (rva, bytes) in code() {
+        for i in 0..bytes.len().saturating_sub(18) {
+            let b = &bytes[i..i + 18];
+            if b[..5] == [0x48, 0x85, 0xC9, 0x0F, 0x84]
+                && b[9..11] == [0x80, 0x3D]
+                && b[15..18] == [0x00, 0x0F, 0x84]
+            {
+                let at = rva + i as u32;
+                let disp = i32::from_le_bytes([b[11], b[12], b[13], b[14]]);
+                let target = (at as i64 + 9 + 7 + disp as i64) as u32;
+                if writable(target) {
+                    let distance = xrefs
+                        .iter()
+                        .map(|x| x.abs_diff(at))
+                        .min()
+                        .unwrap_or(u32::MAX);
+                    found.push((distance, target));
+                }
+            }
+        }
+    }
+    found.sort_by_key(|(distance, _)| *distance);
+    let near: Vec<u32> = found
+        .iter()
+        .filter(|(distance, _)| *distance <= NEAR)
+        .map(|(_, target)| *target)
+        .collect();
+    let mut ordered = if near.is_empty() {
+        found.into_iter().map(|(_, target)| target).collect()
+    } else {
+        near
+    };
+    let mut seen = std::collections::HashSet::new();
+    ordered.retain(|rva| seen.insert(*rva));
+    ordered
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn image(code: &[u8], data: &[u8]) -> Vec<u8> {
+        let mut bytes = vec![0u8; 0x600];
+        bytes[0x3C..0x40].copy_from_slice(&0x80u32.to_le_bytes());
+        bytes[0x80..0x84].copy_from_slice(b"PE\0\0");
+        bytes[0x86..0x88].copy_from_slice(&2u16.to_le_bytes());
+        bytes[0x94..0x96].copy_from_slice(&0xF0u16.to_le_bytes());
+        for (i, (rva, raw, flags)) in [(0x1000u32, 0x200u32, EXECUTE), (0x3000, 0x400, WRITE)]
+            .into_iter()
+            .enumerate()
+        {
+            let at = 0x80 + 24 + 0xF0 + i * 40;
+            bytes[at + 8..at + 12].copy_from_slice(&0x200u32.to_le_bytes());
+            bytes[at + 12..at + 16].copy_from_slice(&rva.to_le_bytes());
+            bytes[at + 16..at + 20].copy_from_slice(&0x200u32.to_le_bytes());
+            bytes[at + 20..at + 24].copy_from_slice(&raw.to_le_bytes());
+            bytes[at + 36..at + 40].copy_from_slice(&flags.to_le_bytes());
+        }
+        bytes[0x200..0x200 + code.len()].copy_from_slice(code);
+        bytes[0x400..0x400 + data.len()].copy_from_slice(data);
+        bytes
+    }
+
+    fn gate_check(at: u32, target: u32) -> Vec<u8> {
+        let disp = (target as i64 - (at as i64 + 16)) as i32;
+        let mut b = vec![0x48, 0x85, 0xC9, 0x0F, 0x84, 1, 0, 0, 0, 0x80, 0x3D];
+        b.extend(disp.to_le_bytes());
+        b.extend([0x00, 0x0F, 0x84]);
+        b
+    }
+
+    #[test]
+    fn finds_the_gate_next_to_the_logging_category() {
+        let mut code = vec![0x90u8; 0x200];
+        code[..18].copy_from_slice(&gate_check(0x1000, 0x3080));
+        let lea_disp = (0x3010i64 - (0x10F0 + 6)) as i32;
+        code[0xEF..0xF6].copy_from_slice(&[0x48, 0x8D, 0x0D, 0, 0, 0, 0]);
+        code[0xF2..0xF6].copy_from_slice(&lea_disp.to_le_bytes());
+        code[0x100..0x112].copy_from_slice(&gate_check(0x1100, 0x3040));
+        let mut data = vec![0u8; 0x80];
+        data[0x10..0x10 + CORE_STRING.len()].copy_from_slice(CORE_STRING);
+        let found = scan(&image(&code, &data));
+        assert_eq!(found, [0x3040, 0x3080]);
+    }
+
+    #[test]
+    fn ignores_targets_outside_writable_memory() {
+        let mut code = vec![0x90u8; 0x200];
+        code[..18].copy_from_slice(&gate_check(0x1000, 0x1180));
+        assert!(scan(&image(&code, &[])).is_empty());
+        assert!(scan(b"not a PE").is_empty());
+    }
+}

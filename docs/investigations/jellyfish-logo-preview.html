@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>水母方案预览：原稿做图标，B 上岛（issue #281）</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --motion-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+    --motion-fast: 120ms;
+    --motion-base: 160ms;
+    --motion-medium: 240ms;
+    --motion-slow: 420ms;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; padding: 24px 32px 80px; overflow-x: hidden; background: #111214; color: #e8e8ea; font: 14px/1.6 "Segoe UI Variable Text", "Segoe UI", -apple-system, "PingFang SC", "Microsoft YaHei UI", sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 40px 0 6px; }
+  p.note { color: #9a9aa0; margin: 0 0 12px; max-width: 980px; }
+  p.note b, li b { color: #e8e8ea; font-weight: 600; }
+  ul.plain { margin: 0; padding-left: 20px; color: #c8c8cc; max-width: 980px; }
+  ul.plain li { margin: 4px 0; }
+  code { font: 12.5px/1.4 ui-monospace, "Cascadia Code", Menlo, monospace; background: #1b1c1f; padding: 1px 5px; border-radius: 4px; color: #cfd0d6; }
+
+  .controls { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: center; background: #1b1c1fee; padding: 10px 16px; border-radius: 10px; margin: 14px 0 0; backdrop-filter: blur(8px); max-width: 1100px; }
+  .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .group > span { color: #9a9aa0; margin-right: 2px; }
+  button.seg { font: inherit; cursor: pointer; border-radius: 6px; padding: 2px 10px; background: #2a2b30; color: #ddd; border: 1px solid #3a3b40; }
+  button.seg.on { background: #2f4a3f; border-color: #6abf9b; color: #fff; }
+  button:focus-visible { outline: 2px solid #6abf9b; outline-offset: 1px; }
+
+  .scroll { overflow-x: auto; max-width: 1100px; }
+  table { border-collapse: collapse; max-width: 1100px; margin: 6px 0 12px; }
+  th, td { border: 1px solid #2c2d32; padding: 6px 10px; text-align: left; vertical-align: top; color: #c8c8cc; font-size: 13px; }
+  th { background: #1b1c1f; color: #e8e8ea; font-weight: 600; white-space: nowrap; }
+  td:first-child { white-space: nowrap; color: #e8e8ea; }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; max-width: 1100px; }
+  .big { display: flex; align-items: center; justify-content: center; height: 300px; border-radius: 16px; background: #000; cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .big svg { display: block; height: 196px; width: auto; }
+  .side { display: flex; flex-direction: column; gap: 12px; background: #1b1c1f; border-radius: 16px; padding: 16px; min-width: 0; }
+  .track { position: relative; height: 62px; border-radius: 12px; background: radial-gradient(120% 140% at 20% 0%, #3b4d74 0%, #1d2233 45%, #0c0d12 100%); overflow: hidden; }
+  .track .bar { position: absolute; top: 12px; left: 16px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  .track .bar.dragging { cursor: grabbing; }
+  .hint { margin: 0; min-height: 22px; color: #6abf9b; font-size: 13px; }
+  .side ul { margin: 0; padding-left: 18px; color: #c8c8cc; font-size: 13px; }
+  .side li { margin: 3px 0; }
+
+  .bar { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 19px; background: #000; color: rgba(248, 246, 240, .94); box-shadow: 0 6px 24px #0008; font-size: 12.5px; white-space: nowrap; }
+  .bar.light { background: #f4f2ec; color: #1c1c1e; }
+  .bar .slot { position: relative; display: inline-flex; align-items: center; justify-content: center; height: 24px; }
+  .bar .slot svg { display: block; width: auto; height: 24px; }
+  .bar .ring { flex: none; width: 24px; height: 24px; }
+  .bar .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #6abf9b; color: #0c0d12; font-size: 11px; font-weight: 600; line-height: 16px; text-align: center; opacity: 0; transition: opacity var(--motion-base) var(--motion-ease); }
+  .bar .badge.on { opacity: 1; }
+  .bar.center { justify-content: space-between; width: 300px; }
+  .bar.center .slot svg { height: 22px; }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; max-width: 1100px; margin-bottom: 14px; }
+  .state { display: flex; flex-direction: column; align-items: center; gap: 12px; background: #1b1c1f; border-radius: 12px; padding: 14px 12px 12px; }
+  .state > b { align-self: flex-start; font-size: 13.5px; }
+  .state .minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .state .minis span { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #7d7e85; font-size: 11px; text-align: center; line-height: 1.3; }
+  .state .minis .chip { min-width: 0; width: 100%; max-width: 76px; padding: 0 6px; }
+  .chip { --z: 1; display: inline-flex; align-items: center; justify-content: center; justify-self: center; min-width: 76px; height: calc(38px * var(--z)); padding: 0 calc(8px * var(--z)); border-radius: calc(19px * var(--z)); background: #000; }
+  .chip.z3 { --z: 3; }
+  .chip.z3 { min-width: 0; width: 100%; max-width: 172px; }
+  .chip.light { background: #f4f2ec; }
+  .chip svg { display: block; width: auto; height: calc(24px * var(--z)); }
+
+  .places { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 14px; max-width: 1100px; }
+  .place { background: #1b1c1f; border-radius: 12px; padding: 14px 16px 16px; min-width: 0; }
+  .place b { display: block; font-size: 13.5px; }
+  .place > span { display: block; color: #9a9aa0; font-size: 12.5px; margin: 2px 0 12px; }
+  .place .demo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: 76px; padding: 14px; overflow-x: auto; border-radius: 10px; background: radial-gradient(120% 140% at 20% 0%, #3b4d74 0%, #1d2233 45%, #0c0d12 100%); }
+  .topbar { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 16px; border-radius: 16px; background: #000; }
+  .topbar .entry { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 9px; background: #ffffff14; }
+  .topbar .entry svg { display: block; height: 15px; width: auto; }
+  .topbar i { width: 16px; height: 16px; border-radius: 5px; background: #ffffff2e; }
+  .topbar i.round { width: 24px; height: 24px; border-radius: 50%; background: #ffffff1c; margin-left: 2px; }
+  .topbar .gap { width: 12px; }
+  .handle { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; width: 12px; height: 72px; border-radius: 6px; background: #000; }
+  .handle svg { display: block; width: 10px; height: auto; }
+  .handle .dot { width: 6px; height: 6px; border-radius: 50%; background: #34c759; }
+  .handle .unread { width: 5px; height: 5px; border-radius: 50%; background: #6abf9b; }
+  .cap { color: #e8e8eacc; font-size: 12px; }
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 280px; height: 150px; border-radius: 18px; background: #0b0b0c; color: #e8e8ea; font-size: 13px; }
+  .empty svg { display: block; height: 52px; width: auto; margin-bottom: 6px; }
+  .empty small { color: #7d7e85; font-size: 12px; }
+
+  .iconrow { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; max-width: 1100px; }
+  .iconrow figure { margin: 0; text-align: center; color: #9a9aa0; font-size: 12.5px; }
+  .iconrow figure > div { margin: 0 auto 8px; }
+  .ico { flex: none; display: block; }
+  .ico svg, .ico img { display: block; width: 100%; height: 100%; }
+  .taskbars { display: grid; grid-template-columns: 150px repeat(2, minmax(280px, 1fr)); min-width: 760px; border-radius: 12px; overflow: hidden; }
+  .taskbars > div { display: flex; align-items: center; gap: 22px; padding: 10px 18px; min-height: 68px; }
+  .taskbars .lab { background: #1b1c1f; color: #c8c8cc; font-size: 12.5px; padding: 10px 12px; line-height: 1.4; }
+  .taskbars .dark { background: #202020; }
+  .taskbars .light { background: #f3f3f3; }
+  .taskbars .head { min-height: 0; padding-top: 6px; padding-bottom: 6px; font-size: 12px; color: #9a9aa0; }
+  .taskbars .head.light { color: #55565c; }
+  .taskbars .head i { font-style: normal; text-align: center; }
+  .menus { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 14px; max-width: 1100px; }
+  .menu { display: flex; align-items: center; justify-content: flex-end; gap: 18px; height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13px; }
+  .menu.l { background: #e6e6ea; color: #1d1d1f; }
+  .menu.d { background: #2a2b31; color: #f2f2f4; }
+  .menu svg { display: block; width: auto; height: 16px; }
+  .menu i { flex: none; width: 16px; height: 11px; border-radius: 3px; background: currentColor; opacity: .55; }
+  .menu em { font-style: normal; opacity: .8; }
+  .desk { position: relative; max-width: 1100px; height: 210px; border-radius: 12px; overflow: hidden; background: radial-gradient(260px 180px at 46% 4%, #ff7ab833, transparent 70%), radial-gradient(120% 140% at 20% 0%, #3b4d74 0%, #1d2233 45%, #0c0d12 100%); }
+  .desk .bar { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); }
+  .desk .tb { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 12px; height: 48px; background: #202020e6; }
+  .desk .tb i { width: 26px; height: 26px; border-radius: 7px; background: #ffffff24; }
+  .desk .tb .ico { width: 30px; height: 30px; }
+
+  .jf { --jf-ink: #fbf6ea; --jf-eye: #1c1c1e; --jf-cheek: #ff8c9c; --jf-body: var(--jf-ink); overflow: visible; }
+  body[data-tone="lilac"] .jf:not(.mono) { --jf-ink: #b9a6ff; }
+  .jf.on-light { --jf-ink: #a4a4aa; }
+  .jf.mono { --jf-ink: currentColor; }
+  .jf.dim { opacity: .88; }
+  body .jf[data-state="running"]:not(.mono) { --jf-body: #8ccbf2; }
+  body .jf[data-state="waiting"]:not(.mono) { --jf-body: #ffd23f; }
+  body .jf[data-state="failed"]:not(.mono) { --jf-body: #ff5b4f; }
+  body .jf[data-state="done"]:not(.mono) { --jf-body: #63c99d; }
+  .jf * { transform-box: view-box; }
+  .jf-fill { fill: var(--jf-body); transition: fill var(--motion-medium) var(--motion-ease); }
+  .jf-ghost { fill: var(--jf-body); opacity: 0; transform: translate(2.2px, .3px); transition: opacity var(--motion-medium) var(--motion-ease), fill var(--motion-medium) var(--motion-ease); }
+  .jf.mono .jf-shine, .jf.mono .jf-hl, .jf.mono .jf-cheeks, .jf.mono .jf-ghost { display: none; }
+  .jf-leg { transition: transform var(--motion-medium) var(--motion-ease); }
+  .jf-body, .jf-head { transform-origin: 18px 14px; transition: transform var(--motion-medium) var(--motion-ease); }
+  .jf-legs { transform-origin: 18px 14px; transform: skewX(var(--jf-drag, 0deg)); }
+  .jf-face { transition: transform var(--motion-base) var(--motion-ease); }
+  .jf-lids, .jf-eyes { transform-origin: 18px 10.4px; }
+  .jf-lids { transition: transform var(--motion-fast) var(--motion-ease); }
+  .jf-eye-open { transition: opacity var(--motion-base) var(--motion-ease), transform var(--motion-medium) var(--motion-ease); }
+  .jf-eye-open ellipse, .jf-mouth { fill: var(--jf-eye); }
+  .jf-eye-happy, .jf-brows { fill: none; stroke: var(--jf-eye); stroke-width: 1.4; stroke-linecap: round; }
+  .jf-eye-happy, .jf-brows, .jf-mouth { opacity: 0; transition: opacity var(--motion-base) var(--motion-ease); }
+  .jf-cheeks ellipse { fill: var(--jf-cheek); opacity: .75; }
+  .jf-ring { fill: none; stroke: #ffd23f; stroke-width: 1.2; opacity: 0; transform-origin: 18px 12px; }
+
+  .jf[data-state="running"] .jf-leg1, .jf[data-state="running"] .jf-leg3 { transform: scaleY(.82); }
+  .jf[data-state="running"] .jf-eye-open { transform: translateY(.4px); }
+  .jf[data-state="running"] .jf-brows, .jf[data-state="failed"] .jf-brows { opacity: 1; }
+  .jf[data-state="running"] .jf-ghost { opacity: .26; }
+  .jf[data-state="waiting"] .jf-body { transform: rotate(-7deg); }
+  .jf[data-state="waiting"] .jf-leg { transform: rotate(7deg); }
+  .jf[data-state="waiting"] .jf-eye-open { transform: translateY(-.6px); }
+  .jf[data-state="waiting"] .jf-mouth { opacity: 1; }
+  .jf[data-state="waiting"] .jf-ghost { opacity: .2; }
+  .jf[data-state="failed"] .jf-body { transform: translateY(.6px); }
+  .jf[data-state="failed"] .jf-head { transform: scale(1.04, .92); }
+  .jf[data-state="failed"] .jf-leg1 { transform: rotate(12deg); }
+  .jf[data-state="failed"] .jf-leg2 { transform: scaleY(1.22); }
+  .jf[data-state="failed"] .jf-leg3 { transform: rotate(-12deg); }
+  .jf[data-state="done"] .jf-leg { transform: scaleY(.72); }
+  .jf[data-state="done"] .jf-eye-open { opacity: 0; }
+  .jf[data-state="done"] .jf-eye-happy { opacity: 1; }
+  .pressed .jf-lids { transform: scaleY(.12); }
+
+  body.motion .jf.live[data-state="idle"] .jf-body { animation: jf-idle-lift 10s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="idle"] .jf-head { animation: jf-idle-squash 10s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="idle"] .jf-leg { animation: jf-idle-kick 10s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="idle"] .jf-eyes, body.motion .jf.live[data-state="waiting"] .jf-eyes { animation: jf-blink 5.8s infinite; }
+  body.motion .jf.live[data-state="running"] .jf-body { animation: jf-run-bob 1.2s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="running"] .jf-leg { animation: jf-run-leg 1.2s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="running"] .jf-leg2 { animation-delay: .15s; }
+  body.motion .jf.live[data-state="running"] .jf-leg3 { animation-delay: .3s; }
+  body.motion .jf.live[data-state="running"] .jf-eyes { animation: jf-run-scan 2.4s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="running"] .jf-ghost { animation: jf-ghost 1.2s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="waiting"] .jf-body { animation: jf-wait-hop 2.4s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="waiting"] .jf-ghost { animation: jf-ghost 2.4s var(--motion-ease-in-out) infinite; }
+  body.motion .jf.live[data-state="waiting"] .jf-ring { animation: jf-ring var(--motion-slow) var(--motion-ease-out) 1 backwards; }
+  body.motion .jf.live[data-state="failed"] .jf-body { animation: jf-shake var(--motion-slow) var(--motion-ease) 1 backwards; }
+  body.motion .jf.live[data-state="done"] .jf-body { animation: jf-rise var(--motion-slow) var(--motion-ease-out) 1 backwards; }
+
+  @keyframes jf-idle-lift { 0%, 86%, 100% { transform: translateY(0); } 91% { transform: translateY(-.9px); } }
+  @keyframes jf-idle-squash { 0%, 86%, 96%, 100% { transform: scale(1, 1); } 89.5% { transform: scale(1.05, .9); } }
+  @keyframes jf-idle-kick { 0%, 86%, 97%, 100% { transform: scaleY(1); } 90% { transform: scaleY(.7); } }
+  @keyframes jf-blink { 0%, 92%, 97%, 100% { transform: scaleY(1); } 94.5% { transform: scaleY(.08); } }
+  @keyframes jf-run-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-.7px); } }
+  @keyframes jf-run-leg { 0%, 60%, 100% { transform: scaleY(1); } 30% { transform: scaleY(.62); } }
+  @keyframes jf-run-scan { 0%, 100% { transform: translate(-.8px, .4px); } 50% { transform: translate(.8px, .4px); } }
+  @keyframes jf-ghost { 0%, 100% { opacity: .26; } 50% { opacity: .08; } }
+  @keyframes jf-wait-hop { 0%, 40%, 100% { transform: rotate(-7deg) translateY(0); } 10%, 30% { transform: rotate(-7deg) translateY(-1.5px); } 20% { transform: rotate(-7deg) translateY(-.2px); } }
+  @keyframes jf-ring { from { opacity: .75; transform: scale(.7); } to { opacity: 0; transform: scale(1.35); } }
+  @keyframes jf-shake { 0%, 100% { transform: translate(0, .6px); } 20% { transform: translate(-1.6px, .6px); } 45% { transform: translate(1.4px, .6px); } 70% { transform: translate(-.8px, .6px); } }
+  @keyframes jf-rise { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-2.2px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jf *, .jf { animation: none !important; }
+    .jf-leg, .jf-body, .jf-head, .jf-face, .jf-lids, .jf-eye-open { transition-property: opacity, fill, stroke !important; }
+  }
+  body:not(.motion) .jf-leg, body:not(.motion) .jf-body, body:not(.motion) .jf-head, body:not(.motion) .jf-face, body:not(.motion) .jf-lids, body:not(.motion) .jf-eye-open { transition-property: opacity, fill, stroke; }
+
+  .refimg { display: block; width: 100%; max-width: 760px; border-radius: 12px; }
+  .state { background: radial-gradient(90% 60% at 50% 30%, color-mix(in srgb, var(--tint, #fbf6ea) 14%, transparent), transparent 70%), #1b1c1f; }
+
+  .rows { display: none; }
+
+  @media (max-width: 760px) {
+    body { padding: 16px 16px 60px; font-size: 14px; }
+    h1 { font-size: 20px; }
+    h2 { margin-top: 32px; }
+    .controls { flex-wrap: nowrap; overflow-x: auto; gap: 18px; margin-left: -16px; margin-right: -16px; padding: 8px 16px; border-radius: 0; scrollbar-width: none; }
+    .controls::-webkit-scrollbar { display: none; }
+    .group { flex-wrap: nowrap; white-space: nowrap; }
+    .stage { grid-template-columns: 1fr; }
+    .big { height: 220px; }
+    .big svg { height: 144px; }
+    .side { padding: 14px; }
+    .states { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .state { padding: 12px 8px 10px; gap: 10px; }
+    .chip.z3 { --z: 2.2; }
+    .state .minis { gap: 4px; }
+    .grid-table { display: none; }
+    .rows { display: grid; gap: 10px; }
+    .rows section { background: #1b1c1f; border-radius: 12px; padding: 12px 14px; }
+    .rows h3 { margin: 0 0 6px; font-size: 14px; }
+    .rows dl { display: grid; grid-template-columns: 5.5em 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
+    .rows dt { color: #7d7e85; }
+    .rows dd { margin: 0; color: #c8c8cc; }
+    ul.plain { padding-left: 18px; }
+    .place { padding: 12px; }
+    .place .demo { padding: 12px; }
+    .topbar { gap: 8px; padding: 0 12px; }
+    .topbar i:nth-of-type(n+4):not(.round) { display: none; }
+    .empty { width: 100%; }
+    .iconrow { gap: 16px; }
+    .iconrow figure:first-child .ico { width: 120px !important; height: 120px !important; }
+    .scroll:has(.taskbars) { overflow: visible; }
+    .taskbars { grid-template-columns: 1fr; min-width: 0; }
+    .taskbars > div { gap: 12px; padding: 10px 14px; min-height: 60px; }
+    .taskbars .lab { min-height: 0; padding: 8px 14px 4px; }
+    .taskbars .lab.head, .taskbars .head.light { display: none; }
+    .taskbars .head.dark { border-radius: 12px 12px 0 0; }
+    .desk { height: 190px; }
+    .desk .bar { max-width: calc(100% - 24px); }
+  }
+</style>
+</head>
+<body class="motion" data-tone="ink">
+<h1>水母方案预览</h1>
+<p class="note" style="padding:8px 12px;border:1px solid #6abf9b;border-radius:8px;color:#e8e8ea"><b>这一页留作记录。</b>造型已经换成 <a href="jellyfish-set-preview.html" style="color:#6abf9b">水母全套动效</a> 里的那一版（宽伞盖、四瓣触手），状态切换、看鼠标、按下、拖动这些交互也搬过去了，后面的修改都在那一页做。</p>
+<p class="note">已定的方向：<b>应用图标用 issue #281 的原稿</b>，<b>岛上和其他地方用扁平的 B（圆顶双眼）</b>。这一页把 B 的状态、动效、交互和它会出现的每个位置都摆出来，B 是草图，线条定稿时再细画。</p>
+<p class="note">这一版按下面的参考图改了 B：<b>粗短的圆头触手、腮红、皱眉和张嘴、运行时的残影</b>，运行中改成淡蓝，五种状态各有一个颜色。参考图里头顶的光环不要。</p>
+<details style="max-width:760px;margin:6px 0 4px"><summary style="cursor:pointer;color:#c8c8cc">参考图（豆包生成）</summary><img class="refimg" src="assets/jellyfish-states-reference.webp" alt="五种状态的参考图" style="margin-top:8px" /></details>
+
+<div class="controls">
+  <div class="group" id="ctl-state"><span>状态</span></div>
+  <div class="group" id="ctl-auto"></div>
+  <div class="group" id="ctl-tone"><span>岛上的身体颜色</span></div>
+  <div class="group" id="ctl-motion"><span>减少动画</span></div>
+</div>
+
+<h2>1. 互动台</h2>
+<p class="note">左边是放大 8 倍的 B，右边是实际大小的收起条。两边跟着上面的「状态」一起变。</p>
+<div class="stage">
+  <div class="big" id="big"></div>
+  <div class="side">
+    <div class="track" id="track"></div>
+    <p class="hint" id="hint">把鼠标移过来试试。</p>
+    <ul id="tips">
+      <li><b>鼠标靠近</b>：眼睛看向鼠标；4 秒没动就自己四处看。</li>
+      <li><b>按下</b>：闭眼，松开睁开。不缩放（动效约定：按下不缩放）。</li>
+      <li><b>点击</b>：打开 Agent 页，和现在点状态灯一样。</li>
+      <li><b>拖动右边的收起条</b>：触手往反方向拖尾，松手回正。</li>
+      <li><b>来新消息</b>：眼睛朝消息那边看一眼再回来。</li>
+    </ul>
+    <div class="group"><button class="seg" id="btn-msg">来一条消息</button></div>
+  </div>
+</div>
+
+<h2>2. 五种状态</h2>
+<p class="note">不只靠颜色：每种状态的<b>颜色、表情、姿态</b>三样都不同，色弱或只用余光也分得开。空闲和运行中靠颜色、皱眉和残影来分。每张卡片上面是放大的样子，下面三个是实际大小：深色岛、浅色岛，以及系统开了「减少动画」时（不动）。</p>
+<div class="states" id="states"></div>
+<div class="scroll grid-table" id="grid-table"></div>
+<div class="rows" id="rows"></div>
+<ul class="plain">
+  <li><b>曲线和时长</b>都用动效约定里的档位：过渡用 <code>--motion-ease</code>，进场用 <code>--motion-ease-out</code>，循环用 <code>--motion-ease-in-out</code>；时长是 120 / 160 / 240 / 420ms 四档。</li>
+  <li><b>循环只给状态</b>：只有运行中、等你有持续的循环。空闲只有眨眼和 10 秒一次的游动，和现在悬岛的呼吸、宠物的眨眼是同一档。</li>
+  <li><b>不回弹</b>：完成的上浮、失败的晃动都不冲过头。</li>
+  <li><b>参考图里浅色岛上的运行中、失败是灰的</b>，这里没照搬：浅色岛只有空闲换成灰，其余保留状态色，不然浅色主题下分不出状态。</li>
+  <li><b>只动 transform、opacity 和颜色</b>，不触发排版；岛收起到边缘或隐藏时暂停（现有的 <code>data-paused</code>）。</li>
+  <li><b>多个会话</b>时显示哪个状态，规则不变，仍按现在的优先级取最要紧的一个。</li>
+</ul>
+
+<h2>3. 岛上的各个位置</h2>
+<p class="note">都跟着上面的「状态」变。</p>
+<div class="places" id="places"></div>
+
+<h2>4. 应用图标</h2>
+<p class="note">原稿是 AI 生成的位图，定稿要重画成矢量。大尺寸直接用；16 到 32 像素建议另出一份<b>小尺寸简化版</b>（去掉高光和外发光、眼睛放大），下面第二行是我画的草图。</p>
+<div class="iconrow" id="iconrow"></div>
+<div class="scroll" style="margin-top:16px"><div class="taskbars" id="taskbars"></div></div>
+
+<h2>5. Mac 菜单栏和托盘</h2>
+<p class="note">菜单栏是单色模板图，用 B 的剪影，16 像素高。Windows 托盘是彩色的，用上面的小尺寸简化版。</p>
+<div class="menus" id="menus"></div>
+
+<h2>6. 图标和岛放在一起</h2>
+<p class="note">图标是蓝紫色。岛上的 B 有两种本色可选，用上面的「岛上的身体颜色」切换：<b>米白</b>和现有的中心图案一致，但只靠形状和图标呼应；<b>淡紫</b>和图标同一个配色。运行中、等你、失败、完成时两种都换成状态色。</p>
+<div class="desk" id="desk"></div>
+
+<h2>7. 落地前要定的事</h2>
+<ul class="plain">
+  <li><b>状态灯的设置项</b>：在「悬岛 / 圆点」之外加「水母」并设为新默认，还是直接替换悬岛？已经选了悬岛或圆点的老用户保持原样。中心图案里同样加一项「水母」。</li>
+  <li><b>身体颜色</b>：空闲时米白（和现有图案一致），还是淡紫（和图标同一个配色）。眼睛都用深色，配腮红更像参考图。</li>
+  <li><b>残影</b>：运行中和等你时身后有一层淡淡的残影，小尺寸上可能显得糊，要在真岛上看一眼再定。</li>
+  <li><b>图标要不要跟着改</b>：原稿是细触手、没有腮红，B 改成粗短触手后两者差得更远。可以按参考图的风格重画图标（第 4 节的简化版草图已经换成新造型）。</li>
+  <li><b>贴边把手</b>：12 像素宽放不下眼睛，只剩一个小伞形。保留圆点更清楚，建议把手不换。</li>
+  <li><b>图标的制作</b>：原稿重画成矢量后，替换 <code>src-tauri/icons/</code> 的全部尺寸、Mac 菜单栏的模板图、README 里的小岛图和关于页；小尺寸简化版一起出。</li>
+  <li><b>撞脸检查</b>：凭印象，Phantom 钱包的图标是紫底、白色幽灵、两只椭圆眼，和原稿接近，定稿前查一下。</li>
+  <li><b>署名和 issue</b>：关于页写 ShengLin1001，在 #281 下回复采用结果。</li>
+</ul>
+
+<script>
+const STATES = [["idle", "空闲"], ["running", "运行中"], ["waiting", "等你"], ["failed", "失败"], ["done", "完成"]];
+const SPEC_HEAD = ["颜色", "眼睛", "姿态", "进入时（只播一次）", "持续期间"];
+const SPEC = [
+  ["空闲", "米白（浅色岛上是灰）", "竖椭圆眼，约 6 秒眨一次，会看鼠标；有腮红", "触手垂着", "颜色和姿态 240ms 过渡回来", "每 10 秒游一下，其余时间不动"],
+  ["运行中", "淡蓝", "皱眉专注，左右来回看（2.4 秒一轮）", "三根触手依次收缩，身后有一层残影", "240ms 过渡", "1.2 秒一轮，和悬岛的三个点同节奏；状态结束就停"],
+  ["等你", "黄", "向上看，张嘴笑，照常眨眼", "歪着头，触手垂直挂着，带残影", "外圈扩散一次（420ms）", "跳两下、停一下，2.4 秒一轮；状态结束就停"],
+  ["失败 / 可能中断", "红", "睁眼皱眉", "伞面压低，两边触手散开，中间那根拉长往下滴", "左右晃两下（420ms）", "不动"],
+  ["完成", "薄荷绿", "弯弯的笑眼", "触手收短", "上浮 2 像素再落回（420ms）", "不动，3 秒后回到空闲（和现在的宠物一样）"],
+];
+const TOUCH = window.matchMedia("(hover: none)").matches;
+const TITLES = { idle: "Claude Code · 空闲", running: "Claude Code · 正在改 3 个文件", waiting: "Claude Code · 等你确认", failed: "Claude Code · 出错了", done: "Claude Code · 已完成" };
+const BELL = "M6 14C6 7.4 11.4 2.5 18 2.5S30 7.4 30 14v.2a2.3 2.3 0 0 1-2.3 2.3H8.3A2.3 2.3 0 0 1 6 14.2Z";
+const LEG_X = [11.2, 18, 24.8];
+const legRect = (x, attrs) => `<rect x="${(x - 2.8).toFixed(1)}" y="11" width="5.6" height="12" rx="2.8"${attrs}/>`;
+const TINTS = { idle: "#fbf6ea", running: "#8ccbf2", waiting: "#ffd23f", failed: "#ff5b4f", done: "#63c99d" };
+const DONE_HOLD_MS = 3000;
+const AUTO_STEPS = [["idle", 2400], ["running", 4200], ["waiting", 4600], ["running", 2600], ["done", 3000], ["idle", 1800], ["running", 2600], ["failed", 3200]];
+const WANDER = [[0, 0], [-0.9, 0.2], [0.9, -0.3], [0, 0.7], [0.6, 0.5], [-0.7, -0.4]];
+let uid = 0;
+
+function jf({ state = "idle", follow = false, gaze = false, live = true, tiny = false, cls = "", style = "" } = {}) {
+  const n = ++uid;
+  const sh = `url(#jfs${n})`;
+  const shine = (shape) => (tiny ? "" : shape.replace("/>", ` class="jf-shine" fill="${sh}"/>`));
+  const defs = tiny ? "" : `<defs><linearGradient id="jfs${n}" gradientUnits="userSpaceOnUse" x1="0" y1="2.5" x2="0" y2="23"><stop offset="0" stop-color="#fff" stop-opacity=".34"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".16"/></linearGradient></defs>`;
+  const legs = LEG_X.map((x, i) => `<g class="jf-leg jf-leg${i + 1}" style="transform-origin:${x}px 14px">${legRect(x, ' class="jf-fill"')}${shine(legRect(x, ""))}</g>`).join("");
+  const ghost = tiny ? "" : `<g class="jf-ghost"><path d="${BELL}"/>${LEG_X.map((x) => legRect(x, "")).join("")}</g>`;
+  const face = tiny ? "" : `<ellipse class="jf-hl" cx="12.4" cy="6.2" rx="2.4" ry="1.1" transform="rotate(-34 12.4 6.2)" fill="#fff" opacity=".45"/><g class="jf-face"><g class="jf-cheeks"><ellipse cx="10.4" cy="13" rx="2.1" ry="1.25"/><ellipse cx="25.6" cy="13" rx="2.1" ry="1.25"/></g><path class="jf-brows" d="M11.5 6.2l3.7 1.5M24.5 6.2l-3.7 1.5"/><g class="jf-lids"><g class="jf-eyes"><g class="jf-eye-open"><ellipse cx="13.8" cy="10.4" rx="1.75" ry="2.4"/><ellipse cx="22.2" cy="10.4" rx="1.75" ry="2.4"/></g><path class="jf-eye-happy" d="M12 11.2a1.8 1.8 0 0 1 3.6 0M20.4 11.2a1.8 1.8 0 0 1 3.6 0"/></g></g><path class="jf-mouth" d="M16.4 12.7h3.2a1.6 1.6 0 0 1-3.2 0Z"/></g>`;
+  const flags = `${follow ? " data-follow" : ""}${gaze && !tiny ? " data-gaze" : ""}`;
+  return `<svg class="jf${live ? " live" : ""}${cls ? ` ${cls}` : ""}" data-state="${state}"${flags}${style ? ` style="${style}"` : ""} viewBox="0 0 36 26">${defs}<circle class="jf-ring" cx="18" cy="12" r="11"/><g class="jf-body">${ghost}<g class="jf-legs">${legs}</g><g class="jf-head"><path class="jf-fill" d="${BELL}"/>${shine(`<path d="${BELL}"/>`)}${face}</g></g></svg>`;
+}
+
+function ring() {
+  return `<svg class="ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="rgba(128,128,128,.3)" stroke-width="3"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="#6abf9b" stroke-width="3" stroke-linecap="round" stroke-dasharray="34 54" transform="rotate(-90 12 12)"/></svg>`;
+}
+
+function bar({ light = false, gaze = false, id = "" } = {}) {
+  return `<div class="bar${light ? " light" : ""}"${id ? ` id="${id}"` : ""}><span class="slot">${jf({ follow: true, gaze, cls: light ? "on-light" : "" })}</span><span data-title></span><span class="badge">1</span>${ring()}</div>`;
+}
+
+function iconOriginal() {
+  return `<img src="assets/jellyfish-logo-issue-281.png" alt="issue #281 原稿" />`;
+}
+
+function iconSmall() {
+  const n = ++uid;
+  const legs = LEG_X.map((x) => legRect(x, ` fill="url(#jb${n})"`)).join("");
+  return `<svg viewBox="0 0 64 64"><defs><radialGradient id="bg${n}" cx="50%" cy="45%" r="65%"><stop offset="0" stop-color="#5544f2"/><stop offset="1" stop-color="#2a15ad"/></radialGradient><linearGradient id="jb${n}" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="23"><stop offset="0" stop-color="#c4b2ff"/><stop offset="1" stop-color="#f1b3f2"/></linearGradient></defs><rect x="1" y="1" width="62" height="62" rx="18" fill="url(#bg${n})"/><g transform="translate(8.6 13.5) scale(1.3)">${legs}<path d="${BELL}" fill="url(#jb${n})"/><ellipse cx="10.4" cy="13" rx="2.1" ry="1.25" fill="#ff8cc0" opacity=".8"/><ellipse cx="25.6" cy="13" rx="2.1" ry="1.25" fill="#ff8cc0" opacity=".8"/><ellipse cx="13.8" cy="10.2" rx="2" ry="2.8" fill="#2a1f5c"/><ellipse cx="22.2" cy="10.2" rx="2" ry="2.8" fill="#2a1f5c"/></g></svg>`;
+}
+
+function build() {
+  document.getElementById("big").innerHTML = jf({ follow: true, gaze: true });
+  document.getElementById("track").innerHTML = bar({ gaze: true, id: "dragbar" });
+
+  document.getElementById("states").innerHTML = STATES.map(([state, name]) => `<div class="state" style="--tint:${TINTS[state]}"><b>${name}</b><span class="chip z3">${jf({ state })}</span><div class="minis"><span><span class="chip">${jf({ state })}</span>深色</span><span><span class="chip light">${jf({ state, cls: "on-light" })}</span>浅色</span><span><span class="chip">${jf({ state, live: false })}</span>减少动画</span></div></div>`).join("");
+  document.getElementById("grid-table").innerHTML = `<table><tr><th>状态</th>${SPEC_HEAD.map((h) => `<th>${h}</th>`).join("")}</tr>${SPEC.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+  document.getElementById("rows").innerHTML = SPEC.map(([name, ...cells]) => `<section><h3>${name}</h3><dl>${cells.map((c, i) => `<dt>${SPEC_HEAD[i].replace("（只播一次）", "")}</dt><dd>${c}</dd>`).join("")}</dl></section>`).join("");
+  if (TOUCH) {
+    document.getElementById("hint").textContent = "手指在大水母上滑一滑，或者按住收起条拖一拖。";
+    document.getElementById("tips").innerHTML = "<li><b>手指滑过</b>：眼睛跟着手指；放开 4 秒后自己四处看。电脑上是跟着鼠标。</li><li><b>按住</b>：闭眼，松开睁开。不缩放（动效约定：按下不缩放）。</li><li><b>轻点</b>：打开 Agent 页，和现在点状态灯一样。</li><li><b>按住收起条左右拖</b>：触手往反方向拖尾，松手回正。</li><li><b>来新消息</b>：眼睛朝消息那边看一眼再回来。</li>";
+  }
+
+  const place = (name, text, demo) => `<div class="place"><b>${name}</b><span>${text}</span><div class="demo">${demo}</div></div>`;
+  document.getElementById("places").innerHTML = [
+    place("收起条的状态灯", "最主要的位置，24 像素高，替换悬岛标志。", bar()),
+    place("浅色主题的岛", "空闲的米白在这里换成灰（和参考图一样）；淡紫那版不用换。其余状态色不变。", bar({ light: true })),
+    place("中心图案", "刘海或条中间的 40×22 位置，22 像素高。", `<div class="bar center"><span data-title-short></span><span class="slot">${jf({ follow: true })}</span>${ring()}</div>`),
+    place("展开后顶部栏的 Agent 入口", "现在是机器人图标、颜色跟状态；换成 15 像素高的 B。其余图标用色块代替。", `<div class="topbar"><span class="entry">${jf({ follow: true, cls: "dim" })}</span><i></i><i></i><i></i><i></i><i></i><span class="gap"></span><i class="round"></i><i class="round"></i></div>`),
+    place("贴边把手", "12×72。左边是现在的圆点，右边换成 B：放不下五官，只剩小伞形和三根短触手。", `<span class="handle"><span class="dot" data-dot></span><span class="unread"></span></span><span class="cap">现在</span><span class="handle">${jf({ follow: true, tiny: true })}<span class="unread"></span></span><span class="cap">换成 B</span>`),
+    place("Agent 页的空状态", "没有会话时放一只大的，52 像素高，会看鼠标。", `<div class="empty">${jf({ gaze: true })}<span>没有正在运行的会话</span><small>Agent 开始工作后会出现在这里</small></div>`),
+  ].join("");
+
+  const fig = (size, art, text) => `<figure><div class="ico" style="width:${size}px;height:${size}px">${art}</div>${text}</figure>`;
+  document.getElementById("iconrow").innerHTML = fig(160, iconOriginal(), "原稿 · 160") + fig(96, iconOriginal(), "原稿 · 96") + fig(64, iconOriginal(), "原稿 · 64") + fig(64, iconSmall(), "简化版草图 · 64") + fig(32, iconSmall(), "简化版 · 32");
+
+  const sizes = [16, 20, 24, 32, 48];
+  const head = (cls) => `<div class="head ${cls}">${sizes.map((s) => `<i style="width:${s}px">${s}</i>`).join("")}</div>`;
+  const icons = (art, cls) => `<div class="${cls}">${sizes.map((s) => `<span class="ico" style="width:${s}px;height:${s}px">${art()}</span>`).join("")}</div>`;
+  document.getElementById("taskbars").innerHTML = `<div class="lab head"></div>${head("dark")}${head("light")}`
+    + `<div class="lab">原稿直接缩小</div>${icons(iconOriginal, "dark")}${icons(iconOriginal, "light")}`
+    + `<div class="lab">小尺寸简化版（草图）</div>${icons(iconSmall, "dark")}${icons(iconSmall, "light")}`;
+
+  const strip = (cls, bg) => `<div class="menu ${cls}">${jf({ live: false, cls: "mono", style: `--jf-eye:${bg}` })}<i></i><i></i><em>周四 12:55</em></div>`;
+  document.getElementById("menus").innerHTML = strip("l", "#e6e6ea") + strip("d", "#2a2b31");
+
+  document.getElementById("desk").innerHTML = `${bar()}<div class="tb"><i></i><i></i><span class="ico">${iconOriginal()}</span><i></i><i></i></div>`;
+}
+
+const view = { state: "idle", tone: "ink", reduce: false, auto: false };
+let doneTimer = 0;
+let autoTimer = 0;
+let autoStep = 0;
+let glanceUntil = 0;
+let lastMoveAt = 0;
+let wanderAt = 0;
+
+function segs(host, options, onPick) {
+  for (const [value, text] of options) {
+    const b = document.createElement("button");
+    b.className = "seg";
+    b.textContent = text;
+    b.dataset.value = String(value);
+    b.addEventListener("click", () => onPick(value));
+    host.append(b);
+  }
+}
+
+function syncSegs(id, value) {
+  for (const b of document.getElementById(id).querySelectorAll("button.seg")) b.classList.toggle("on", b.dataset.value === String(value));
+}
+
+function setFace(svg, x, y) {
+  const face = svg.querySelector(".jf-face");
+  if (face) face.style.transform = x || y ? `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)` : "";
+}
+
+function resetGaze() {
+  for (const svg of document.querySelectorAll(".jf[data-gaze]")) setFace(svg, 0, 0);
+}
+
+function setState(state) {
+  view.state = state;
+  window.clearTimeout(doneTimer);
+  if (state === "done" && !view.auto) doneTimer = window.setTimeout(() => setState("idle"), DONE_HOLD_MS);
+  for (const el of document.querySelectorAll(".jf[data-follow]")) el.dataset.state = state;
+  for (const el of document.querySelectorAll("[data-title]")) el.textContent = TITLES[state];
+  for (const el of document.querySelectorAll("[data-title-short]")) el.textContent = TITLES[state].split(" · ")[1];
+  for (const el of document.querySelectorAll("[data-dot]")) el.style.background = { idle: "#34c759", running: "#0a84ff", waiting: "#ffd60a", failed: "#ff453a", done: "#34c759" }[state];
+  if (state === "failed" || state === "done") resetGaze();
+  syncSegs("ctl-state", state);
+}
+
+function runAuto() {
+  window.clearTimeout(autoTimer);
+  if (!view.auto) return;
+  const [state, ms] = AUTO_STEPS[autoStep % AUTO_STEPS.length];
+  autoStep += 1;
+  setState(state);
+  autoTimer = window.setTimeout(runAuto, ms);
+}
+
+function sync() {
+  document.body.classList.toggle("motion", !view.reduce);
+  document.body.dataset.tone = view.tone;
+  syncSegs("ctl-tone", view.tone);
+  syncSegs("ctl-motion", view.reduce);
+  syncSegs("ctl-auto", view.auto);
+  if (view.reduce) resetGaze();
+}
+
+function gazeOffset(dx, dy, max, reach) {
+  const distance = Math.hypot(dx, dy);
+  if (!Number.isFinite(distance) || distance < 0.5) return { x: 0, y: 0 };
+  const length = max * Math.min(1, distance / reach);
+  return { x: (dx / distance) * length, y: (dy / distance) * length * 0.75 };
+}
+
+function gazeAllowed(svg) {
+  const state = svg.dataset.state;
+  return !view.reduce && state !== "failed" && state !== "done";
+}
+
+function lookAt(x, y) {
+  if (performance.now() < glanceUntil) return;
+  for (const svg of document.querySelectorAll(".jf[data-gaze]")) {
+    if (!gazeAllowed(svg)) continue;
+    const box = svg.getBoundingClientRect();
+    if (!box.height) continue;
+    const unit = box.height / 26;
+    const offset = gazeOffset(x - (box.left + box.width / 2), y - (box.top + box.height * 0.42), 1.1, 90 * Math.max(1, unit / 2));
+    setFace(svg, offset.x, offset.y);
+  }
+}
+
+function wander() {
+  const now = performance.now();
+  if (view.reduce || now - lastMoveAt < 4000 || now - wanderAt < 2600 || now < glanceUntil) return;
+  wanderAt = now;
+  const [x, y] = WANDER[Math.floor(Math.random() * WANDER.length)];
+  for (const svg of document.querySelectorAll(".jf[data-gaze]")) if (svg.dataset.state === "idle") setFace(svg, x, y);
+}
+
+function glance() {
+  const badge = document.querySelector("#dragbar .badge");
+  badge.classList.add("on");
+  document.getElementById("hint").textContent = "来了一条消息：眼睛朝右边看一眼，0.8 秒后回来。";
+  if (!view.reduce) {
+    glanceUntil = performance.now() + 800;
+    for (const svg of document.querySelectorAll(".jf[data-gaze]")) if (gazeAllowed(svg)) setFace(svg, 1.1, 0.1);
+    window.setTimeout(resetGaze, 800);
+  }
+  window.setTimeout(() => badge.classList.remove("on"), 2400);
+}
+
+function pressable(el, onClick) {
+  el.addEventListener("pointerdown", () => el.classList.add("pressed"));
+  for (const type of ["pointerup", "pointerleave", "pointercancel"]) el.addEventListener(type, () => el.classList.remove("pressed"));
+  if (onClick) el.addEventListener("click", onClick);
+}
+
+function draggable(barEl, trackEl) {
+  const hint = document.getElementById("hint");
+  let dragging = false;
+  let startX = 0;
+  let startLeft = 0;
+  let left = 16;
+  let lastX = 0;
+  let velocity = 0;
+  let skew = 0;
+  let moved = 0;
+
+  const tick = () => {
+    const target = dragging && !view.reduce ? Math.max(-26, Math.min(26, -velocity * 2.2)) : 0;
+    skew += (target - skew) * 0.22;
+    velocity *= 0.7;
+    const value = Math.abs(skew) < 0.05 ? "0deg" : `${skew.toFixed(2)}deg`;
+    barEl.querySelector(".jf").style.setProperty("--jf-drag", value);
+    document.querySelector("#big .jf").style.setProperty("--jf-drag", value);
+    window.requestAnimationFrame(tick);
+  };
+  window.requestAnimationFrame(tick);
+
+  barEl.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    moved = 0;
+    startX = lastX = event.clientX;
+    startLeft = left;
+    barEl.classList.add("dragging", "pressed");
+    barEl.setPointerCapture(event.pointerId);
+  });
+  barEl.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    velocity = event.clientX - lastX;
+    lastX = event.clientX;
+    moved = Math.max(moved, Math.abs(event.clientX - startX));
+    const max = Math.max(16, trackEl.clientWidth - barEl.offsetWidth - 16);
+    left = Math.max(16, Math.min(max, startLeft + event.clientX - startX));
+    barEl.style.left = `${left}px`;
+    if (moved > 4) {
+      barEl.classList.remove("pressed");
+      hint.textContent = "拖动中：触手往反方向拖尾，跟手、不加过渡。";
+    }
+  });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    barEl.classList.remove("dragging", "pressed");
+    hint.textContent = moved > 4 ? "松手：触手回正。" : "点击：打开 Agent 页。";
+  };
+  barEl.addEventListener("pointerup", end);
+  barEl.addEventListener("pointercancel", end);
+}
+
+build();
+segs(document.getElementById("ctl-state"), STATES, (state) => { view.auto = false; window.clearTimeout(autoTimer); sync(); setState(state); });
+segs(document.getElementById("ctl-auto"), [[true, "自动演示"]], () => { view.auto = !view.auto; autoStep = 0; sync(); runAuto(); });
+segs(document.getElementById("ctl-tone"), [["ink", "米白"], ["lilac", "淡紫"]], (tone) => { view.tone = tone; sync(); });
+segs(document.getElementById("ctl-motion"), [[false, "关"], [true, "开"]], (reduce) => { view.reduce = reduce; sync(); });
+pressable(document.getElementById("big"), () => { document.getElementById("hint").textContent = "点击：打开 Agent 页。"; });
+draggable(document.getElementById("dragbar"), document.getElementById("track"));
+document.getElementById("btn-msg").addEventListener("click", glance);
+window.addEventListener("pointerdown", (event) => { lastMoveAt = performance.now(); lookAt(event.clientX, event.clientY); });
+let pending = null;
+window.addEventListener("pointermove", (event) => {
+  lastMoveAt = performance.now();
+  if (pending) { pending = event; return; }
+  pending = event;
+  window.requestAnimationFrame(() => { lookAt(pending.clientX, pending.clientY); pending = null; });
+});
+window.setInterval(wander, 500);
+sync();
+setState("idle");
+</script>
+</body>
+</html>

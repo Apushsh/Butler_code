@@ -1,0 +1,1261 @@
+<body>
+  <div id="root">
+    <main class="settings-stage stage--font-system settings-stage--light">
+      <div class="settings-layout" data-tauri-drag-region="true">
+        <div class="window-buttons">
+          <button aria-label="最小化" class="window-buttons__button" type="button">
+            <svg aria-hidden="true" class="lucide lucide-minus" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <button aria-label="最大化" class="window-buttons__button" type="button">
+            <svg aria-hidden="true" class="lucide lucide-square" fill="none" height="11" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="11" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <button aria-label="关闭" class="window-buttons__button window-buttons__button--close" type="button">
+            <svg aria-hidden="true" class="lucide lucide-x" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.4" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+        </div>
+        <div class="settings-sidebar-card" data-tauri-drag-region="true">
+          <nav aria-label="设置分类" class="settings-sidebar">
+            <div class="settings-sidebar__search">
+              <svg aria-hidden="true" class="lucide lucide-search" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+              <input aria-label="搜索设置" placeholder="搜索设置" spellcheck="false" type="text" value="外观">
+              <button aria-label="清除搜索" class="settings-sidebar__search-clear" type="button">
+                <svg aria-hidden="true" class="lucide lucide-x" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+              </button>
+            </div>
+            <div class="settings-sidebar__list">
+              <section aria-label="基础" class="settings-sidebar__group">
+                <button aria-expanded="true" aria-label="折叠「基础」" class="settings-sidebar__folder" data-group="basics" disabled="" type="button">
+                  <svg aria-hidden="true" class="lucide lucide-settings2 lucide-settings-2" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                  <span>
+                    基础
+                  </span>
+                  <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                </button>
+                <ul class="settings-sidebar__children">
+                  <li>
+                    <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="appearance" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-layout-template" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        外观
+                      </span>
+                    </button>
+                    <ul class="settings-sidebar__hits">
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="theme" type="button">
+                          <span>
+                            主题与配色
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="themeStyle" type="button">
+                          <span>
+                            材质与圆角
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="appearance" type="button">
+                          <span>
+                            位置与尺寸
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__hit" data-page="themeStyle" title="外观 › 材质与圆角 › 质感与形状 › 外观模式" type="button">
+                          <span>
+                            外观模式
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </section>
+              <section aria-label="AI Agent" class="settings-sidebar__group">
+                <button aria-expanded="true" aria-label="折叠「AI Agent」" class="settings-sidebar__folder settings-sidebar__folder--holds-active" data-group="agents" disabled="" type="button">
+                  <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                  <span>
+                    AI Agent
+                  </span>
+                  <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                </button>
+                <ul class="settings-sidebar__children">
+                  <li>
+                    <button aria-current="page" class="settings-sidebar__item settings-sidebar__item--nested settings-sidebar__item--active" data-category="agentAppearance" type="button">
+                      <svg aria-hidden="true" class="lucide lucide-palette" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      <span>
+                        外观
+                      </span>
+                    </button>
+                    <ul class="settings-sidebar__hits">
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="agentAppearance" type="button">
+                          <span>
+                            状态灯与标题
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="agentSessions" type="button">
+                          <span>
+                            会话列表
+                          </span>
+                        </button>
+                      </li>
+                      <li>
+                        <button class="settings-sidebar__hit settings-sidebar__hit--tab" data-tab="agentRings" type="button">
+                          <span>
+                            用量与会话环
+                          </span>
+                        </button>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </section>
+            </div>
+            <div class="settings-sidebar__footer">
+              <ul>
+                <li>
+                  <button class="settings-sidebar__item" data-category="about" type="button">
+                    <svg aria-hidden="true" class="lucide lucide-info" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                    <span>
+                      关于
+                    </span>
+                  </button>
+                  <ul class="settings-sidebar__hits">
+                    <li>
+                      <button class="settings-sidebar__hit" data-page="about" title="关于 › 概览 › 重置与退出 › 重置所有设置" type="button">
+                        <span>
+                          重置所有设置
+                        </span>
+                      </button>
+                    </li>
+                    <li>
+                      <button class="settings-sidebar__hit" data-page="aboutHelp" title="关于 › 帮助和交流群 › 帮助 › 新手引导" type="button">
+                        <span>
+                          新手引导
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+        <div class="settings-content">
+          <div class="settings-page__header" data-tauri-drag-region="true">
+            <h1 class="settings-page__title" data-tauri-drag-region="true">
+              外观
+            </h1>
+          </div>
+          <div aria-label="外观" class="settings-tabs" data-tauri-drag-region="true" role="tablist">
+            <button aria-selected="false" class="settings-tabs__tab" data-tab="agentAppearance" role="tab" tabindex="-1" type="button">
+              状态灯与标题
+            </button>
+            <button aria-selected="true" class="settings-tabs__tab settings-tabs__tab--active" data-tab="agentSessions" role="tab" tabindex="0" type="button">
+              会话列表
+            </button>
+            <button aria-selected="false" class="settings-tabs__tab" data-tab="agentRings" role="tab" tabindex="-1" type="button">
+              用量与会话环
+            </button>
+          </div>
+          <div class="editor-panel">
+            <section class="settings-group">
+              <div class="settings-group__header">
+                <h2 class="settings-group__title">
+                  会话卡片
+                </h2>
+              </div>
+              <div class="settings-group__card">
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        显示方式
+                      </span>
+                      <span class="settings-row__description">
+                        在下面挑一种列表布局，改了马上在岛屿预览里看到；在 Agent 页右上角的「排列与布局」里也能随时切换。
+                      </span>
+                    </div>
+                  </div>
+                  <div class="agent-stage">
+                    <div aria-label="显示方式" class="settings-cards" role="group" style="--cards-columns: 3">
+                      <button aria-pressed="true" class="settings-cards__card settings-cards__card--active" type="button">
+                        <span aria-hidden="true" class="settings-cards__art">
+                          <span class="agent-glyph agent-glyph--stack">
+                            <span class="agent-glyph__focused-card">
+                              <i class="agent-glyph__stripe agent-glyph__stripe--work"></i>
+                              <span class="agent-glyph__list-lines">
+                                <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                                <b class="agent-glyph__bar agent-glyph__bar--soft"></b>
+                              </span>
+                            </span>
+                            <span class="agent-glyph__compact-row">
+                              <i class="agent-glyph__list-dot"></i>
+                              <b class="agent-glyph__bar agent-glyph__bar--mid"></b>
+                              <s class="agent-glyph__time"></s>
+                            </span>
+                          </span>
+                        </span>
+                        <span class="settings-cards__text">
+                          <span class="settings-cards__label">
+                            分层聚焦
+                          </span>
+                          <span class="settings-cards__hint">
+                            活跃轻卡 + 已完成静默单行
+                          </span>
+                        </span>
+                        <svg aria-hidden="true" class="lucide lucide-check settings-cards__check" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                      <button aria-pressed="false" class="settings-cards__card" type="button">
+                        <span aria-hidden="true" class="settings-cards__art">
+                          <span class="agent-glyph agent-glyph--split">
+                            <span class="agent-glyph__split-left">
+                              <span class="agent-glyph__split-row agent-glyph__split-row--on">
+                                <i class="agent-glyph__list-dot agent-glyph__list-dot--work"></i>
+                                <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                              </span>
+                              <span class="agent-glyph__split-row">
+                                <i class="agent-glyph__list-dot agent-glyph__list-dot--turn"></i>
+                                <b class="agent-glyph__bar"></b>
+                              </span>
+                              <span class="agent-glyph__split-row">
+                                <i class="agent-glyph__list-dot"></i>
+                                <b class="agent-glyph__bar agent-glyph__bar--soft"></b>
+                              </span>
+                            </span>
+                            <span class="agent-glyph__split-right">
+                              <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                              <span class="agent-glyph__split-box"></span>
+                              <span class="agent-glyph__split-cta"></span>
+                            </span>
+                          </span>
+                        </span>
+                        <span class="settings-cards__text">
+                          <span class="settings-cards__label">
+                            双栏工作台
+                          </span>
+                          <span class="settings-cards__hint">
+                            左栏极简索引，右栏实时详情
+                          </span>
+                        </span>
+                      </button>
+                      <button aria-pressed="false" class="settings-cards__card" type="button">
+                        <span aria-hidden="true" class="settings-cards__art">
+                          <span class="agent-glyph agent-glyph--bento">
+                            <span class="agent-glyph__bento-spot">
+                              <i class="agent-glyph__stripe agent-glyph__stripe--needs"></i>
+                              <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                            </span>
+                            <span class="agent-glyph__bento-grid">
+                              <span class="agent-glyph__bento-cell">
+                                <i class="agent-glyph__list-dot agent-glyph__list-dot--work"></i>
+                                <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                                <b class="agent-glyph__bar agent-glyph__bar--soft"></b>
+                              </span>
+                              <span class="agent-glyph__bento-cell">
+                                <i class="agent-glyph__list-dot agent-glyph__list-dot--turn"></i>
+                                <b class="agent-glyph__bar"></b>
+                                <b class="agent-glyph__bar agent-glyph__bar--soft"></b>
+                              </span>
+                            </span>
+                          </span>
+                        </span>
+                        <span class="settings-cards__text">
+                          <span class="settings-cards__label">
+                            双列卡片
+                          </span>
+                          <span class="settings-cards__hint">
+                            紧急项置顶，双列同屏看全
+                          </span>
+                        </span>
+                      </button>
+                      <button aria-pressed="false" class="settings-cards__card" type="button">
+                        <span aria-hidden="true" class="settings-cards__art">
+                          <span class="agent-glyph agent-glyph--projects">
+                            <span class="agent-glyph__proj-box">
+                              <span class="agent-glyph__proj-head">
+                                <b class="agent-glyph__bar agent-glyph__bar--short"></b>
+                              </span>
+                              <span class="agent-glyph__proj-row">
+                                <i class="agent-glyph__list-dot agent-glyph__list-dot--work"></i>
+                                <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                              </span>
+                              <span class="agent-glyph__proj-row">
+                                <i class="agent-glyph__list-dot"></i>
+                                <b class="agent-glyph__bar agent-glyph__bar--soft"></b>
+                              </span>
+                            </span>
+                          </span>
+                        </span>
+                        <span class="settings-cards__text">
+                          <span class="settings-cards__label">
+                            项目指挥台
+                          </span>
+                          <span class="settings-cards__hint">
+                            按项目收纳，去掉重复前缀
+                          </span>
+                        </span>
+                      </button>
+                      <button aria-pressed="false" class="settings-cards__card" type="button">
+                        <span aria-hidden="true" class="settings-cards__art">
+                          <span class="agent-glyph agent-glyph--stack">
+                            <span class="agent-glyph__compact-row agent-glyph__compact-row--on">
+                              <i class="agent-glyph__list-dot agent-glyph__list-dot--work"></i>
+                              <b class="agent-glyph__bar agent-glyph__bar--strong"></b>
+                              <s class="agent-glyph__time"></s>
+                            </span>
+                            <span class="agent-glyph__compact-row">
+                              <i class="agent-glyph__list-dot agent-glyph__list-dot--turn"></i>
+                              <b class="agent-glyph__bar"></b>
+                              <s class="agent-glyph__time"></s>
+                            </span>
+                            <span class="agent-glyph__compact-row">
+                              <i class="agent-glyph__list-dot"></i>
+                              <b class="agent-glyph__bar agent-glyph__bar--mid"></b>
+                              <s class="agent-glyph__time"></s>
+                            </span>
+                          </span>
+                        </span>
+                        <span class="settings-cards__text">
+                          <span class="settings-cards__label">
+                            极简清单
+                          </span>
+                          <span class="settings-cards__hint">
+                            去边框胶囊，纯排版键盘流
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                    <div aria-label="会话列表预览" class="agent-stage-island agent-stage-island--dark" role="group" style="background: rgb(3, 3, 3); --overlay-rgb: 241, 240, 246; --text-1: rgba(241, 240, 246, 0.95); --text-2: rgba(241, 240, 246, 0.7); --text-3: rgba(241, 240, 246, 0.55)">
+                      <div class="agent-stage-island__sessions">
+                        <section aria-label="Agent 会话" class="agent-sessions" data-view="focused">
+                          <div class="agent-sessions__usage">
+                            <div class="agent-usage-box agent-usage-box--chips" data-layout="chips">
+                              <div class="agent-usage-layout">
+                                <div class="agent-usage-chips agent-usage-chips--number">
+                                  <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                    <span aria-label="Claude Code 用量 Opus 63%" class="agent-usage-chip" role="status">
+                                      <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--claudeCode" draggable="false" height="14" src="/src/assets/brands/claude-code.png" width="14">
+                                      <strong class="agent-usage__value agent-usage__value--medium">
+                                        63
+                                        %
+                                      </strong>
+                                      <span class="agent-usage-chip__label">
+                                        Opus
+                                      </span>
+                                      <span aria-hidden="true" class="agent-usage-chip__more">
+                                        +
+                                        2
+                                      </span>
+                                    </span>
+                                  </span>
+                                  <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                    <span aria-label="Codex 用量 7 天 16%" class="agent-usage-chip" role="status">
+                                      <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--codex" draggable="false" height="14" src="/src/assets/brands/codex.webp" width="14">
+                                      <strong class="agent-usage__value agent-usage__value--low">
+                                        16
+                                        %
+                                      </strong>
+                                      <span class="agent-usage-chip__label">
+                                        7 天
+                                      </span>
+                                      <span aria-hidden="true" class="agent-usage-chip__more">
+                                        +
+                                        1
+                                      </span>
+                                    </span>
+                                  </span>
+                                  <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                    <span aria-label="Antigravity 用量 Gemini 3 Pro 30%" class="agent-usage-chip" role="status">
+                                      <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--antigravity" draggable="false" height="14" src="/src/assets/brands/antigravity.png" width="14">
+                                      <strong class="agent-usage__value agent-usage__value--low">
+                                        30
+                                        %
+                                      </strong>
+                                      <span class="agent-usage-chip__label">
+                                        Gemini 3 Pro
+                                      </span>
+                                    </span>
+                                  </span>
+                                  <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                    <span aria-label="WorkBuddy 用量 今日 1,240 · 7 天 8,930 积分" class="agent-usage-chip" role="status">
+                                      <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--workbuddy" draggable="false" height="14" src="/src/assets/brands/workbuddy.svg" width="14">
+                                      <strong class="agent-usage-chip__money">
+                                        8,930
+                                      </strong>
+                                      <span class="agent-usage-chip__label">
+                                        积分 · 7 天
+                                      </span>
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="agent-sessions__stage">
+                            <div class="agent-view agent-view--focused">
+                              <div aria-label="Agent 会话" class="agent-v__bar" role="tablist">
+                                <button aria-selected="true" class="agent-v__tab agent-v__tab--on" role="tab" type="button">
+                                  <span>
+                                    全部
+                                  </span>
+                                  <span class="agent-v__count">
+                                    3
+                                  </span>
+                                </button>
+                                <button aria-selected="false" class="agent-v__tab" role="tab" type="button">
+                                  <span>
+                                    需处理
+                                  </span>
+                                  <span class="agent-v__count agent-v__count--alert">
+                                    1
+                                  </span>
+                                </button>
+                                <button aria-selected="false" class="agent-v__tab" role="tab" type="button">
+                                  <span>
+                                    运行中
+                                  </span>
+                                  <span class="agent-v__count">
+                                    1
+                                  </span>
+                                </button>
+                                <button aria-selected="false" class="agent-v__tab" role="tab" type="button">
+                                  <span>
+                                    已完成
+                                  </span>
+                                  <span class="agent-v__count">
+                                    1
+                                  </span>
+                                </button>
+                              </div>
+                              <ul class="agent-sessions__list agent-sessions__list--focused agent-sessions__list--menu" data-fade-bottom="true">
+                                <li data-session-key="antigravity:preview-wait">
+                                  <span class="island-hover-card__anchor agent-session__hover">
+                                    <button class="agent-session agent-focused__row agent-focused__row--active agent-session--waiting agent-v--light-needs agent-session--light-needs agent-card--lively agent-card--sparkle" type="button">
+                                      <span aria-hidden="true" class="agent-card__band"></span>
+                                      <span class="agent-v__mark">
+                                        <span aria-label="等你确认" class="agent-session__jelly" role="img" title="等你确认">
+                                          <span aria-hidden="true" class="center-jelly" data-mood="waiting" style="--center-jelly-height: 12px">
+                                            <svg viewBox="3 4 58 43">
+                                              <defs>
+                                                <linearGradient gradientUnits="userSpaceOnUse" id="center-jelly-shade-_id1_" x1="0" x2="0" y1="6" y2="48">
+                                                  <stop offset="0" stop-color="#fff" stop-opacity="0.5"></stop>
+                                                  <stop offset="0.5" stop-color="#fff" stop-opacity="0"></stop>
+                                                  <stop offset="1" stop-color="#000" stop-opacity="0.14"></stop>
+                                                </linearGradient>
+                                              </defs>
+                                              <g class="center-jelly-pose">
+                                                <g class="center-jelly-body">
+                                                  <g class="center-jelly-outline">
+                                                    <circle cx="18" cy="39" r="6.6"></circle>
+                                                    <circle cx="27.3" cy="39" r="6.6"></circle>
+                                                    <circle cx="36.7" cy="39" r="6.6"></circle>
+                                                    <circle cx="46" cy="39" r="6.6"></circle>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                  </g>
+                                                  <g class="center-jelly-lobes">
+                                                    <g class="center-jelly-lobe" style="transform-origin: 18px 33px">
+                                                      <circle class="center-jelly-fill" cx="18" cy="39" r="6.6"></circle>
+                                                      <circle cx="18" cy="39" fill="url(#center-jelly-shade-_id1_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 27.3px 33px">
+                                                      <circle class="center-jelly-fill" cx="27.3" cy="39" r="6.6"></circle>
+                                                      <circle cx="27.3" cy="39" fill="url(#center-jelly-shade-_id1_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 36.7px 33px">
+                                                      <circle class="center-jelly-fill" cx="36.7" cy="39" r="6.6"></circle>
+                                                      <circle cx="36.7" cy="39" fill="url(#center-jelly-shade-_id1_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 46px 33px">
+                                                      <circle class="center-jelly-fill" cx="46" cy="39" r="6.6"></circle>
+                                                      <circle cx="46" cy="39" fill="url(#center-jelly-shade-_id1_)" r="6.6"></circle>
+                                                    </g>
+                                                  </g>
+                                                  <g class="center-jelly-head">
+                                                    <path class="center-jelly-fill" d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z" fill="url(#center-jelly-shade-_id1_)"></path>
+                                                    <ellipse class="center-jelly-highlight" cx="19" cy="14" rx="7.5" ry="3.4" transform="rotate(-26 19 14)"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="17.6" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="46.4" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <g transform="translate(0 -1)">
+                                                      <g class="center-jelly-lids">
+                                                        <ellipse class="center-jelly-eye" cx="24" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                        <ellipse class="center-jelly-eye" cx="40" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                      </g>
+                                                    </g>
+                                                    <path class="center-jelly-eye" d="M28.2 30.4h7.6a3.8 3.8 0 0 1-7.6 0Z"></path>
+                                                    <ellipse class="center-jelly-tongue" cx="32" cy="33.1" rx="2" ry="1.1"></ellipse>
+                                                  </g>
+                                                </g>
+                                              </g>
+                                              <path class="center-jelly-fx center-jelly-tick" d="M55 6l1.4-5M59 9.5l4.2-3.4M61 15l5-1"></path>
+                                            </svg>
+                                          </span>
+                                        </span>
+                                      </span>
+                                      <span class="agent-focused__main">
+                                        <span class="agent-focused__heading">
+                                          <span class="agent-v__proj">
+                                            Fuyu
+                                          </span>
+                                          <span class="agent-v__title">
+                                            运行审批排查
+                                          </span>
+                                          <span class="agent-v__model" title="gemini-4-neon · High">
+                                            <span class="agent-v__model-name">
+                                              gemini-4-neon
+                                            </span>
+                                            <span class="agent-v__model-effort">
+                                              H
+                                            </span>
+                                          </span>
+                                          <span class="agent-v__trailing">
+                                            <span class="agent-session__agent">
+                                              <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--antigravity" draggable="false" height="14" src="/src/assets/brands/antigravity.png" width="14">
+                                            </span>
+                                            <span class="agent-session__time">
+                                              <span class="agent-session__age">
+                                                1m
+                                              </span>
+                                            </span>
+                                          </span>
+                                        </span>
+                                        <span class="agent-focused__sub">
+                                          <span class="agent-v__activity agent-v__activity--needs" title="正在调用 run_command: git grep -n &quot;AGENTS.md&quot; scripts/ tests/">
+                                            <span class="agent-v__verb">
+                                              等待确认
+                                            </span>
+                                            <span class="agent-v__tool-inline">
+                                              run_command
+                                            </span>
+                                            <span class="agent-session__tool-detail">
+                                              <span class="agent-session__tool-head">
+                                                git grep -n "AGENTS.md" scripts/ tests/
+                                              </span>
+                                            </span>
+                                          </span>
+                                        </span>
+                                      </span>
+                                    </button>
+                                  </span>
+                                  <span class="agent-session__more">
+                                    <button aria-expanded="false" aria-haspopup="menu" aria-label="「运行审批排查」的更多操作" class="island-list-icon-button" title="「运行审批排查」的更多操作" type="button">
+                                      <svg aria-hidden="true" class="lucide lucide-ellipsis" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                                    </button>
+                                  </span>
+                                </li>
+                                <li data-session-key="claudeCode:preview-run">
+                                  <span class="island-hover-card__anchor agent-session__hover">
+                                    <button class="agent-session agent-focused__row agent-focused__row--active agent-session--running agent-v--light-working agent-session--light-working agent-card--lively agent-card--sparkle" type="button">
+                                      <span aria-hidden="true" class="agent-card__band"></span>
+                                      <span class="agent-v__mark">
+                                        <span aria-label="运行中" class="agent-session__jelly" role="img" title="运行中">
+                                          <span aria-hidden="true" class="center-jelly" data-mood="running" style="--center-jelly-height: 12px">
+                                            <svg viewBox="3 4 58 43">
+                                              <defs>
+                                                <linearGradient gradientUnits="userSpaceOnUse" id="center-jelly-shade-_id2_" x1="0" x2="0" y1="6" y2="48">
+                                                  <stop offset="0" stop-color="#fff" stop-opacity="0.5"></stop>
+                                                  <stop offset="0.5" stop-color="#fff" stop-opacity="0"></stop>
+                                                  <stop offset="1" stop-color="#000" stop-opacity="0.14"></stop>
+                                                </linearGradient>
+                                              </defs>
+                                              <g class="center-jelly-pose">
+                                                <g class="center-jelly-body">
+                                                  <g class="center-jelly-outline">
+                                                    <circle cx="18" cy="39" r="6.6"></circle>
+                                                    <circle cx="27.3" cy="39" r="6.6"></circle>
+                                                    <circle cx="36.7" cy="39" r="6.6"></circle>
+                                                    <circle cx="46" cy="39" r="6.6"></circle>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                  </g>
+                                                  <g class="center-jelly-lobes">
+                                                    <g class="center-jelly-lobe" style="transform-origin: 18px 33px">
+                                                      <circle class="center-jelly-fill" cx="18" cy="39" r="6.6"></circle>
+                                                      <circle cx="18" cy="39" fill="url(#center-jelly-shade-_id2_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 27.3px 33px">
+                                                      <circle class="center-jelly-fill" cx="27.3" cy="39" r="6.6"></circle>
+                                                      <circle cx="27.3" cy="39" fill="url(#center-jelly-shade-_id2_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 36.7px 33px">
+                                                      <circle class="center-jelly-fill" cx="36.7" cy="39" r="6.6"></circle>
+                                                      <circle cx="36.7" cy="39" fill="url(#center-jelly-shade-_id2_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 46px 33px">
+                                                      <circle class="center-jelly-fill" cx="46" cy="39" r="6.6"></circle>
+                                                      <circle cx="46" cy="39" fill="url(#center-jelly-shade-_id2_)" r="6.6"></circle>
+                                                    </g>
+                                                  </g>
+                                                  <g class="center-jelly-head">
+                                                    <path class="center-jelly-fill" d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z" fill="url(#center-jelly-shade-_id2_)"></path>
+                                                    <ellipse class="center-jelly-highlight" cx="19" cy="14" rx="7.5" ry="3.4" transform="rotate(-26 19 14)"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="17.6" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="46.4" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <g class="center-jelly-lids" transform="translate(-2.2 .6)">
+                                                      <ellipse class="center-jelly-eye" cx="24" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                      <ellipse class="center-jelly-eye" cx="40" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                    </g>
+                                                    <path class="center-jelly-line center-jelly-mouth" d="M27.4 31.8h4"></path>
+                                                  </g>
+                                                </g>
+                                              </g>
+                                            </svg>
+                                          </span>
+                                        </span>
+                                      </span>
+                                      <span class="agent-focused__main">
+                                        <span class="agent-focused__heading">
+                                          <span class="agent-v__proj">
+                                            Fuyu
+                                          </span>
+                                          <span class="agent-v__title">
+                                            Mac 刘海面板优化
+                                          </span>
+                                          <span class="agent-v__model" title="Opus 4.6 · High · 自动">
+                                            <span class="agent-v__model-name">
+                                              Opus 4.6
+                                            </span>
+                                            <span class="agent-v__model-effort">
+                                              H
+                                            </span>
+                                            <span class="agent-v__model-mode agent-v__model-mode--auto">
+                                              自动
+                                            </span>
+                                          </span>
+                                          <span class="agent-v__trailing">
+                                            <span class="agent-session__agent">
+                                              <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--claudeCode" draggable="false" height="14" src="/src/assets/brands/claude-code.png" width="14">
+                                            </span>
+                                            <span class="agent-session__time">
+                                              <span class="agent-session__age">
+                                                1m
+                                              </span>
+                                            </span>
+                                          </span>
+                                        </span>
+                                        <span class="agent-focused__sub">
+                                          <span class="agent-v__activity" title="正在调用 Edit: src/features/agent-status/AgentSessionsPanel.tsx">
+                                            <span class="agent-v__verb">
+                                              Edit
+                                            </span>
+                                            <span class="agent-session__tool-detail">
+                                              <span class="agent-session__tool-head">
+                                                src/features/agent-status
+                                              </span>
+                                              <span class="agent-session__tool-tail">
+                                                /AgentSessionsPanel.tsx
+                                              </span>
+                                            </span>
+                                          </span>
+                                          <span class="agent-focused__status">
+                                            <span class="agent-session__todos">
+                                              3/5 步
+                                            </span>
+                                          </span>
+                                        </span>
+                                      </span>
+                                    </button>
+                                  </span>
+                                  <span class="agent-session__more">
+                                    <button aria-expanded="false" aria-haspopup="menu" aria-label="「Mac 刘海面板优化」的更多操作" class="island-list-icon-button" title="「Mac 刘海面板优化」的更多操作" type="button">
+                                      <svg aria-hidden="true" class="lucide lucide-ellipsis" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                                    </button>
+                                  </span>
+                                </li>
+                                <li class="agent-focused__section" data-session-key="section:done">
+                                  <span>
+                                    最近完成 · 1
+                                  </span>
+                                  <button aria-expanded="true" class="agent-focused__toggle" type="button">
+                                    <svg aria-hidden="true" class="lucide lucide-chevron-down" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                                    <span>
+                                      收起
+                                    </span>
+                                  </button>
+                                </li>
+                                <li data-session-key="claudeCode:preview-done">
+                                  <span class="island-hover-card__anchor agent-session__hover">
+                                    <button class="agent-session agent-focused__row agent-focused__row--done agent-session--completed agent-v--light-done agent-session--light-done" type="button">
+                                      <span class="agent-v__mark">
+                                        <span aria-label="已完成" class="agent-session__jelly" role="img" title="已完成">
+                                          <span aria-hidden="true" class="center-jelly" data-mood="idle" style="--center-jelly-height: 12px">
+                                            <svg viewBox="3 4 58 43">
+                                              <defs>
+                                                <linearGradient gradientUnits="userSpaceOnUse" id="center-jelly-shade-_id3_" x1="0" x2="0" y1="6" y2="48">
+                                                  <stop offset="0" stop-color="#fff" stop-opacity="0.5"></stop>
+                                                  <stop offset="0.5" stop-color="#fff" stop-opacity="0"></stop>
+                                                  <stop offset="1" stop-color="#000" stop-opacity="0.14"></stop>
+                                                </linearGradient>
+                                              </defs>
+                                              <g class="center-jelly-pose">
+                                                <g class="center-jelly-body">
+                                                  <g class="center-jelly-outline">
+                                                    <circle cx="18" cy="39" r="6.6"></circle>
+                                                    <circle cx="27.3" cy="39" r="6.6"></circle>
+                                                    <circle cx="36.7" cy="39" r="6.6"></circle>
+                                                    <circle cx="46" cy="39" r="6.6"></circle>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                  </g>
+                                                  <g class="center-jelly-lobes">
+                                                    <g class="center-jelly-lobe" style="transform-origin: 18px 33px">
+                                                      <circle class="center-jelly-fill" cx="18" cy="39" r="6.6"></circle>
+                                                      <circle cx="18" cy="39" fill="url(#center-jelly-shade-_id3_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 27.3px 33px">
+                                                      <circle class="center-jelly-fill" cx="27.3" cy="39" r="6.6"></circle>
+                                                      <circle cx="27.3" cy="39" fill="url(#center-jelly-shade-_id3_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 36.7px 33px">
+                                                      <circle class="center-jelly-fill" cx="36.7" cy="39" r="6.6"></circle>
+                                                      <circle cx="36.7" cy="39" fill="url(#center-jelly-shade-_id3_)" r="6.6"></circle>
+                                                    </g>
+                                                    <g class="center-jelly-lobe" style="transform-origin: 46px 33px">
+                                                      <circle class="center-jelly-fill" cx="46" cy="39" r="6.6"></circle>
+                                                      <circle cx="46" cy="39" fill="url(#center-jelly-shade-_id3_)" r="6.6"></circle>
+                                                    </g>
+                                                  </g>
+                                                  <g class="center-jelly-head">
+                                                    <path class="center-jelly-fill" d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                                    <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z" fill="url(#center-jelly-shade-_id3_)"></path>
+                                                    <ellipse class="center-jelly-highlight" cx="19" cy="14" rx="7.5" ry="3.4" transform="rotate(-26 19 14)"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="17.6" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <ellipse class="center-jelly-cheek" cx="46.4" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                                    <g class="center-jelly-lids">
+                                                      <ellipse class="center-jelly-eye" cx="24" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                      <ellipse class="center-jelly-eye" cx="40" cy="25" rx="2.9" ry="4.1"></ellipse>
+                                                    </g>
+                                                  </g>
+                                                </g>
+                                              </g>
+                                            </svg>
+                                          </span>
+                                        </span>
+                                      </span>
+                                      <span class="agent-v__proj agent-v__proj--quiet">
+                                        Fuxi
+                                      </span>
+                                      <span class="agent-v__title">
+                                        全面分析与后续规划
+                                      </span>
+                                      <span class="agent-v__trailing">
+                                        <span class="agent-session__agent">
+                                          <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--claudeCode" draggable="false" height="13" src="/src/assets/brands/claude-code.png" width="13">
+                                        </span>
+                                        <span class="agent-session__time">
+                                          <span class="agent-session__age">
+                                            23m
+                                          </span>
+                                        </span>
+                                      </span>
+                                    </button>
+                                  </span>
+                                  <span class="agent-session__more">
+                                    <button aria-expanded="false" aria-haspopup="menu" aria-label="「全面分析与后续规划」的更多操作" class="island-list-icon-button" title="「全面分析与后续规划」的更多操作" type="button">
+                                      <svg aria-hidden="true" class="lucide lucide-ellipsis" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                                    </button>
+                                  </span>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        卡片光效
+                      </span>
+                      <span class="settings-row__description">
+                        粒子流苏与渐变带只在「卡片」和「紧凑」显示方式下生效；流光边框在三种显示方式下都只给等你确认的会话加上绕边框流动的光带，减少动画时静止。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <div class="settings-select">
+                        <div class="select-control">
+                          <button aria-controls="_id4_" aria-expanded="false" aria-haspopup="listbox" aria-label="卡片光效" class="select-control__trigger" role="combobox" type="button">
+                            <span>
+                              粒子流苏
+                            </span>
+                            <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        归档动画
+                      </span>
+                      <span class="settings-row__description">
+                        滑出：会话向右滑出再收起。粒子消散：会话从左到右化成状态颜色的粒子散开再收起。系统要求减少动画时直接移除。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <div aria-label="归档动画" class="settings-choice" role="group">
+                        <button aria-pressed="false" class="settings-choice__option" type="button">
+                          滑出
+                        </button>
+                        <button aria-pressed="true" class="settings-choice__option settings-choice__option--active" type="button">
+                          粒子消散
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        会话来源
+                      </span>
+                      <span class="settings-row__description">
+                        会话在哪个程序里运行，比如 Orca、Windows Terminal、VS Code、Codex。正在运行的 Claude Code 会话会自动识别；岛屿启动前就结束的会话没有来源。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <div class="settings-select">
+                        <div class="select-control">
+                          <button aria-controls="_id5_" aria-expanded="false" aria-haspopup="listbox" aria-label="会话来源" class="select-control__trigger" role="combobox" type="button">
+                            <span>
+                              只显示图标
+                            </span>
+                            <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id6_">
+                        显示模型和推理强度
+                      </label>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input checked="" id="_id6_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id7_">
+                        显示最近提问和正在用的工具
+                      </label>
+                      <span class="settings-row__description">
+                        进行中的会话在回复上方显示你最近一次的提问，运行时显示它正在调用的工具（如 Bash 命令、正在改的文件）。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input checked="" id="_id7_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id8_">
+                        显示运行时长
+                      </label>
+                      <span class="settings-row__description">
+                        进行中的会话显示"已运行多久"，每秒更新；结束的显示这一轮"用时多久"。从最近一次提问开始算。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input id="_id8_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="settings-group">
+              <div class="settings-group__header">
+                <h2 class="settings-group__title">
+                  会话列表
+                </h2>
+              </div>
+              <div class="settings-group__card">
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        列出多久内的会话
+                      </span>
+                      <span class="settings-row__description">
+                        最后一次活动在这段时间内的会话才会列出。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <div class="settings-select">
+                        <div class="select-control">
+                          <button aria-controls="_id9_" aria-expanded="false" aria-haspopup="listbox" aria-label="列出多久内的会话" class="select-control__trigger" role="combobox" type="button">
+                            <span>
+                              最近 24 小时
+                            </span>
+                            <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id10_">
+                        子 Agent / 子会话默认展开
+                      </label>
+                      <span class="settings-row__description">
+                        会话行下面的子 Agent 列表和 Claude 桌面版的子会话一打开就展开。手动展开或收起过的行照你点的来。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input id="_id10_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id11_">
+                        只显示进行中的会话
+                      </label>
+                      <span class="settings-row__description">
+                        隐藏已完成和失败的会话，只留正在运行、等待确认和可能中断的。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input id="_id11_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <label class="settings-row__title" for="_id12_">
+                        隐藏已退出的会话
+                      </label>
+                      <span class="settings-row__description">
+                        Claude Code 或 Codex 已经退出的会话不再列出，SessionEnd hook 没触发也算：按进程是否还在判断，远程电脑上的 Claude Code 会话同样适用。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="settings-switch">
+                        <input checked="" id="_id12_" role="switch" type="checkbox">
+                        <span aria-hidden="true" class="settings-switch__track"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="settings-group">
+              <div class="settings-group__header">
+                <h2 class="settings-group__title">
+                  没有会话时
+                </h2>
+              </div>
+              <div class="settings-group__card">
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        没有会话时显示
+                      </span>
+                      <span class="settings-row__description">
+                        Agent 页上没有会话可列时的画面。
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <span class="agent-empty-picker__using">
+                        <svg aria-hidden="true" class="lucide lucide-check" fill="none" height="13" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="13" xmlns="http://www.w3.org/2000/svg"></svg>
+                        正在用这个
+                      </span>
+                    </div>
+                  </div>
+                  <div class="agent-stage agent-empty-picker">
+                    <div class="agent-empty-picker__carousel">
+                      <button aria-label="上一个样式" class="agent-empty-picker__arrow" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-chevron-left" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                      <div aria-label="水母打盹" class="agent-stage-island agent-stage-island--dark" role="group" style="background: rgb(3, 3, 3); --overlay-rgb: 241, 240, 246; --text-1: rgba(241, 240, 246, 0.95); --text-2: rgba(241, 240, 246, 0.7); --text-3: rgba(241, 240, 246, 0.55)">
+                        <div class="agent-empty-picker__page">
+                          <div class="agent-usage-box agent-usage-box--chips" data-layout="chips">
+                            <div class="agent-usage-layout">
+                              <div class="agent-usage-chips agent-usage-chips--number">
+                                <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                  <span aria-label="Claude Code 用量 Opus 63%" class="agent-usage-chip" role="status">
+                                    <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--claudeCode" draggable="false" height="14" src="/src/assets/brands/claude-code.png" width="14">
+                                    <strong class="agent-usage__value agent-usage__value--medium">
+                                      63
+                                      %
+                                    </strong>
+                                    <span class="agent-usage-chip__label">
+                                      Opus
+                                    </span>
+                                    <span aria-hidden="true" class="agent-usage-chip__more">
+                                      +
+                                      2
+                                    </span>
+                                  </span>
+                                </span>
+                                <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                  <span aria-label="Codex 用量 7 天 16%" class="agent-usage-chip" role="status">
+                                    <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--codex" draggable="false" height="14" src="/src/assets/brands/codex.webp" width="14">
+                                    <strong class="agent-usage__value agent-usage__value--low">
+                                      16
+                                      %
+                                    </strong>
+                                    <span class="agent-usage-chip__label">
+                                      7 天
+                                    </span>
+                                    <span aria-hidden="true" class="agent-usage-chip__more">
+                                      +
+                                      1
+                                    </span>
+                                  </span>
+                                </span>
+                                <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                  <span aria-label="Antigravity 用量 Gemini 3 Pro 30%" class="agent-usage-chip" role="status">
+                                    <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--antigravity" draggable="false" height="14" src="/src/assets/brands/antigravity.png" width="14">
+                                    <strong class="agent-usage__value agent-usage__value--low">
+                                      30
+                                      %
+                                    </strong>
+                                    <span class="agent-usage-chip__label">
+                                      Gemini 3 Pro
+                                    </span>
+                                  </span>
+                                </span>
+                                <span class="island-hover-card__anchor agent-usage-chip__hover">
+                                  <span aria-label="WorkBuddy 用量 今日 1,240 · 7 天 8,930 积分" class="agent-usage-chip" role="status">
+                                    <img alt="" aria-hidden="true" class="agent-provider-icon agent-provider-icon--workbuddy" draggable="false" height="14" src="/src/assets/brands/workbuddy.svg" width="14">
+                                    <strong class="agent-usage-chip__money">
+                                      8,930
+                                    </strong>
+                                    <span class="agent-usage-chip__label">
+                                      积分 · 7 天
+                                    </span>
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="agent-empty agent-empty--sleep">
+                            <span class="agent-empty__jelly">
+                              <span aria-hidden="true" class="center-jelly center-jelly--lively" data-mood="sleep" style="--center-jelly-height: 46px">
+                                <svg viewBox="3 4 58 43">
+                                  <defs>
+                                    <linearGradient gradientUnits="userSpaceOnUse" id="center-jelly-shade-_id13_" x1="0" x2="0" y1="6" y2="48">
+                                      <stop offset="0" stop-color="#fff" stop-opacity="0.5"></stop>
+                                      <stop offset="0.5" stop-color="#fff" stop-opacity="0"></stop>
+                                      <stop offset="1" stop-color="#000" stop-opacity="0.14"></stop>
+                                    </linearGradient>
+                                  </defs>
+                                  <g class="center-jelly-pose">
+                                    <g class="center-jelly-body">
+                                      <g class="center-jelly-outline">
+                                        <circle cx="18" cy="39" r="6.6"></circle>
+                                        <circle cx="27.3" cy="39" r="6.6"></circle>
+                                        <circle cx="36.7" cy="39" r="6.6"></circle>
+                                        <circle cx="46" cy="39" r="6.6"></circle>
+                                        <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                      </g>
+                                      <g class="center-jelly-lobes">
+                                        <g class="center-jelly-lobe" style="transform-origin: 18px 33px">
+                                          <circle class="center-jelly-fill" cx="18" cy="39" r="6.6"></circle>
+                                          <circle cx="18" cy="39" fill="url(#center-jelly-shade-_id13_)" r="6.6"></circle>
+                                        </g>
+                                        <g class="center-jelly-lobe" style="transform-origin: 27.3px 33px">
+                                          <circle class="center-jelly-fill" cx="27.3" cy="39" r="6.6"></circle>
+                                          <circle cx="27.3" cy="39" fill="url(#center-jelly-shade-_id13_)" r="6.6"></circle>
+                                        </g>
+                                        <g class="center-jelly-lobe" style="transform-origin: 36.7px 33px">
+                                          <circle class="center-jelly-fill" cx="36.7" cy="39" r="6.6"></circle>
+                                          <circle cx="36.7" cy="39" fill="url(#center-jelly-shade-_id13_)" r="6.6"></circle>
+                                        </g>
+                                        <g class="center-jelly-lobe" style="transform-origin: 46px 33px">
+                                          <circle class="center-jelly-fill" cx="46" cy="39" r="6.6"></circle>
+                                          <circle cx="46" cy="39" fill="url(#center-jelly-shade-_id13_)" r="6.6"></circle>
+                                        </g>
+                                      </g>
+                                      <g class="center-jelly-head">
+                                        <path class="center-jelly-fill" d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z"></path>
+                                        <path d="M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z" fill="url(#center-jelly-shade-_id13_)"></path>
+                                        <ellipse class="center-jelly-highlight" cx="19" cy="14" rx="7.5" ry="3.4" transform="rotate(-26 19 14)"></ellipse>
+                                        <ellipse class="center-jelly-cheek" cx="17.6" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                        <ellipse class="center-jelly-cheek" cx="46.4" cy="31.5" rx="3.6" ry="2.2"></ellipse>
+                                        <path class="center-jelly-line" d="M20.6 25.2a3.4 3.4 0 0 0 6.8 0M36.6 25.2a3.4 3.4 0 0 0 6.8 0"></path>
+                                      </g>
+                                    </g>
+                                  </g>
+                                </svg>
+                              </span>
+                              <svg aria-hidden="true" class="agent-empty__zz" viewBox="0 0 10 10">
+                                <path d="M2.5 2.5h5l-5 5h5"></path>
+                              </svg>
+                              <svg aria-hidden="true" class="agent-empty__zz" viewBox="0 0 10 10">
+                                <path d="M2.5 2.5h5l-5 5h5"></path>
+                              </svg>
+                              <svg aria-hidden="true" class="agent-empty__zz" viewBox="0 0 10 10">
+                                <path d="M2.5 2.5h5l-5 5h5"></path>
+                              </svg>
+                            </span>
+                            <strong>
+                              都歇着呢
+                            </strong>
+                            <span>
+                              在任意一个 Agent 里开个对话，它就会醒过来
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button aria-label="下一个样式" class="agent-empty-picker__arrow" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-chevron-right" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                      </button>
+                    </div>
+                    <div class="agent-empty-picker__caption">
+                      <strong>
+                        1 / 6 · 水母打盹
+                      </strong>
+                      <span>
+                        最安静的陪伴感
+                      </span>
+                    </div>
+                    <div aria-label="没有会话时显示" class="agent-empty-picker__dots" role="group">
+                      <button aria-current="true" aria-label="水母打盹" class="agent-empty-picker__dot" type="button"></button>
+                      <button aria-current="false" aria-label="待命台" class="agent-empty-picker__dot" type="button"></button>
+                      <button aria-current="false" aria-label="上一个会话" class="agent-empty-picker__dot" type="button"></button>
+                      <button aria-current="false" aria-label="额度大圆环" class="agent-empty-picker__dot" type="button"></button>
+                      <button aria-current="false" aria-label="今天的潮汐" class="agent-empty-picker__dot" type="button"></button>
+                      <button aria-current="false" aria-label="极简水平线" class="agent-empty-picker__dot" type="button"></button>
+                    </div>
+                    <button class="agent-empty-picker__use" disabled="" type="button">
+                      正在用这个
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="settings-group">
+              <div class="settings-group__header">
+                <h2 class="settings-group__title">
+                  隐藏会话
+                </h2>
+              </div>
+              <div class="settings-group__card">
+                <div class="settings-row">
+                  <div class="settings-row__main">
+                    <div class="settings-row__text">
+                      <span class="settings-row__title">
+                        添加规则
+                      </span>
+                    </div>
+                    <div class="settings-row__control">
+                      <div aria-label="规则类型" class="settings-choice" role="group">
+                        <button aria-pressed="true" class="settings-choice__option settings-choice__option--active" type="button">
+                          所在目录
+                        </button>
+                        <button aria-pressed="false" class="settings-choice__option" type="button">
+                          标题或提示词包含
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <form class="session-filter__form">
+                    <input aria-label="添加规则" class="settings-input settings-input--mono" placeholder="例如 E:\Projects\scratch 或 */agy-title-*" spellcheck="false" value="">
+                    <button class="settings-link-button" disabled="" type="button">
+                      添加
+                    </button>
+                  </form>
+                </div>
+              </div>
+              <div class="settings-group__footer">
+                <p class="settings-footnote">
+                  符合任一条的会话在岛上完全不出现：Agent 页、会话数、收起条标题、提醒和音效都不算它。
+                  <button aria-expanded="false" class="settings-footnote__toggle" type="button">
+                    了解更多
+                  </button>
+                </p>
+              </div>
+            </section>
+            <section class="settings-group">
+              <div class="settings-group__header">
+                <h2 class="settings-group__title">
+                  静默启动
+                </h2>
+                <div aria-label="写法" class="settings-choice" role="group">
+                  <button aria-pressed="false" class="settings-choice__option" type="button">
+                    bash / zsh
+                  </button>
+                  <button aria-pressed="true" class="settings-choice__option settings-choice__option--active" type="button">
+                    PowerShell
+                  </button>
+                  <button aria-pressed="false" class="settings-choice__option" type="button">
+                    Node.js
+                  </button>
+                </div>
+              </div>
+              <div class="settings-group__card">
+                <div class="settings-code-block" data-search="off">
+                  <div class="settings-code-block__bar">
+                    <span class="settings-code-block__label">
+                      <svg aria-hidden="true" class="lucide lucide-terminal" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+                      PowerShell
+                    </span>
+                    <span class="settings-code-block__action">
+                      <button class="settings-link-button" type="button">
+                        <svg aria-hidden="true" class="lucide lucide-copy" fill="none" height="12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"></svg>
+                        复制
+                      </button>
+                    </span>
+                  </div>
+                  <pre class="settings-code-block__pre">
+                    $env:FUYU_AGENT_STATUS = "off" agy -p "…"
+                  </pre>
+                </div>
+              </div>
+              <div class="settings-group__footer">
+                <p class="settings-footnote">
+                  给脚本和插件在后台起的一次性代理（例如 agy -p、claude -p、codex exec）用：启动时带上环境变量 FUYU_AGENT_STATUS=off，浮屿的钩子见到它就直接退出，这个会话不提醒、不响、不点亮状态灯。
+                  <button aria-expanded="false" class="settings-footnote__toggle" type="button">
+                    了解更多
+                  </button>
+                </p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>

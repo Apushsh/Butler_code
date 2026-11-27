@@ -1,0 +1,57 @@
+import { useEffect, useState } from "react";
+import { lyricsV1 } from "@fuyu/plugin-services";
+import { windowServices } from "../../plugin-kernel/services";
+import "../plugin/services";
+import type { MediaState } from "../api";
+import { onAppleMusicTokenChanged } from "./api";
+import { parseLrc, trackKey, withTranslations, type LyricLine } from "./lrc";
+
+export type LyricsSettings = { lyricsFolder: string; lyricsOnline: boolean; lyricsChinese?: boolean; lyricsAppleMusic?: boolean };
+
+export function useLyrics(mediaState: MediaState, settings: LyricsSettings): { lines: LyricLine[] | null; notFound: boolean } {
+  const key = trackKey(mediaState);
+  const folder = settings.lyricsFolder.trim();
+  const active = Boolean(key) && (folder !== "" || settings.lyricsOnline);
+  const [found, setFound] = useState<{ key: string; lines: LyricLine[] } | null>(null);
+  const [sourceRevision, setSourceRevision] = useState(0);
+  const { title, artist, album, durationMs, trackId, sourceApp } = mediaState;
+  const appleMusic = settings.lyricsAppleMusic === true;
+  const chinese = settings.lyricsOnline && settings.lyricsChinese === true;
+
+  useEffect(() => {
+    const refetch = () => {
+      setFound(null);
+      setSourceRevision((rev) => rev + 1);
+    };
+    const stop = windowServices.get(lyricsV1).on("changed", refetch);
+    const stopToken = onAppleMusicTokenChanged(refetch);
+    return () => {
+      void stop();
+      void stopToken.then((unlisten) => unlisten()).catch(() => {});
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!active || !key || !title) return;
+    let cancelled = false;
+    void windowServices
+      .get(lyricsV1)
+      .lookup({ title, artist: artist ?? "", album: album ?? "", durationMs, folder, online: settings.lyricsOnline, chinese, trackId: trackId ?? null, sourceApp: sourceApp ?? null })
+      .then((lyrics) => {
+        const parsed = lyrics ? parseLrc(lyrics.lrc).filter((line, index, all) => line.text || index < all.length - 1) : [];
+        const lines = withTranslations(parsed, lyrics?.translation ? parseLrc(lyrics.translation) : []);
+        if (!cancelled) setFound({ key, lines });
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to look up lyrics", error);
+        if (!cancelled) setFound({ key, lines: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, key, folder, settings.lyricsOnline, chinese, appleMusic, sourceApp, sourceRevision]);
+
+  if (!active || !found || found.key !== key) return { lines: null, notFound: false };
+  return found.lines.length === 0 ? { lines: null, notFound: true } : { lines: found.lines, notFound: false };
+}

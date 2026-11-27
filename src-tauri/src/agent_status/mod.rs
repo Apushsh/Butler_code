@@ -1,0 +1,739 @@
+#[cfg_attr(target_os = "macos", path = "approval_hotkeys_macos.rs")]
+pub(crate) mod approval_hotkeys;
+mod background;
+mod background_tasks;
+mod claude_code;
+mod claude_desktop;
+mod claude_hooks;
+mod claude_statusline;
+mod codex;
+mod codex_hooks;
+mod codex_threads;
+mod editor_extension;
+mod editor_terminal;
+mod external;
+mod harness;
+mod hooks_state;
+mod host;
+pub(crate) mod host_icon;
+mod codex_usage;
+mod codex_version;
+mod magpie;
+mod markers;
+mod notifications;
+mod orca;
+pub(crate) mod reply_marker;
+mod reply_text;
+pub(crate) mod remote_fetch;
+pub(crate) mod remote_hosts;
+mod remote_sessions;
+mod remote_setup;
+mod focus;
+mod focus_log;
+mod session_host;
+mod session_memory;
+mod session_mode;
+mod session_process;
+mod session_records;
+mod subagents;
+mod snapshot;
+pub(crate) mod sound_packs;
+#[cfg(test)]
+mod tests;
+mod session_scan;
+mod sessions;
+pub(crate) use sessions::parse_timestamp_ms;
+pub(crate) use claude_desktop::app_dir as claude_desktop_dir;
+mod title;
+mod tmux;
+mod todo_list;
+mod tool_call;
+pub(crate) mod usage;
+mod push_detail;
+mod wezterm;
+mod window_focus;
+mod workbuddy;
+mod antigravity;
+mod antigravity_focus;
+mod cursor_focus;
+mod claude_desktop_focus;
+mod workbuddy_focus;
+mod antigravity_remote;
+mod dsh;
+mod dsh_hooks;
+mod opencode;
+mod claude_compat;
+include!(concat!(env!("OUT_DIR"), "/compat_harnesses.rs"));
+mod trae;
+mod zcode;
+mod kimi_code;
+mod grok;
+mod copilot;
+mod copilot_hooks;
+mod droid;
+mod droid_hooks;
+mod kimi_hooks;
+mod mimo;
+mod pi;
+mod cursor;
+mod third_party;
+pub(crate) mod per_agent_hooks;
+mod uninstall;
+
+use serde::Serialize;
+use serde_json::{json, Value};
+use std::{fs, path::Path};
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::system::windows_home_dir;
+
+use harness::HookEnv;
+use hooks_state::{script_outdated, AgentHooksState};
+use markers::{apply_agent_running_markers, remove_agent_marker_files, remove_legacy_hook_inputs};
+pub(crate) use claude_compat::{claimed_elsewhere, compat_input, compat_reply, Reply};
+pub use uninstall::AgentHooksUninstallResult;
+pub(crate) use uninstall::cleanup_for_app_uninstall;
+use uninstall::restore_hooks_after_reinstall;
+use snapshot::{
+    agent_status_snapshot_from_persisted, current_unix_millis, default_agent_phase,
+    default_agent_status_snapshot, default_persisted_agent_status, AgentStatusSnapshot,
+    AgentTaskStatus, PersistedAgentStatus,
+};
+
+pub(super) const AGENT_STATUS_FILE_NAME: &str = "agent-status.json";
+
+#[cfg(windows)]
+pub(super) const AGENT_RUNNING_SCRIPT_FILE_NAME: &str = "fuyu-agent-running.cmd";
+#[cfg(windows)]
+pub(super) const AGENT_STATUS_SCRIPT_FILE_NAME: &str = "fuyu-agent-status.ps1";
+#[cfg(windows)]
+pub(super) const AGENT_SESSION_SCRIPT_FILE_NAME: &str = "fuyu-agent-session.ps1";
+#[cfg(not(windows))]
+pub(super) const AGENT_RUNNING_SCRIPT_FILE_NAME: &str = "fuyu-agent-running.sh";
+#[cfg(not(windows))]
+pub(super) const AGENT_STATUS_SCRIPT_FILE_NAME: &str = "fuyu-agent-status.sh";
+#[cfg(not(windows))]
+pub(super) const AGENT_SESSION_SCRIPT_FILE_NAME: &str = "fuyu-agent-session.sh";
+
+pub(super) const AGENT_HOOK_SIGNATURE: &str = "fuyu-agent-";
+const LEGACY_AGENT_HOOK_SIGNATURE: &str = "focusd-agent-";
+const LEGACY_SCRIPT_FILE_NAMES: [&str; 4] =
+    ["focusd-agent-running.cmd", "focusd-agent-status.ps1", "focusd-agent-session.ps1", "focusd-agent-approval.ps1"];
+
+pub(super) fn is_island_hook_text(text: &str) -> bool {
+    text.contains(AGENT_HOOK_SIGNATURE) || text.contains(LEGACY_AGENT_HOOK_SIGNATURE)
+}
+pub(super) const AGENT_RUNNING_NOTIFICATION_ARG: &str = "notification";
+#[cfg(windows)]
+pub(super) const AGENT_RUNNING_SCRIPT: &str =
+    include_str!("hooks/fuyu-agent-running.cmd");
+#[cfg(windows)]
+pub(super) const AGENT_STATUS_SCRIPT: &str =
+    include_str!("hooks/fuyu-agent-status.ps1");
+#[cfg(windows)]
+pub(super) const AGENT_SESSION_SCRIPT: &str =
+    include_str!("hooks/fuyu-agent-session.ps1");
+#[cfg(windows)]
+pub(super) const AGENT_APPROVAL_SCRIPT_FILE_NAME: &str = "fuyu-agent-approval.ps1";
+#[cfg(windows)]
+pub(super) const AGENT_APPROVAL_SCRIPT: &str =
+    include_str!("hooks/fuyu-agent-approval.ps1");
+#[cfg(not(windows))]
+pub(super) const AGENT_RUNNING_SCRIPT: &str = include_str!("hooks/fuyu-agent-running.sh");
+#[cfg(not(windows))]
+pub(super) const AGENT_STATUS_SCRIPT: &str = include_str!("hooks/fuyu-agent-status.sh");
+#[cfg(not(windows))]
+pub(super) const AGENT_SESSION_SCRIPT: &str = include_str!("hooks/fuyu-agent-session.sh");
+#[cfg(not(windows))]
+pub(super) const AGENT_APPROVAL_SCRIPT_FILE_NAME: &str = "fuyu-agent-approval.sh";
+#[cfg(not(windows))]
+pub(super) const AGENT_APPROVAL_SCRIPT: &str = include_str!("hooks/fuyu-agent-approval.sh");
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentHooksInstallResult {
+    pub(super) scripts_dir: String,
+    pub(super) status_path: String,
+    pub(super) installed_at: i64,
+    pub(super) remotes: Vec<remote_setup::RemoteResult>,
+    pub(super) dsh_bridge: Option<String>,
+}
+
+#[tauri::command]
+pub async fn get_agent_status(app: AppHandle) -> Result<AgentStatusSnapshot, String> {
+    tauri::async_runtime::spawn_blocking(move || read_agent_status(app))
+        .await
+        .map_err(|error| format!("Failed to join the agent status task: {error}"))?
+}
+
+pub(super) fn may_change_hook_files() -> bool {
+    crate::dev_lane::lane().is_none()
+}
+
+pub(super) fn own_dir(app_dir: &Path) -> std::path::PathBuf {
+    match crate::home_dir::current().filter(|_| !may_change_hook_files()) {
+        Some(home) => home.to_path_buf(),
+        None => app_dir.to_path_buf(),
+    }
+}
+
+fn read_agent_status(app: AppHandle) -> Result<AgentStatusSnapshot, String> {
+    let app_dir = crate::home_dir::agent_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    if may_change_hook_files() {
+        fs::create_dir_all(&app_dir)
+            .map_err(|error| format!("Failed to create app data directory: {error}"))?;
+    }
+
+    let status_path = app_dir.join(AGENT_STATUS_FILE_NAME);
+    let status_path_display = status_path.to_string_lossy().to_string();
+    let mut snapshot = match fs::read_to_string(&status_path) {
+        Ok(content) => match serde_json::from_str::<PersistedAgentStatus>(&content) {
+            Ok(persisted) => agent_status_snapshot_from_persisted(persisted, status_path_display),
+            Err(_) => default_agent_status_snapshot(status_path_display),
+        },
+        Err(_) => default_agent_status_snapshot(status_path_display),
+    };
+    apply_agent_running_markers(&app_dir, &mut snapshot);
+
+    Ok(snapshot)
+}
+
+#[tauri::command]
+pub fn clear_agent_status(app: AppHandle, provider: String) -> Result<AgentStatusSnapshot, String> {
+    let builtin = harness::with_status_light().find(|(id, _)| *id == provider);
+    if builtin.is_none() && !third_party::is_third_party_id(&provider) {
+        return if external::clear_by_id(&provider) {
+            read_agent_status(app)
+        } else {
+            Err("Unsupported agent provider.".to_string())
+        };
+    }
+    crate::dev_lane::refuse_in_preview("clear the agents' status")?;
+    let app_dir = crate::home_dir::fuyu_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    fs::create_dir_all(&app_dir)
+        .map_err(|error| format!("Failed to create app data directory: {error}"))?;
+
+    let status_path = app_dir.join(AGENT_STATUS_FILE_NAME);
+    let status_path_display = status_path.to_string_lossy().to_string();
+    let mut persisted = match fs::read_to_string(&status_path) {
+        Ok(content) => serde_json::from_str::<PersistedAgentStatus>(&content)
+            .unwrap_or_else(|_| default_persisted_agent_status()),
+        Err(_) => default_persisted_agent_status(),
+    };
+
+    let now = current_unix_millis();
+    let cleared_status = AgentTaskStatus {
+        phase: default_agent_phase(),
+        task_id: None,
+        updated_at: now,
+    };
+
+    if let Some((id, light)) = builtin {
+        persisted.agents.insert(id, cleared_status);
+        remove_agent_marker_files(&app_dir, light.running_marker, light.running_hold, light.saved_inputs);
+    } else {
+        if let Some(entry) = persisted.third_party.get_mut(&provider) {
+            entry.phase = default_agent_phase();
+            entry.task_id = None;
+            entry.updated_at = now;
+        }
+        third_party::clear_markers(&app_dir, &provider);
+    }
+
+    let prefix = format!("{provider}-");
+    for entry in fs::read_dir(app_dir.join(notifications::NOTIFICATIONS_DIR)).into_iter().flatten().flatten() {
+        if entry.file_name().to_string_lossy().starts_with(&prefix) {
+            fs::remove_file(entry.path()).ok();
+        }
+    }
+
+    persisted.updated_at = now;
+    let content = serde_json::to_string_pretty(&persisted)
+        .map_err(|error| format!("Failed to serialize agent status: {error}"))?;
+    write_text_file(&status_path, &content)?;
+
+    Ok(agent_status_snapshot_from_persisted(
+        persisted,
+        status_path_display,
+    ))
+}
+
+pub(crate) const PLUGIN_ID: &str = "agents";
+
+pub fn init() {
+    background::register();
+    if may_change_hook_files() {
+        std::thread::spawn(|| {
+            if let (Some(app_dir), Ok(home_dir)) = (
+                crate::home_dir::current().map(Path::to_path_buf).or_else(crate::home_dir::real_home),
+                windows_home_dir(),
+            ) {
+                if let Err(error) = restore_hooks_after_reinstall(&app_dir, &home_dir) {
+                    eprintln!("failed to restore hooks after reinstall: {error}");
+                }
+                if let Err(error) = claude_code::upgrade_exec_form_hooks(&app_dir, &home_dir) {
+                    eprintln!("failed to rewrite the Claude Code hooks: {error}");
+                }
+            }
+            reply_marker::upgrade_installed();
+        });
+    }
+}
+
+pub(crate) fn report_external_status(owner: &str, default_name: &str, params: &Value) -> Result<Value, (u16, String)> {
+    let report = external::parse_report(params).map_err(|message| (400, message))?;
+    let status = external::report(owner, default_name, report).map_err(|message| (429, message))?;
+    serde_json::to_value(status).map_err(|error| (500, error.to_string()))
+}
+
+pub(crate) fn clear_external_status(owner: &str, params: &Value) -> Result<Value, (u16, String)> {
+    let source = match params.get("source") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(source)) => Some(source.as_str()),
+        Some(_) => return Err((400, "\"source\" must be a string.".into())),
+    };
+    Ok(json!({ "cleared": external::clear(owner, source) }))
+}
+
+pub(crate) fn clear_external_owner(owner: &str) {
+    external::clear(owner, None);
+}
+
+#[tauri::command]
+pub async fn install_agent_status_hooks(app: AppHandle) -> Result<AgentHooksInstallResult, String> {
+    tauri::async_runtime::spawn_blocking(move || install_agent_status_hooks_now(&app))
+        .await
+        .map_err(|error| format!("Failed to join the agent hooks task: {error}"))?
+}
+
+#[tauri::command]
+pub async fn uninstall_agent_status_hooks(app: AppHandle) -> Result<AgentHooksUninstallResult, String> {
+    crate::dev_lane::refuse_in_preview("remove the agents' hooks")?;
+    let app_dir = crate::home_dir::agent_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || uninstall::uninstall_agent_status_hooks_now(&app_dir))
+        .await
+        .map_err(|error| format!("Failed to join the agent hooks task: {error}"))?
+}
+
+fn install_agent_status_hooks_now(app: &AppHandle) -> Result<AgentHooksInstallResult, String> {
+    let app_dir = crate::home_dir::agent_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    fs::create_dir_all(&app_dir)
+        .map_err(|error| format!("Failed to create app data directory: {error}"))?;
+
+    install_agent_hook_scripts(&app_dir)?;
+
+    let running_script_path = app_dir.join(AGENT_RUNNING_SCRIPT_FILE_NAME);
+    let status_script_path = app_dir.join(AGENT_STATUS_SCRIPT_FILE_NAME);
+    let home_dir = windows_home_dir()?;
+    let env = HookEnv {
+        home_dir: &home_dir,
+        running_script: &running_script_path,
+        status_script: &status_script_path,
+    };
+    let errors: Vec<String> = harness::with_hooks()
+        .filter_map(|(id, hooks)| (hooks.install)(&env).err().map(|error| format!("{id}: {error}")))
+        .collect();
+    if !errors.is_empty() {
+        return Err(errors.join("; "));
+    }
+    let dsh_bridge = dsh_hooks::bridge_lines(&env);
+    reply_marker::repair();
+
+    Ok(AgentHooksInstallResult {
+        scripts_dir: app_dir.to_string_lossy().to_string(),
+        status_path: app_dir
+            .join(AGENT_STATUS_FILE_NAME)
+            .to_string_lossy()
+            .to_string(),
+        installed_at: current_unix_millis(),
+        remotes: {
+            let remotes = remote_setup::install_hooks(&app_dir);
+            remove_legacy_hook_scripts(&app_dir);
+            remotes
+        },
+        dsh_bridge,
+    })
+}
+
+fn remove_legacy_hook_scripts(app_dir: &Path) {
+    for name in LEGACY_SCRIPT_FILE_NAMES {
+        let _ = fs::remove_file(app_dir.join(name));
+    }
+}
+
+pub(crate) fn reinstall_hooks_after_rename(app: &AppHandle) -> Result<bool, String> {
+    if !may_change_hook_files() {
+        return Ok(false);
+    }
+    let app_dir = crate::home_dir::fuyu_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    let state = read_agent_hooks_state(&app_dir)?;
+    let installed = |id: &str| state.agents.get(id).is_some_and(|hooks| hooks.is_installed());
+    if !state.agents.keys().any(|id| installed(id)) {
+        return Ok(false);
+    }
+    install_agent_hook_scripts(&app_dir)?;
+    let running_script_path = app_dir.join(AGENT_RUNNING_SCRIPT_FILE_NAME);
+    let status_script_path = app_dir.join(AGENT_STATUS_SCRIPT_FILE_NAME);
+    let home_dir = windows_home_dir()?;
+    let env = HookEnv {
+        home_dir: &home_dir,
+        running_script: &running_script_path,
+        status_script: &status_script_path,
+    };
+    for (id, hooks) in harness::with_hooks() {
+        if installed(id) {
+            (hooks.install)(&env)?;
+        }
+    }
+    for remote in remote_setup::install_hooks(&app_dir) {
+        if let Some(error) = remote.error {
+            eprintln!("could not reinstall the hooks on {}: {error}", remote.host);
+        }
+    }
+    remove_legacy_hook_scripts(&app_dir);
+    Ok(true)
+}
+
+#[tauri::command]
+pub async fn list_agent_sessions(
+    app: AppHandle,
+    window_hours: Option<u32>,
+) -> Result<Vec<subagents::ListedSession>, String> {
+    let window_ms = window_hours
+        .map(|hours| i64::from(hours.clamp(1, 24)) * 60 * 60 * 1000)
+        .unwrap_or(session_scan::ACTIVE_WINDOW_MS);
+    let app_dir = crate::home_dir::fuyu_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    let agent_dir = crate::home_dir::agent_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || {
+        windows_home_dir().map(|home_dir| {
+            let sessions = host::local_and_remote(&home_dir, &app_dir, &agent_dir, window_ms);
+            subagents::with_subagents(&home_dir, sessions, snapshot::current_unix_millis())
+        })
+    })
+    .await
+    .map_err(|error| format!("Failed to join the agent sessions task: {error}"))?
+}
+
+#[tauri::command]
+pub async fn get_agent_push_detail(
+    app: AppHandle,
+    provider: String,
+    session_id: String,
+    remote_host: Option<String>,
+) -> Result<push_detail::PushDetail, crate::user_error::UserError> {
+    if provider != "claudeCode" {
+        return Ok(push_detail::PushDetail::default());
+    }
+    let home_dir = match remote_host {
+        Some(host) => {
+            let app_dir = remote_app_dir(&app)?;
+            remote_sessions::mirrored_home(&app_dir, &host).ok_or_else(|| {
+                crate::user_error::UserError::new("remoteHosts.unknown", format!("Unknown SSH computer {host}.")).arg("host", host)
+            })?
+        }
+        None => windows_home_dir()?,
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        push_detail::claude_transcript(&home_dir, &session_id)
+            .and_then(|path| session_scan::read_tail(&path))
+            .map(|tail| push_detail::claude_push_detail(&tail))
+            .unwrap_or_default()
+    })
+    .await
+    .map_err(|error| crate::user_error::UserError::new("internal", "Something went wrong inside the island.").detail(error))
+}
+
+#[tauri::command]
+pub async fn list_ssh_hosts() -> Result<Vec<String>, crate::user_error::UserError> {
+    let home_dir = windows_home_dir()?;
+    let config = std::fs::read_to_string(home_dir.join(".ssh").join("config")).unwrap_or_default();
+    Ok(remote_hosts::ssh_config_hosts(&config))
+}
+
+#[tauri::command]
+pub async fn get_agent_remote_hosts(app: AppHandle) -> Result<Vec<remote_sessions::RemoteHostStatus>, crate::user_error::UserError> {
+    Ok(remote_sessions::statuses(&remote_app_dir(&app)?))
+}
+
+#[tauri::command]
+pub async fn set_agent_remote_hosts(app: AppHandle, hosts: Vec<String>) -> Result<Vec<String>, crate::user_error::UserError> {
+    let saved = remote_hosts::write(&remote_app_dir(&app)?, &hosts)?;
+    remote_sessions::refresh_soon();
+    Ok(saved)
+}
+
+#[tauri::command]
+pub async fn get_agent_custom_hosts(app: AppHandle) -> Result<Vec<remote_hosts::CustomHost>, crate::user_error::UserError> {
+    Ok(remote_hosts::custom(&remote_app_dir(&app)?))
+}
+
+#[tauri::command]
+pub async fn add_agent_remote_host(app: AppHandle, host: remote_hosts::CustomHost) -> Result<Vec<remote_hosts::CustomHost>, crate::user_error::UserError> {
+    let added = remote_hosts::add_custom(&remote_app_dir(&app)?, &host)?;
+    remote_sessions::refresh_soon();
+    Ok(added)
+}
+
+#[tauri::command]
+pub async fn remove_agent_remote_host(app: AppHandle, name: String) -> Result<Vec<remote_hosts::CustomHost>, crate::user_error::UserError> {
+    let remaining = remote_hosts::remove_custom(&remote_app_dir(&app)?, &name)?;
+    remote_sessions::refresh_soon();
+    Ok(remaining)
+}
+
+#[tauri::command]
+pub async fn refresh_agent_remote_hosts() {
+    remote_sessions::refresh_soon();
+}
+
+fn remote_app_dir(app: &AppHandle) -> Result<std::path::PathBuf, crate::user_error::UserError> {
+    crate::home_dir::fuyu_home(app.path())
+        .map_err(|error| crate::user_error::UserError::new("internal", "Something went wrong inside the island.").detail(error))
+}
+
+#[tauri::command]
+pub async fn focus_agent_window(
+    app: AppHandle,
+    provider: String,
+    cwd: Option<String>,
+    title: Option<String>,
+    session_id: Option<String>,
+) -> Result<bool, String> {
+    let app_dir = crate::home_dir::agent_home(app.path()).ok();
+    let provider_for_event = provider.clone();
+    let session_for_event = session_id.clone().unwrap_or_default();
+    let focused = tauri::async_runtime::spawn_blocking(move || {
+        focus::focus_session(app_dir.as_deref(), &provider, cwd.as_deref(), title.as_deref(), session_id.as_deref())
+    })
+    .await
+    .map_err(|error| format!("Failed to join the window focus task: {error}"))?;
+    if let Some(editor) = focused.missing_extension {
+        let name = editor_extension::editor_name(&editor).unwrap_or(&editor).to_string();
+        let payload = json!({ "app": editor, "name": name });
+        let _ = app.emit_to(crate::island::WINDOW_LABEL, EDITOR_EXTENSION_MISSING_EVENT, payload);
+    } else if focused.found && !focused.exact && !session_for_event.is_empty() {
+        if let Some((focused_app, name)) = focused.focused_app {
+            let payload = json!({
+                "provider": provider_for_event,
+                "sessionId": session_for_event,
+                "app": focused_app,
+                "name": name,
+            });
+            let _ = app.emit_to(crate::island::WINDOW_LABEL, FOCUS_WINDOW_ONLY_EVENT, payload);
+        }
+    } else if let Some(missing) = focused.missing.filter(|_| !session_for_event.is_empty()) {
+        let payload = json!({ "provider": provider_for_event, "sessionId": session_for_event, "reason": missing.reason() });
+        let _ = app.emit_to(crate::island::WINDOW_LABEL, FOCUS_NOT_FOUND_EVENT, payload);
+    }
+    Ok(focused.found)
+}
+
+const EDITOR_EXTENSION_MISSING_EVENT: &str = "agent-editor-extension-missing";
+const FOCUS_WINDOW_ONLY_EVENT: &str = "agent-focus-window-only";
+const FOCUS_NOT_FOUND_EVENT: &str = "agent-focus-not-found";
+
+#[tauri::command]
+pub async fn get_editor_extension_states() -> Vec<editor_extension::EditorExtensionState> {
+    tauri::async_runtime::spawn_blocking(editor_extension::states).await.unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn install_editor_extension(app: String) -> Result<(), crate::user_error::UserError> {
+    tauri::async_runtime::spawn_blocking(move || editor_extension::install(&app))
+        .await
+        .map_err(|error| crate::user_error::UserError::new("internal", "Something went wrong inside the island.").detail(error))?
+}
+
+#[tauri::command]
+pub async fn agent_sessions_in_front(app: AppHandle, sessions: Vec<focus::SessionRef>) -> Result<Vec<String>, String> {
+    let app_dir = crate::home_dir::agent_home(app.path()).ok();
+    tauri::async_runtime::spawn_blocking(move || focus::sessions_in_front(app_dir.as_deref(), &sessions))
+        .await
+        .map_err(|error| format!("Failed to join the window check: {error}"))
+}
+
+#[tauri::command]
+pub async fn get_agent_usage(app: AppHandle) -> Result<Option<usage::AgentUsage>, String> {
+    let home_dir = windows_home_dir()?;
+    let app_dir = crate::home_dir::agent_home(app.path()).ok();
+    usage::claude_usage(&home_dir, app_dir.as_deref()).await
+}
+
+#[tauri::command]
+pub async fn get_codex_usage() -> Result<Option<usage::AgentUsage>, String> {
+    let home_dir = windows_home_dir()?;
+    tauri::async_runtime::spawn_blocking(move || codex_usage::read_usage(&home_dir))
+        .await
+        .map_err(|error| format!("Failed to join the Codex usage task: {error}"))
+}
+
+#[tauri::command]
+pub async fn get_agent_host_icon(path: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || host_icon::icon_data_url(&path))
+        .await
+        .map_err(|error| format!("Failed to join the host icon task: {error}"))
+}
+
+#[tauri::command]
+pub async fn get_agent_hooks_state(app: AppHandle) -> Result<AgentHooksState, String> {
+    let app_dir = crate::home_dir::agent_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || read_agent_hooks_state(&app_dir))
+        .await
+        .map_err(|error| format!("Failed to join the agent hooks task: {error}"))?
+}
+
+fn read_agent_hooks_state(app_dir: &Path) -> Result<AgentHooksState, String> {
+    let home_dir = windows_home_dir()?;
+    let read = |path: &Path| fs::read_to_string(path).ok();
+    let running_script_path = app_dir.join(AGENT_RUNNING_SCRIPT_FILE_NAME);
+    let status_script_path = app_dir.join(AGENT_STATUS_SCRIPT_FILE_NAME);
+    let env = HookEnv {
+        home_dir: &home_dir,
+        running_script: &running_script_path,
+        status_script: &status_script_path,
+    };
+    let agents: std::collections::BTreeMap<_, _> =
+        harness::with_hooks().map(|(id, hooks)| (id, (hooks.check)(&env))).collect();
+    let hooks_installed = agents.values().any(|state| state.is_installed());
+    let scripts_outdated = script_outdated(
+        read(&app_dir.join(AGENT_RUNNING_SCRIPT_FILE_NAME)).as_deref(),
+        AGENT_RUNNING_SCRIPT,
+        hooks_installed,
+    ) || script_outdated(
+        read(&app_dir.join(AGENT_STATUS_SCRIPT_FILE_NAME)).as_deref(),
+        AGENT_STATUS_SCRIPT,
+        hooks_installed,
+    ) || script_outdated(
+        read(&app_dir.join(AGENT_SESSION_SCRIPT_FILE_NAME)).as_deref(),
+        AGENT_SESSION_SCRIPT,
+        hooks_installed,
+    ) || script_outdated(
+        read(&app_dir.join(AGENT_APPROVAL_SCRIPT_FILE_NAME)).as_deref(),
+        AGENT_APPROVAL_SCRIPT,
+        hooks_installed,
+    );
+
+    Ok(AgentHooksState {
+        agents,
+        scripts_outdated,
+    })
+}
+
+#[cfg(windows)]
+pub(super) fn install_agent_hook_scripts(app_dir: &Path) -> Result<(), String> {
+    remove_legacy_hook_inputs(app_dir);
+    write_text_file(
+        &app_dir.join(AGENT_RUNNING_SCRIPT_FILE_NAME),
+        &normalize_windows_line_endings(AGENT_RUNNING_SCRIPT),
+    )?;
+    write_text_file(
+        &app_dir.join(AGENT_STATUS_SCRIPT_FILE_NAME),
+        &normalize_windows_line_endings(AGENT_STATUS_SCRIPT),
+    )?;
+    write_text_file(
+        &app_dir.join(AGENT_SESSION_SCRIPT_FILE_NAME),
+        &normalize_windows_line_endings(AGENT_SESSION_SCRIPT),
+    )?;
+    write_text_file(
+        &app_dir.join(AGENT_APPROVAL_SCRIPT_FILE_NAME),
+        &normalize_windows_line_endings(AGENT_APPROVAL_SCRIPT),
+    )
+}
+
+#[cfg(not(windows))]
+pub(super) fn install_agent_hook_scripts(app_dir: &Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    remove_legacy_hook_inputs(app_dir);
+    for (name, text) in [
+        (AGENT_RUNNING_SCRIPT_FILE_NAME, AGENT_RUNNING_SCRIPT),
+        (AGENT_STATUS_SCRIPT_FILE_NAME, AGENT_STATUS_SCRIPT),
+        (AGENT_SESSION_SCRIPT_FILE_NAME, AGENT_SESSION_SCRIPT),
+        (AGENT_APPROVAL_SCRIPT_FILE_NAME, AGENT_APPROVAL_SCRIPT),
+    ] {
+        let path = app_dir.join(name);
+        write_text_file(&path, &text.replace("\r\n", "\n"))?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).map_err(|error| format!("Failed to make {} runnable: {error}", path.display()))?;
+    }
+    Ok(())
+}
+
+pub(super) fn write_text_file(path: &Path, content: &str) -> Result<(), String> {
+    if let Ok(target) = fs::read_link(path) {
+        return Err(format!(
+            "{} is a symlink to {}; the island does not change it. Change that file yourself",
+            path.display(),
+            target.display()
+        ));
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|error| format!("Failed to create {}: {error}", parent.display()))?;
+    }
+
+    let temporary_path = path.with_extension("tmp");
+    fs::write(&temporary_path, content)
+        .map_err(|error| format!("Failed to write {}: {error}", temporary_path.display()))?;
+    fs::rename(&temporary_path, path)
+        .or_else(|_| {
+            fs::remove_file(path).ok();
+            fs::rename(&temporary_path, path)
+        })
+        .map_err(|error| format!("Failed to replace {}: {error}", path.display()))
+}
+
+pub(super) fn normalize_windows_line_endings(content: &str) -> String {
+    content.replace("\r\n", "\n").replace('\n', "\r\n")
+}
+
+#[tauri::command]
+pub fn list_agent_effort_labels() -> Result<std::collections::BTreeMap<String, std::collections::BTreeMap<String, String>>, String> {
+    Ok(std::collections::BTreeMap::new())
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::agent_status::get_agent_status,
+            crate::agent_status::clear_agent_status,
+            crate::agent_status::install_agent_status_hooks,
+            crate::agent_status::uninstall_agent_status_hooks,
+            crate::agent_status::per_agent_hooks::install_agent_hooks,
+            crate::agent_status::per_agent_hooks::uninstall_agent_hooks,
+            crate::agent_status::get_agent_hooks_state,
+            crate::agent_status::focus_agent_window,
+            crate::agent_status::get_editor_extension_states,
+            crate::agent_status::install_editor_extension,
+            crate::agent_status::agent_sessions_in_front,
+            crate::agent_status::get_agent_host_icon,
+            crate::agent_status::list_agent_sessions,
+            crate::agent_status::list_agent_effort_labels,
+            crate::agent_status::get_agent_push_detail,
+            crate::agent_status::list_ssh_hosts,
+            crate::agent_status::get_agent_remote_hosts,
+            crate::agent_status::set_agent_remote_hosts,
+            crate::agent_status::get_agent_custom_hosts,
+            crate::agent_status::add_agent_remote_host,
+            crate::agent_status::remove_agent_remote_host,
+            crate::agent_status::refresh_agent_remote_hosts,
+            crate::agent_status::get_agent_usage,
+            crate::agent_status::get_codex_usage,
+            crate::agent_status::reply_marker::get_reply_marker_state,
+            crate::agent_status::reply_marker::set_reply_marker,
+            crate::agent_status::sound_packs::list_sound_packs,
+            crate::agent_status::sound_packs::import_sound_pack,
+            crate::agent_status::sound_packs::remove_sound_pack,
+            crate::agent_status::sound_packs::read_sound_pack_file,
+            crate::agent_status::sound_packs::open_sound_pack_folder,
+            crate::agent_status::approval_hotkeys::set_agent_approval_hotkeys,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

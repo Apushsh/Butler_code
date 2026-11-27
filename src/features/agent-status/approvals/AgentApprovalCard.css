@@ -1,0 +1,40 @@
+.agent-approval__note {
+  margin: 0 0 3px;
+  overflow: hidden;
+  color: rgba(var(--agent-ink), 0.68);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.agent-approval__preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--notice-command-lines, 4);
+  width: 100%;
+  overflow: hidden;
+  padding: 6px 9px;
+  color: rgba(var(--agent-ink), 0.9);
+  text-align: left;
+  background: rgba(var(--agent-ink), 0.12);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 17px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.agent-approval__preview--expanded {
+  display: block;
+  max-height: 172px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.agent-approval__preview:focus-visible {
+  outline: 1px solid rgba(var(--agent-ink), 0.4);
+}

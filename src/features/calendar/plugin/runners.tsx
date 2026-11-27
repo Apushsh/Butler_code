@@ -1,0 +1,105 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "../../../i18n";
+import type { IslandContribution } from "../../plugin-kernel/islandContributions";
+import { defineSlot } from "../../plugin-kernel/slots";
+import { useIslandAction, useIslandContributions } from "../../plugin-kernel/useIslandContributions";
+import { useTextRanks } from "../../plugin-kernel/useTextRanks";
+import type { LyricsIslandPriority } from "../../../lib/settings/lyricsSettings";
+import { listenCalendarJoinShortcut } from "../api";
+import { joinCalendarMeeting } from "../joinMeeting";
+import { todoEvents } from "../todoEvents";
+import { useCalendar } from "../useCalendar";
+import { useCalendarPrefs } from "../useCalendarPrefs";
+import { useHolidayEve } from "../useHolidayEve";
+import { useMeetingBanner } from "../useMeetingBanner";
+import { useTodoLink } from "../useTodoLink";
+import { requestCalendarDay } from "./dayRequest";
+import { calendarState, meetingBannerState, meetingState, todoLinkState } from "./islandState";
+import { resolveJoinShortcutTarget } from "./joinShortcut";
+import { useMeetingContributions } from "./meetingLines";
+import { OWNER } from "./owner.ts";
+import { OPEN_CALENDAR_ACTION } from "./widgets.ts";
+
+type RunnerProps = {
+  barText: boolean;
+  settings: { todoEnabled: boolean; calendarEnabled: boolean; calendarRemindMinutes: number; calendarShowTitle: boolean; lyricsIslandPriority: LyricsIslandPriority };
+  openIslandPage: (page: "calendar") => void;
+};
+
+const runnerSlot = defineSlot<RunnerProps>("island.runner/v1");
+
+function CalendarRunner({ barText, settings, openIslandPage }: RunnerProps) {
+  const t = useTranslation();
+  const [prefs] = useCalendarPrefs();
+  const link = useTodoLink(settings.todoEnabled);
+  todoLinkState.useProvide(link);
+  const todos = link?.todos;
+  const timedTodos = useMemo(
+    () => (todos && prefs.includeTimedTodos ? todoEvents(todos, Date.now(), t.island.todoList) : []),
+    [prefs.includeTimedTodos, t, todos],
+  );
+  const calendar = useCalendar(settings.calendarEnabled, settings.calendarRemindMinutes, timedTodos, prefs);
+  calendarState.useProvide(calendar);
+  useIslandAction(OPEN_CALENDAR_ACTION, settings.calendarEnabled ? (day) => {
+    requestCalendarDay(typeof day === "number" ? day : null);
+    openIslandPage("calendar");
+  } : null);
+  const { upcoming } = calendar;
+  const joinContext = useRef({
+    enabled: settings.calendarEnabled,
+    upcoming,
+    pauseMediaOnJoin: prefs.pauseMediaOnJoin,
+  });
+  joinContext.current = {
+    enabled: settings.calendarEnabled,
+    upcoming,
+    pauseMediaOnJoin: prefs.pauseMediaOnJoin,
+  };
+
+  useEffect(() => {
+    let disposed = false;
+    let stop: (() => void) | null = null;
+    void listenCalendarJoinShortcut(() => {
+      const target = resolveJoinShortcutTarget(joinContext.current);
+      if (target) {
+        joinCalendarMeeting(target.link, target.pauseMedia);
+      }
+    })
+      .then((unlisten) => {
+        if (disposed) unlisten();
+        else stop = unlisten;
+      })
+      .catch((error: unknown) => console.error("Failed to listen for the calendar join shortcut", error));
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, []);
+
+  const meeting = useMemo(
+    () =>
+      upcoming && settings.calendarEnabled
+        ? {
+            upcoming,
+            showTitle: settings.calendarShowTitle,
+            format: prefs.countdownFormat,
+            pauseMediaOnJoin: prefs.pauseMediaOnJoin,
+          }
+        : null,
+    [prefs.countdownFormat, prefs.pauseMediaOnJoin, settings.calendarEnabled, settings.calendarShowTitle, upcoming],
+  );
+  meetingState.useProvide(meeting);
+  useHolidayEve(settings.calendarEnabled && prefs.holidayEveReminder, calendar.snapshot.events, calendar.now);
+  const banner = useMeetingBanner(settings.calendarEnabled, calendar.snapshot.events, calendar.now, prefs, settings.calendarShowTitle);
+  meetingBannerState.useProvide(banner);
+  const ranks = useTextRanks(settings.lyricsIslandPriority);
+  const lineContributions = useMeetingContributions(meeting, barText, ranks.meeting);
+  const contributions = useMemo<IslandContribution[]>(() => {
+    if (!banner) return lineContributions;
+    return [...lineContributions, { kind: "notice", item: "calendar.banner" }, { kind: "reveal", reveal: "allowed" }];
+  }, [banner, lineContributions]);
+  useIslandContributions(OWNER, "calendar.meeting", contributions);
+  return null;
+}
+
+runnerSlot.add({ id: "calendar.runner", component: CalendarRunner }, OWNER);

@@ -1,0 +1,52 @@
+.settings-group__card > .shortcut-row,
+.settings-group__card > .shortcut-control {
+  padding: 10px 16px;
+}
+
+.settings-group__card .shortcut-control__meta {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.settings-group__card .shortcut-control__meta strong {
+  display: none;
+}
+
+.settings-group__card .shortcut-record-button {
+  font-weight: 500;
+}
+
+.shortcut-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+  gap: var(--space-lg) var(--space-2xl);
+  margin-top: var(--space-lg);
+}
+
+.shortcut-sheet > .settings-group + .settings-group {
+  margin-top: 0;
+}
+
+.shortcut-sheet .settings-row {
+  min-height: 42px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.shortcut-sheet .shortcut-keys__cap {
+  color: var(--color-text-muted);
+}
+
+.shortcut-finder__result {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.shortcut-finder__result--free {
+  color: var(--color-success, var(--color-text-muted));
+}

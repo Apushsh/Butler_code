@@ -1,0 +1,61 @@
+.island-light .island--appearance-liquidGlass {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 96px),
+    linear-gradient(145deg, rgba(255, 255, 255, calc(var(--glass-soft-alpha) * 4)), transparent 42%),
+    linear-gradient(165deg, transparent 42%, rgba(30, 40, 60, 0.06)),
+    var(--island-shell-fill);
+  box-shadow:
+    0 18px 46px rgba(30, 40, 60, calc(var(--glass-shadow-alpha) * 0.7)),
+    var(--island-edge-lines,
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(30, 40, 60, 0.1),
+      inset 0 0 0 1px rgba(30, 40, 60, 0.07),
+      inset 1px 0 0 rgba(60, 150, 210, var(--glass-cyan-alpha)),
+      inset -1px 0 0 rgba(200, 90, 170, var(--glass-magenta-alpha)));
+}
+
+.island-light .island--appearance-liquidGlass.island--glass-css-fallback {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.5), transparent 42%),
+    linear-gradient(165deg, transparent 40%, rgba(30, 40, 60, 0.08)),
+    var(--island-shell-fill);
+}
+
+.island-light .island__glass::after {
+  mix-blend-mode: normal;
+  opacity: calc(var(--glass-refraction-opacity) * 0.5);
+}
+
+.island-light .island__glass-refraction {
+  border-color: rgba(30, 40, 60, calc(var(--glass-border-alpha) * 0.5));
+  box-shadow:
+    inset 0 0 14px color-mix(in srgb, var(--glass-page-accent) calc(calc(var(--glass-inner-accent-alpha) * 1.6) * 100%), transparent),
+    inset 0 0 2px rgba(255, 255, 255, 0.7);
+}
+
+.island-light .island__glass-highlight {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 1), transparent);
+}
+
+:root[data-island-top-edge="attached"] .island-light .island--appearance-liquidGlass.island--expanded,
+:root:not([data-island-top-edge]) .island-light .island--docked.island--appearance-liquidGlass.island--expanded {
+  box-shadow:
+    0 18px 46px rgba(30, 40, 60, calc(var(--glass-shadow-alpha) * 0.7)),
+    var(--island-edge-lines,
+      inset 0 -1px 0 rgba(30, 40, 60, 0.1),
+      inset 1px 0 0 rgba(60, 150, 210, var(--glass-cyan-alpha)),
+      inset -1px 0 0 rgba(200, 90, 170, var(--glass-magenta-alpha)));
+}
+
+.island-light .island__glass-flow {
+  opacity: calc((0.45 + var(--glass-intensity, 0.72) * 0.35) * min(1, var(--glass-color-strength, 0.7) / 0.7));
+}
+
+.island-light .island__glass {
+  --glass-sheen-color: rgba(255, 255, 255, 0.55);
+  --glass-rim-light: rgba(255, 255, 255, 0.9);
+}
+
+.island-light .island--glass-rim .island__glass-rim {
+  opacity: 0.7;
+}

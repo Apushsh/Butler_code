@@ -1,0 +1,49 @@
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { visibilityInterval } from "../../../lib/useVisibilityInterval";
+import { useTranslation } from "../../../i18n";
+import { detectAlerts, phasesOf, type SessionPhases } from "../alerts";
+import type { AgentSessionSummary } from "../api";
+import { sessionKey } from "../unseen";
+import { queuePushes, takeDuePushes, type PushQueue } from "./pushQueue";
+import { isAway, sendPush } from "./sendPush";
+import { useAgentPushSettings } from "./useAgentPushSettings";
+
+const RECHECK_MS = 15_000;
+
+export function useAgentPush(sessions: AgentSessionSummary[], enabled: boolean, unseen: ReadonlySet<string>) {
+  const [settings] = useAgentPushSettings();
+  const text = useTranslation().agent.push;
+  const phasesRef = useRef<SessionPhases | null>(null);
+  const queueRef = useRef<PushQueue>(new Map());
+  const latest = useRef({ settings, text, enabled, sessions, unseen });
+  useLayoutEffect(() => {
+    latest.current = { settings, text, enabled, sessions, unseen };
+  });
+
+  const flush = useCallback(async () => {
+    const away = await isAway(latest.current.settings.awayMinutes);
+    const { settings: push, text: labels, sessions: now, unseen: notLooked } = latest.current;
+    const due = takeDuePushes(queueRef.current, now, away, (session) => !notLooked.has(sessionKey(session)));
+    for (const alert of due) {
+      sendPush(alert, push, { kinds: labels, takeover: labels.takeover }).catch((error: unknown) => console.error("Failed to push to the phone", error));
+    }
+  }, []);
+
+  useEffect(() => {
+    const previous = phasesRef.current;
+    phasesRef.current = phasesOf(sessions, previous);
+    const { settings: push, enabled: on } = latest.current;
+    if (!on || !push.enabled) {
+      queueRef.current.clear();
+      return;
+    }
+    queuePushes(queueRef.current, detectAlerts(previous, sessions, { started: "off", ...push.events }));
+    if (queueRef.current.size > 0) void flush();
+  }, [sessions, flush]);
+
+  useEffect(() => {
+    return visibilityInterval(() => {
+      if (queueRef.current.size > 0) void flush();
+    }, RECHECK_MS);
+  }, [flush]);
+}

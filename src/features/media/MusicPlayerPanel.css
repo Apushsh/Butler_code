@@ -1,0 +1,288 @@
+.music-player {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 0 0;
+  --music-ink: var(--island-ink-rgb, 241, 240, 246);
+  --text-1: rgba(var(--music-ink), 0.96);
+  --text-2: rgba(var(--music-ink), 0.68);
+  --text-3: rgba(var(--music-ink), 0.54);
+  --music-hover: rgba(var(--music-ink), 0.08);
+  color: var(--text-1);
+}
+
+.music-player--empty {
+  color: var(--text-2);
+}
+
+.music-player__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.music-player__artwork {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--text-3);
+  background: rgba(var(--music-ink), 0.08);
+  border-radius: var(--island-panel-radius, 10px);
+  corner-shape: var(--island-corner-shape, round);
+}
+
+.music-player__artwork img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.music-player__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.3;
+}
+
+.music-player__track,
+.music-player__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-player__track {
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.music-player__artist {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.music-player__tune {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.music-player:hover .music-player__tune,
+.music-player__tune:focus-within {
+  opacity: 1;
+}
+
+.music-icon-button {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease);
+}
+
+.music-icon-button:hover {
+  color: var(--text-1);
+  background: var(--music-hover);
+}
+
+.music-icon-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.music-player__lyrics-hint {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 10px;
+  overflow: hidden;
+  color: var(--text-3);
+  background: var(--music-hover);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.music-player__lyrics-hint:hover {
+  color: var(--text-1);
+  background: rgba(var(--music-ink), 0.14);
+}
+
+.music-player__lyrics-hint:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.music-player__error {
+  margin: 0;
+  color: var(--error-text, rgba(255, 170, 170, 0.85));
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.music-player__stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  align-content: center;
+  min-width: 0;
+}
+
+.music-player__stage .media-waveform {
+  height: 64px;
+}
+
+.music-player__estimate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 8px;
+  margin: 0;
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.music-player__estimate-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  color: var(--text-2);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.music-player__estimate-link:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+
+.music-player__estimate-link:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.music-player__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding-bottom: 2px;
+}
+
+.music-control-button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  color: var(--text-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--motion-base) var(--motion-ease), background var(--motion-base) var(--motion-ease), opacity var(--motion-base) var(--motion-ease);
+}
+
+.music-control-button:hover:not(:disabled) {
+  color: var(--text-1);
+  background: var(--music-hover);
+}
+
+.music-control-button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.music-control-button--primary {
+  width: 38px;
+  height: 38px;
+  color: var(--island-background-color, #000);
+  background: var(--text-1);
+}
+
+.music-control-button--primary:hover:not(:disabled) {
+  color: var(--island-background-color, #000);
+  background: rgba(var(--music-ink), 1);
+}
+
+.music-control-button:disabled {
+  cursor: default;
+  opacity: 0.36;
+}
+
+.music-control-button__track-change {
+  animation: music-control-track-change 700ms linear infinite;
+}
+
+@keyframes music-control-track-change {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-control-button__track-change {
+    animation: none;
+  }
+
+  .music-player__tune {
+    transition: none;
+  }
+}
+
+.cover-color .music-player {
+  isolation: isolate;
+}
+
+.cover-color .music-player::before {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 200px;
+  content: "";
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 100% at 18% 0%, color-mix(in srgb, var(--cover-accent) 26%, transparent), transparent 72%);
+  -webkit-mask:
+    linear-gradient(180deg, transparent, var(--color-black, #000) 24px),
+    linear-gradient(90deg, transparent, var(--color-black, #000) 16px, var(--color-black, #000) calc(100% - 16px), transparent);
+  -webkit-mask-composite: source-in;
+  mask:
+    linear-gradient(180deg, transparent, var(--color-black, #000) 24px),
+    linear-gradient(90deg, transparent, var(--color-black, #000) 16px, var(--color-black, #000) calc(100% - 16px), transparent);
+  mask-composite: intersect;
+}

@@ -1,0 +1,233 @@
+use std::{sync::mpsc, time::Duration};
+
+use block2::RcBlock;
+use objc2::AllocAnyThread;
+use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+use objc2_core_graphics::{CGDataProvider, CGImage, CGPreflightScreenCaptureAccess, CGRequestScreenCaptureAccess};
+use objc2_foundation::{NSArray, NSError};
+use objc2_screen_capture_kit::{
+    SCCaptureResolutionType, SCContentFilter, SCRunningApplication, SCScreenshotManager, SCShareableContent, SCStreamConfiguration, SCWindow,
+};
+
+const WAIT: Duration = Duration::from_secs(4);
+
+pub(crate) struct Shot {
+    pub(crate) width: u32,
+    pub(crate) height: u32,
+    pub(crate) rgba: Vec<u8>,
+}
+
+pub(crate) fn has_access() -> bool {
+    CGPreflightScreenCaptureAccess()
+}
+
+pub(crate) fn ask_for_access() -> bool {
+    CGRequestScreenCaptureAccess()
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Leave {
+    Nothing,
+    OwnWindows,
+    Windows(Vec<u32>),
+}
+
+#[derive(Clone)]
+struct Request {
+    rect: (f64, f64, f64, f64),
+    scale: f64,
+    leave: Leave,
+}
+
+pub(crate) fn prewarm() {
+    if !has_access() {
+        return;
+    }
+    std::thread::spawn(|| {
+        let handler = RcBlock::new(|_content: *mut SCShareableContent, _error: *mut NSError| {});
+        unsafe { SCShareableContent::getShareableContentExcludingDesktopWindows_onScreenWindowsOnly_completionHandler(false, true, &handler) };
+    });
+}
+
+pub(crate) fn capture(rect: (f64, f64, f64, f64), scale: f64, leave: Leave) -> Option<Shot> {
+    if rect.2 <= 0.0 || rect.3 <= 0.0 || !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    let request = Request { rect, scale, leave };
+    let (sender, receiver) = mpsc::channel::<Option<Shot>>();
+    let handler = RcBlock::new(move |content: *mut SCShareableContent, _error: *mut NSError| {
+        let content = unsafe { content.as_ref() };
+        let started = content.is_some_and(|content| shoot(content, request.clone(), sender.clone()));
+        if !started {
+            let _ = sender.send(None);
+        }
+    });
+    unsafe { SCShareableContent::getShareableContentExcludingDesktopWindows_onScreenWindowsOnly_completionHandler(false, true, &handler) };
+    receiver.recv_timeout(WAIT).ok().flatten()
+}
+
+pub(crate) fn capture_window(window_id: u32, scale: f64, ignore_shadows: bool) -> Option<Shot> {
+    if window_id == 0 || !scale.is_finite() || scale <= 0.0 {
+        return None;
+    }
+    let (sender, receiver) = mpsc::channel::<Option<Shot>>();
+    let handler = RcBlock::new(move |content: *mut SCShareableContent, _error: *mut NSError| {
+        let content = unsafe { content.as_ref() };
+        let started = content.is_some_and(|content| shoot_window(content, window_id, scale, ignore_shadows, sender.clone()));
+        if !started {
+            let _ = sender.send(None);
+        }
+    });
+    unsafe { SCShareableContent::getShareableContentExcludingDesktopWindows_onScreenWindowsOnly_completionHandler(false, true, &handler) };
+    receiver.recv_timeout(WAIT).ok().flatten()
+}
+
+fn shoot_window(
+    content: &SCShareableContent,
+    window_id: u32,
+    scale: f64,
+    ignore_shadows: bool,
+    sender: mpsc::Sender<Option<Shot>>,
+) -> bool {
+    let windows = unsafe { content.windows() };
+    let Some(window) = windows.iter().find(|window| unsafe { window.windowID() } == window_id) else {
+        return false;
+    };
+    let filter = unsafe { SCContentFilter::initWithDesktopIndependentWindow(SCContentFilter::alloc(), &window) };
+    let rect = unsafe { filter.contentRect() };
+    if rect.size.width <= 0.0 || rect.size.height <= 0.0 {
+        return false;
+    }
+    let config = unsafe { SCStreamConfiguration::new() };
+    unsafe {
+        config.setWidth((rect.size.width * scale).round().max(1.0) as usize);
+        config.setHeight((rect.size.height * scale).round().max(1.0) as usize);
+        config.setShowsCursor(false);
+        config.setCaptureResolution(SCCaptureResolutionType::Best);
+        config.setIgnoreShadowsSingleWindow(ignore_shadows);
+    }
+    let handler = RcBlock::new(move |image: *mut CGImage, _error: *mut NSError| {
+        let image = unsafe { image.as_ref() };
+        let _ = sender.send(image.and_then(to_rgba_alpha));
+    });
+    unsafe { SCScreenshotManager::captureImageWithFilter_configuration_completionHandler(&filter, &config, Some(&handler)) };
+    true
+}
+
+fn contains(frame: CGRect, point: (f64, f64)) -> bool {
+    point.0 >= frame.origin.x && point.0 < frame.origin.x + frame.size.width && point.1 >= frame.origin.y && point.1 < frame.origin.y + frame.size.height
+}
+
+fn shoot(content: &SCShareableContent, request: Request, sender: mpsc::Sender<Option<Shot>>) -> bool {
+    let (x, y, width, height) = request.rect;
+    let centre = (x + width / 2.0, y + height / 2.0);
+    let displays = unsafe { content.displays() };
+    let Some(display) = displays.iter().find(|display| contains(unsafe { display.frame() }, centre)) else {
+        return false;
+    };
+    let frame = unsafe { display.frame() };
+    let ours: Vec<_> = if request.leave == Leave::Nothing {
+        Vec::new()
+    } else {
+        unsafe { content.applications() }.iter().filter(|app| is_own(unsafe { app.processID() })).collect()
+    };
+    let kept: Vec<_> = match &request.leave {
+        Leave::Windows(left) => unsafe { content.windows() }.iter().filter(|window| keeps(window, left)).collect(),
+        Leave::Nothing | Leave::OwnWindows => Vec::new(),
+    };
+    let filter = unsafe {
+        SCContentFilter::initWithDisplay_excludingApplications_exceptingWindows(
+            SCContentFilter::alloc(),
+            &display,
+            &NSArray::<SCRunningApplication>::from_retained_slice(&ours),
+            &NSArray::<SCWindow>::from_retained_slice(&kept),
+        )
+    };
+    let config = unsafe { SCStreamConfiguration::new() };
+    let source = CGRect::new(CGPoint::new(x - frame.origin.x, y - frame.origin.y), CGSize::new(width, height));
+    unsafe {
+        config.setSourceRect(source);
+        config.setWidth((width * request.scale).round().max(1.0) as usize);
+        config.setHeight((height * request.scale).round().max(1.0) as usize);
+        config.setShowsCursor(false);
+        config.setCaptureResolution(SCCaptureResolutionType::Best);
+    }
+    let handler = RcBlock::new(move |image: *mut CGImage, _error: *mut NSError| {
+        let image = unsafe { image.as_ref() };
+        let _ = sender.send(image.and_then(to_rgba));
+    });
+    unsafe { SCScreenshotManager::captureImageWithFilter_configuration_completionHandler(&filter, &config, Some(&handler)) };
+    true
+}
+
+fn is_own(pid: i32) -> bool {
+    u32::try_from(pid).ok() == Some(std::process::id())
+}
+
+fn keeps(window: &SCWindow, left: &[u32]) -> bool {
+    let owner = unsafe { window.owningApplication() };
+    owner.is_some_and(|app| is_own(unsafe { app.processID() })) && !left.contains(&unsafe { window.windowID() })
+}
+
+pub(crate) fn bgra_to_rgba(bytes: &[u8], width: usize, height: usize, row: usize) -> Option<Vec<u8>> {
+    let row_bytes = width.checked_mul(4)?;
+    let needed = row.checked_mul(height)?;
+    if width == 0 || height == 0 || row < row_bytes || bytes.len() < needed {
+        return None;
+    }
+    let mut rgba = vec![0u8; row_bytes.checked_mul(height)?];
+    for (out, line) in rgba.chunks_exact_mut(row_bytes).zip(bytes.chunks_exact(row)) {
+        bgra_row_to_rgba(&line[..row_bytes], out);
+    }
+    Some(rgba)
+}
+
+#[cfg(target_endian = "little")]
+fn bgra_row_to_rgba(src: &[u8], dst: &mut [u8]) {
+    let (src_head, src_words, src_tail) = unsafe { src.align_to::<u32>() };
+    let (dst_head, dst_words, dst_tail) = unsafe { dst.align_to_mut::<u32>() };
+    if src_head.is_empty() && src_tail.is_empty() && dst_head.is_empty() && dst_tail.is_empty() && src_words.len() == dst_words.len() {
+        for (out, &px) in dst_words.iter_mut().zip(src_words.iter()) {
+            *out = (px & 0x0000_ff00) | ((px & 0x00ff_0000) >> 16) | ((px & 0x0000_00ff) << 16) | 0xff00_0000;
+        }
+        return;
+    }
+    bgra_row_to_rgba_scalar(src, dst);
+}
+
+#[cfg(not(target_endian = "little"))]
+fn bgra_row_to_rgba(src: &[u8], dst: &mut [u8]) {
+    bgra_row_to_rgba_scalar(src, dst);
+}
+
+fn bgra_row_to_rgba_scalar(src: &[u8], dst: &mut [u8]) {
+    for (pixel, &[blue, green, red, _]) in dst.as_chunks_mut::<4>().0.iter_mut().zip(src.as_chunks::<4>().0) {
+        *pixel = [red, green, blue, 255];
+    }
+}
+
+fn to_rgba(image: &CGImage) -> Option<Shot> {
+    let (width, height) = (CGImage::width(Some(image)), CGImage::height(Some(image)));
+    let row = CGImage::bytes_per_row(Some(image));
+    if width == 0 || height == 0 || CGImage::bits_per_pixel(Some(image)) != 32 || row < width * 4 {
+        return None;
+    }
+    let provider = CGImage::data_provider(Some(image))?;
+    let data = CGDataProvider::data(Some(&provider))?;
+    let bytes = unsafe { data.as_bytes_unchecked() };
+    let rgba = bgra_to_rgba(bytes, width, height, row)?;
+    Some(Shot { width: u32::try_from(width).ok()?, height: u32::try_from(height).ok()?, rgba })
+}
+
+fn to_rgba_alpha(image: &CGImage) -> Option<Shot> {
+    let (width, height) = (CGImage::width(Some(image)), CGImage::height(Some(image)));
+    let row = CGImage::bytes_per_row(Some(image));
+    if width == 0 || height == 0 || CGImage::bits_per_pixel(Some(image)) != 32 || row < width * 4 {
+        return None;
+    }
+    let provider = CGImage::data_provider(Some(image))?;
+    let data = CGDataProvider::data(Some(&provider))?;
+    let bytes = unsafe { data.as_bytes_unchecked() };
+    let rgba = crate::screenshot::window_shadow::unpremultiply_bgra_to_rgba(bytes, width, height, row)?;
+    Some(Shot { width: u32::try_from(width).ok()?, height: u32::try_from(height).ok()?, rgba })
+}

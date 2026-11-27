@@ -1,0 +1,278 @@
+use crate::user_error::UserError;
+use reqwest::Url;
+
+pub(super) struct Provider {
+    pub(super) id: &'static str,
+    pub(super) name: &'static str,
+    base_url: Option<&'static str>,
+    default_model: Option<&'static str>,
+}
+
+const PROVIDERS: &[Provider] = &[
+    Provider {
+        id: "deepseek",
+        name: "DeepSeek",
+        base_url: Some("https://api.deepseek.com"),
+        default_model: Some("deepseek-flash"),
+    },
+    Provider {
+        id: "volcengine",
+        name: "火山方舟",
+        base_url: Some("https://ark.cn-beijing.volces.com/api/v3"),
+        default_model: None,
+    },
+    Provider {
+        id: "dashscope",
+        name: "通义千问",
+        base_url: Some("https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        default_model: None,
+    },
+    Provider {
+        id: "moonshot",
+        name: "Kimi",
+        base_url: Some("https://api.moonshot.cn/v1"),
+        default_model: None,
+    },
+    Provider {
+        id: "siliconflow",
+        name: "硅基流动",
+        base_url: Some("https://api.siliconflow.cn/v1"),
+        default_model: None,
+    },
+    Provider {
+        id: "openai",
+        name: "OpenAI",
+        base_url: Some("https://api.openai.com/v1"),
+        default_model: None,
+    },
+    Provider {
+        id: "custom",
+        name: "自定义接口",
+        base_url: None,
+        default_model: None,
+    },
+];
+
+pub(super) const DEFAULT_PROVIDER_ID: &str = "deepseek";
+
+pub(super) fn providers() -> &'static [Provider] {
+    PROVIDERS
+}
+
+impl Provider {
+    pub(super) fn needs_address(&self) -> bool {
+        self.base_url.is_none()
+    }
+}
+
+pub(super) const MAX_BASE_URL_LENGTH: usize = 500;
+const MAX_MODEL_LENGTH: usize = 200;
+
+pub(super) fn find_provider(id: Option<&str>) -> Result<&'static Provider, UserError> {
+    let id = id.unwrap_or(DEFAULT_PROVIDER_ID);
+    PROVIDERS
+        .iter()
+        .find(|provider| provider.id == id)
+        .ok_or_else(|| UserError::new("translation.provider", format!("Unsupported translation service: {id}")).arg("service", id))
+}
+
+pub(super) fn completions_url(
+    provider: &Provider,
+    custom_base_url: Option<&str>,
+) -> Result<Url, UserError> {
+    let base = match provider.base_url {
+        Some(base) => base.to_string(),
+        None => validate_custom_base_url(custom_base_url.unwrap_or_default())?,
+    };
+    let base = base.trim_end_matches('/');
+    let endpoint = if base.ends_with("/chat/completions") {
+        base.to_string()
+    } else {
+        format!("{base}/chat/completions")
+    };
+    Url::parse(&endpoint).map_err(|error| UserError::new("translation.url", "The service address is not valid.").detail(error))
+}
+
+pub(super) fn is_loopback_url(url: &Url) -> bool {
+    matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
+}
+
+pub(super) fn is_loopback_custom_address(raw: Option<&str>) -> bool {
+    raw.and_then(|raw| validate_custom_base_url(raw).ok())
+        .and_then(|valid| Url::parse(&valid).ok())
+        .is_some_and(|url| is_loopback_url(&url))
+}
+
+fn validate_custom_base_url(raw: &str) -> Result<String, UserError> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err(UserError::new("translation.urlEmpty", "Fill in the custom service address."));
+    }
+    if raw.len() > MAX_BASE_URL_LENGTH {
+        return Err(UserError::new("translation.urlLong", "The service address is too long."));
+    }
+    let url =
+        Url::parse(raw).map_err(|_| UserError::new("translation.urlFull", "The service address is not valid; fill in the whole https:// address."))?;
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(UserError::new("translation.urlCredentials", "The service address cannot hold a user name or password; put the key in the key field."));
+    }
+    let is_local = is_loopback_url(&url);
+    match url.scheme() {
+        "https" => {}
+        "http" if is_local => {}
+        _ => return Err(UserError::new("translation.urlScheme", "The service address must use https (http only for this computer).")),
+    }
+    if url.query().is_some() || url.fragment().is_some() {
+        return Err(UserError::new("translation.urlQuery", "The service address cannot have query parameters."));
+    }
+    Ok(url.to_string())
+}
+
+pub(super) fn resolve_model(provider: &Provider, model: Option<&str>) -> Result<String, UserError> {
+    let model = model.map(str::trim).filter(|model| !model.is_empty());
+    match model.or(provider.default_model) {
+        Some(model) if model.chars().count() <= MAX_MODEL_LENGTH => Ok(model.to_string()),
+        Some(_) => Err(UserError::new("translation.modelLong", "The model name is too long.")),
+        None => Err(UserError::new("translation.noModel", format!("Fill in the model name for {} in the translation settings first.", provider.name)).arg("service", provider.name)),
+    }
+}
+
+pub(super) fn parse_completion(
+    provider: &Provider,
+    result: &serde_json::Value,
+) -> Result<String, UserError> {
+    let name = provider.name;
+    let choice = result
+        .get("choices")
+        .and_then(|choices| choices.get(0))
+        .ok_or_else(|| UserError::new("translation.noResult", format!("{name} returned no translation.")).arg("service", name))?;
+    match choice.get("finish_reason").and_then(|value| value.as_str()) {
+        None | Some("stop") => {}
+        Some("length") => return Err(UserError::new("translation.cutOff", format!("{name} did not finish the translation; try again or shorten the text.")).arg("service", name)),
+        Some(reason) => return Err(UserError::new("translation.unfinished", format!("{name} did not finish the translation.")).arg("service", name).detail(reason)),
+    }
+    let output = choice
+        .get("message")
+        .and_then(|message| message.get("content"))
+        .and_then(|content| content.as_str())
+        .unwrap_or_default()
+        .trim();
+    if output.is_empty() {
+        return Err(UserError::new("translation.noResult", format!("{name} returned no translation.")).arg("service", name));
+    }
+    Ok(output.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn provider(id: &str) -> &'static Provider {
+        find_provider(Some(id)).unwrap()
+    }
+
+    #[test]
+    fn requests_without_a_provider_keep_using_deepseek() {
+        let deepseek = find_provider(None).unwrap();
+        assert_eq!(deepseek.id, "deepseek");
+        assert_eq!(
+            completions_url(deepseek, None).unwrap().as_str(),
+            "https://api.deepseek.com/chat/completions"
+        );
+        assert_eq!(resolve_model(deepseek, None).unwrap(), "deepseek-flash");
+        assert_eq!(
+            resolve_model(deepseek, Some("  ")).unwrap(),
+            "deepseek-flash"
+        );
+        assert!(find_provider(Some("baidu")).is_err());
+    }
+
+    #[test]
+    fn presets_ignore_a_custom_base_url_and_providers_without_a_default_need_a_model() {
+        let ark = provider("volcengine");
+        assert_eq!(
+            completions_url(ark, Some("https://attacker.example"))
+                .unwrap()
+                .as_str(),
+            "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+        );
+        assert!(resolve_model(ark, None).is_err());
+        assert_eq!(resolve_model(ark, Some(" doubao-x ")).unwrap(), "doubao-x");
+        assert!(resolve_model(ark, Some(&"m".repeat(201))).is_err());
+    }
+
+    #[test]
+    fn siliconflow_uses_its_openai_compatible_endpoint_and_needs_a_model() {
+        let siliconflow = provider("siliconflow");
+        assert_eq!(
+            completions_url(siliconflow, Some("https://attacker.example"))
+                .unwrap()
+                .as_str(),
+            "https://api.siliconflow.cn/v1/chat/completions"
+        );
+        assert!(resolve_model(siliconflow, None).is_err());
+        assert_eq!(
+            resolve_model(siliconflow, Some("Qwen/Qwen2.5-7B-Instruct")).unwrap(),
+            "Qwen/Qwen2.5-7B-Instruct"
+        );
+    }
+
+    #[test]
+    fn custom_base_urls_must_be_https_or_local_http_without_secrets() {
+        let custom = provider("custom");
+        let url = |raw: &str| completions_url(custom, Some(raw)).map(|url| url.to_string());
+        assert_eq!(
+            url("https://api.example.com/v1/").unwrap(),
+            "https://api.example.com/v1/chat/completions"
+        );
+        assert_eq!(
+            url("https://api.example.com/v1/chat/completions").unwrap(),
+            "https://api.example.com/v1/chat/completions"
+        );
+        assert_eq!(
+            url("http://localhost:11434/v1").unwrap(),
+            "http://localhost:11434/v1/chat/completions"
+        );
+        assert_eq!(
+            url("http://127.0.0.1:8080").unwrap(),
+            "http://127.0.0.1:8080/chat/completions"
+        );
+        assert_eq!(
+            url("http://[::1]:11434/v1").unwrap(),
+            "http://[::1]:11434/v1/chat/completions"
+        );
+        assert!(is_loopback_custom_address(Some("http://localhost:11434/v1")));
+        assert!(is_loopback_custom_address(Some("https://127.0.0.1:8080/v1")));
+        assert!(is_loopback_custom_address(Some("http://[::1]:11434/v1")));
+        assert!(!is_loopback_custom_address(Some("https://api.example.com/v1")));
+        assert!(!is_loopback_custom_address(Some("http://api.example.com/v1")));
+        assert!(!is_loopback_custom_address(Some("")));
+        assert!(!is_loopback_custom_address(None));
+        assert_eq!(url("http://api.example.com/v1").unwrap_err().code(), "translation.urlScheme");
+        assert!(url("https://user:pass@api.example.com/v1").is_err());
+        assert!(url("https://api.example.com/v1?key=1").is_err());
+        assert!(url("ftp://api.example.com").is_err());
+        assert!(url("api.example.com").is_err());
+        assert!(url("").is_err());
+        assert!(completions_url(custom, None).is_err());
+    }
+
+    #[test]
+    fn completions_accept_stop_or_a_missing_reason_and_reject_cut_offs() {
+        let deepseek = provider("deepseek");
+        let reply = |reason: serde_json::Value, content: &str| json!({ "choices": [{ "finish_reason": reason, "message": { "content": content } }] });
+        assert_eq!(
+            parse_completion(deepseek, &reply(json!("stop"), " Hello ")).unwrap(),
+            "Hello"
+        );
+        assert_eq!(
+            parse_completion(deepseek, &reply(json!(null), "Hi")).unwrap(),
+            "Hi"
+        );
+        assert!(parse_completion(deepseek, &reply(json!("length"), "Hal")).is_err());
+        assert!(parse_completion(deepseek, &reply(json!("content_filter"), "")).is_err());
+        assert!(parse_completion(deepseek, &reply(json!("stop"), "  ")).is_err());
+        assert!(parse_completion(deepseek, &json!({ "choices": [] })).is_err());
+    }
+}

@@ -1,0 +1,153 @@
+import { clamp } from "../../utils/number.ts";
+import { getColorSetting } from "../../utils/color.ts";
+import { DEFAULT_SETTINGS, LEGACY_FALLBACKS } from "./settingsDefaults.ts";
+import {
+  CUSTOM_FONT_ID_PATTERN, ISLAND_FONTS, MAX_FONT_SCALE, MIN_FONT_SCALE,
+  MAX_ISLAND_CORNER_RADIUS, MAX_ISLAND_OPACITY, MAX_MAX_PANEL_HEIGHT, MAX_TOP_FILLET_RADIUS,
+  MIN_ISLAND_CORNER_RADIUS, MIN_ISLAND_OPACITY, MIN_MAX_PANEL_HEIGHT, MIN_TOP_FILLET_RADIUS,
+  MAX_PANEL_WIDTH, MIN_PANEL_WIDTH, MAX_COLLAPSED_WIDTH_EXTRA, MIN_COLLAPSED_WIDTH_EXTRA, MAX_NOTCH_WING_MAX, MIN_NOTCH_WING_MAX,
+} from "./settingsLimits.ts";
+import { hasThemeSets, THEME_COLOR_KEYS, THEME_COLORS, THEME_MODES, themeSetsFromSingleColors } from "../theme/themeMode.ts";
+import { oneOf } from "./settingsLimits.ts";
+import { ISLAND_MOTIONS } from "../theme/islandMotion.ts";
+import { ISLAND_HOVERS } from "../theme/islandHover.ts";
+import { ISLAND_BOUNCES } from "../theme/islandBounce.ts";
+import { WIDGET_ENTRANCES } from "../theme/widgetEntrance.ts";
+import { normalizeGlassSettings } from "./glassSettings.ts";
+import { normalizeNotchRimSettings } from "./notchRimSettings.ts";
+import { normalizeNotchRingSettings } from "./notchRingSettings.ts";
+import { storedIslandForm } from "./islandFormMigration.ts";
+import { isMacOS } from "../platform.ts";
+import { normalizePageSizes } from "./pageSizes.ts";
+import type { IslandSettings, LegacyIslandSettings } from "./types";
+
+export function normalizeLayoutSettings(settings: LegacyIslandSettings | null | undefined) {
+  const taskTextColor = getColorSetting(
+    settings?.taskTextColor ?? settings?.pendingTodoColor,
+    getColorSetting(settings?.taskTitleColor, DEFAULT_SETTINGS.taskTextColor),
+  );
+  const hasPreviousDefaultScales =
+    settings?.collapsedScale === 0.81 && settings.expandedScale === 0.88;
+  const collapsedScale = hasPreviousDefaultScales
+    ? 0.82
+    : settings?.collapsedScale ?? settings?.sizeScale ?? DEFAULT_SETTINGS.collapsedScale;
+  const expandedScale = hasPreviousDefaultScales
+    ? 1.05
+    : settings?.expandedScale ?? settings?.sizeScale ?? DEFAULT_SETTINGS.expandedScale;
+  const marginY = settings?.marginY ?? settings?.margin ?? DEFAULT_SETTINGS.marginY;
+  const hasPreviousDefaultMargin =
+    settings?.topEdgeLayoutVersion !== 1 && (marginY === 31 || marginY === 12);
+
+  const customFontId = typeof settings?.customFontId === "string" && CUSTOM_FONT_ID_PATTERN.test(settings.customFontId)
+    ? settings.customFontId
+    : "";
+  const requestedFont = oneOf(ISLAND_FONTS, settings?.fontFamily, DEFAULT_SETTINGS.fontFamily);
+  const fontFamily = requestedFont === "custom" && !customFontId ? DEFAULT_SETTINGS.fontFamily : requestedFont;
+  const fontScale = typeof settings?.fontScale === "number" && Number.isFinite(settings.fontScale)
+    ? clamp(Math.round(settings.fontScale), MIN_FONT_SCALE, MAX_FONT_SCALE)
+    : DEFAULT_SETTINGS.fontScale;
+
+  return {
+    topEdgeLayoutVersion: 1,
+    fontFamily,
+    fontScale,
+    customFontId,
+    appearanceMode:
+      settings?.appearanceMode === "classic" ||
+      settings?.appearanceMode === "liquidGlass"
+        ? settings.appearanceMode
+        : "classic",
+    glassIntensity: clamp(
+      Number(settings?.glassIntensity ?? DEFAULT_SETTINGS.glassIntensity),
+      0,
+      100,
+    ),
+    opacity: clamp(Number(settings?.opacity ?? DEFAULT_SETTINGS.opacity), 50, 100),
+    islandOpacity: typeof settings?.islandOpacity === "number" && Number.isFinite(settings.islandOpacity)
+      ? clamp(Math.round(settings.islandOpacity), MIN_ISLAND_OPACITY, MAX_ISLAND_OPACITY)
+      : DEFAULT_SETTINGS.islandOpacity,
+    collapsedScale: clamp(Number(collapsedScale), 0.75, 1.4),
+    expandedScale: clamp(Number(expandedScale), 0.75, 1.4),
+    islandMonitor: settings?.islandMonitor === "cursor" || settings?.islandMonitor === "foreground" ? settings.islandMonitor : "primary",
+    menuBarPlacement: settings?.menuBarPlacement === "below" ? "below" : "notch",
+    islandForm: storedIslandForm(settings, isMacOS),
+    ...normalizeGlassSettings(settings),
+    ...normalizeNotchRimSettings(settings),
+    ...normalizeNotchRingSettings(settings),
+    marginY: clamp(
+      Number(hasPreviousDefaultMargin ? DEFAULT_SETTINGS.marginY : marginY),
+      0,
+      160,
+    ),
+    topFilletRadius: typeof settings?.topFilletRadius === "number" && Number.isFinite(settings.topFilletRadius)
+      ? clamp(Math.round(settings.topFilletRadius), MIN_TOP_FILLET_RADIUS, MAX_TOP_FILLET_RADIUS)
+      : LEGACY_FALLBACKS.topFilletRadius,
+    islandCornerRadius: typeof settings?.islandCornerRadius === "number" && Number.isFinite(settings.islandCornerRadius)
+      ? clamp(Math.round(settings.islandCornerRadius), MIN_ISLAND_CORNER_RADIUS, MAX_ISLAND_CORNER_RADIUS)
+      : LEGACY_FALLBACKS.islandCornerRadius,
+    islandCornerShape: settings?.islandCornerShape === "round" ? "round" : "squircle",
+    islandMotion: oneOf(ISLAND_MOTIONS, settings?.islandMotion, DEFAULT_SETTINGS.islandMotion),
+    islandHover: oneOf(ISLAND_HOVERS, settings?.islandHover, settings?.islandMotion === "none" ? "none" : DEFAULT_SETTINGS.islandHover),
+    islandBounce: oneOf(ISLAND_BOUNCES, settings?.islandBounce, DEFAULT_SETTINGS.islandBounce),
+    widgetEntrance: oneOf(WIDGET_ENTRANCES, settings?.widgetEntrance, DEFAULT_SETTINGS.widgetEntrance),
+    widgetDataMotion: typeof settings?.widgetDataMotion === "boolean" ? settings.widgetDataMotion : DEFAULT_SETTINGS.widgetDataMotion,
+    maxPanelHeight: typeof settings?.maxPanelHeight === "number" && Number.isFinite(settings.maxPanelHeight)
+      ? clamp(Math.round(settings.maxPanelHeight), MIN_MAX_PANEL_HEIGHT, MAX_MAX_PANEL_HEIGHT)
+      : LEGACY_FALLBACKS.maxPanelHeight,
+    panelWidth: typeof settings?.panelWidth === "number" && Number.isFinite(settings.panelWidth)
+      ? clamp(Math.round(settings.panelWidth), MIN_PANEL_WIDTH, MAX_PANEL_WIDTH)
+      : LEGACY_FALLBACKS.panelWidth,
+    pageSizes: normalizePageSizes(settings?.pageSizes),
+    collapsedWidthExtra: typeof settings?.collapsedWidthExtra === "number" && Number.isFinite(settings.collapsedWidthExtra)
+      ? clamp(Math.round(settings.collapsedWidthExtra), MIN_COLLAPSED_WIDTH_EXTRA, MAX_COLLAPSED_WIDTH_EXTRA)
+      : DEFAULT_SETTINGS.collapsedWidthExtra,
+    dragGrid: typeof settings?.dragGrid === "boolean" ? settings.dragGrid : DEFAULT_SETTINGS.dragGrid,
+    taskTextColor,
+    pulseColor: getColorSetting(
+      settings?.pulseColor,
+      DEFAULT_SETTINGS.pulseColor,
+    ),
+    pulseBrightness: clamp(
+      Number(settings?.pulseBrightness ?? LEGACY_FALLBACKS.pulseBrightness),
+      50,
+      160,
+    ),
+    islandBackgroundColor: getColorSetting(
+      settings?.islandBackgroundColor,
+      LEGACY_FALLBACKS.islandBackgroundColor,
+    ),
+    inkColor: getColorSetting(settings?.inkColor, ""),
+    ...normalizeThemeSets(settings),
+    collapsedDark: typeof settings?.collapsedDark === "boolean" ? settings.collapsedDark : LEGACY_FALLBACKS.collapsedDark,
+    panelDark: typeof settings?.panelDark === "boolean" ? settings.panelDark : DEFAULT_SETTINGS.panelDark,
+    windowsDark: typeof settings?.windowsDark === "boolean" ? settings.windowsDark : DEFAULT_SETTINGS.windowsDark,
+    accentMode: oneOf(["default", "windows", "pick"] as const, settings?.accentMode, DEFAULT_SETTINGS.accentMode),
+    accentColor: getColorSetting(settings?.accentColor, DEFAULT_SETTINGS.accentColor),
+    showTitle:
+      typeof settings?.showTitle === "boolean"
+        ? settings.showTitle
+        : DEFAULT_SETTINGS.showTitle,
+    showCollapsedText:
+      typeof settings?.showCollapsedText === "boolean"
+        ? settings.showCollapsedText
+        : DEFAULT_SETTINGS.showCollapsedText,
+    collapsedOverflowMore: settings?.collapsedOverflowMore !== false,
+    notchWingMax: typeof settings?.notchWingMax === "number" && Number.isFinite(settings.notchWingMax)
+      ? clamp(Math.round(settings.notchWingMax), MIN_NOTCH_WING_MAX, MAX_NOTCH_WING_MAX)
+      : DEFAULT_SETTINGS.notchWingMax,
+  } satisfies Partial<IslandSettings>;
+}
+
+function normalizeThemeSets(settings: LegacyIslandSettings | null | undefined) {
+  const source = (settings ?? {}) as Record<string, unknown>;
+  const merged = hasThemeSets(source) ? source : { ...source, ...themeSetsFromSingleColors(source) };
+  const sets = Object.fromEntries(
+    (["dark", "light"] as const).flatMap((tone) =>
+      (Object.entries(THEME_COLOR_KEYS[tone]) as [keyof typeof THEME_COLORS.dark, string][]).map(([name, key]) => [
+        key,
+        getColorSetting(merged[key], THEME_COLORS[tone][name]),
+      ]),
+    ),
+  ) as Pick<IslandSettings, "darkBackgroundColor" | "darkTextColor" | "darkPulseColor" | "lightBackgroundColor" | "lightTextColor" | "lightPulseColor" | "darkInkColor" | "lightInkColor">;
+  return { themeMode: oneOf(THEME_MODES, merged.themeMode, DEFAULT_SETTINGS.themeMode), ...sets };
+}

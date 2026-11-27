@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Fuyu</string>
+  <key>LSHasLocalizedDisplayName</key>
+  <true/>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>zh-Hans</string>
+  </array>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Fuyu switches to the right Terminal or iTerm2 tab for an AI session, and controls Apple Music or Spotify when the system media service is unavailable.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>Fuyu reads the battery level of the Bluetooth headphones, mice and keyboards you have connected. It does not scan for or connect to other devices.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Fuyu finds and talks to your other computers running Fuyu on this network, only after you turn on the local network link and pair them.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_fuyu._tcp</string>
+  </array>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Fuyu listens only while you use voice input, and turns speech into text on this Mac.</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.tixxin.fuyu</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>fuyu</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>

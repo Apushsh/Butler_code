@@ -1,0 +1,107 @@
+import { Context, Service } from "@fuyu/plugin-base";
+import { PACKAGES_DIR, dataDirOf, readBuiltins, readManifest, serviceError, startHost, type BuiltinCatalog, type Host, type PluginPackage, type PluginStatus, type ServiceEntry, type ServicesApi } from "@fuyu/plugin-base/host";
+
+class Counter extends Service {
+  value = 0;
+  constructor(ctx: Context) {
+    super(ctx, "counter");
+  }
+}
+
+const host: Host = await startHost({ dir: "/tmp", watch: true, onLog: (entry) => entry.text });
+const states: PluginStatus["state"][] = host.status().map((entry) => entry.state);
+void Counter;
+void states;
+
+const offered: ServiceEntry[] = host.services();
+const stopWatching: () => void = host.watchServices((list) => list.map((entry) => entry.name.length));
+const detach: () => void = host.serviceHub.attachWindows({ connected: () => ["main"], publish: () => {} });
+void host.serviceHub.windowCall("service.call", { service: "timers/v1", method: "list" }, "main");
+// @ts-expect-error only the three service calls go to the hub
+void host.serviceHub.windowCall("plugin.call", {}, "main");
+const failed: string = serviceError("not-ready", "no provider").code;
+const known: boolean = SERVICE_CALLS.includes("service.on");
+declare const services: ServicesApi;
+const echo = { name: "demo.echo/v1", methods: { echo: {} }, events: { said: {} } } as const;
+const handle = services.provide(echo, { echo: (params, caller) => ({ params, window: caller.window ?? null }) });
+const delivered: boolean = handle.emit("said", { at: 1 });
+const reply: Promise<unknown> = services.get(echo).echo({ text: "hi" });
+void services.get(echo).on("said", () => {});
+void offered;
+void stopWatching;
+void detach;
+void failed;
+void known;
+void delivered;
+void reply;
+
+import { connectHost, createServiceProxy, type HostConnection } from "@fuyu/plugin-base/client";
+import { CLOSE, SERVICE_CALLS, SERVICE_TIMEOUT_MS, WINDOW_ORIGINS, type ServiceCallName } from "@fuyu/plugin-base/protocol";
+import type { ServiceDefinitionLike } from "@fuyu/plugin-base";
+
+const connection: HostConnection = connectHost<{ plugins: PluginStatus[] }>({
+  resolve: async () => ({ port: 1, token: "t" }),
+  window: "main",
+  onSnapshot: (snapshot) => snapshot.plugins.length,
+});
+const code: 4401 = CLOSE.badToken;
+void connection;
+void code;
+void WINDOW_ORIGINS;
+
+const withBuiltins: Host = await startHost({ dir: "/tmp", builtins: "/app/builtins", dataDir: "/tmp/data" });
+const builtinKinds: ("essential" | "builtin")[] = withBuiltins.builtins().map((entry) => entry.kind);
+const catalog: BuiltinCatalog = readBuiltins("/app/builtins");
+const folder: string = dataDirOf("/tmp/data", catalog.plugins[0]?.id ?? "timer");
+void builtinKinds;
+void folder;
+
+const sourced: Host = await startHost({ dir: "/tmp", appVersion: "0.6.0" });
+const sources: (string | undefined)[] = sourced.status().map((entry) => entry.source);
+const undeclared: string[] | undefined = sourced.status()[0]?.undeclared?.provides;
+const manifestErrors = sourced.status().flatMap((entry) => (entry.blocked?.by === "manifest" ? entry.blocked.errors.map((issue) => issue.code) : []));
+const installed: PluginPackage = readManifest(`/tmp/${PACKAGES_DIR}/@ann/weather`, { allowExperimental: false, appVersion: "0.6.0" });
+const windows: string[] = installed.clients.map((client) => client.window);
+void sources;
+void undeclared;
+void manifestErrors;
+void windows;
+
+type EchoMethods = { echo(params: { text: string }): { text: string }; count(): { n: number } };
+type EchoEvents = { said: { at: number } };
+declare const typedEcho: ServiceDefinitionLike<EchoMethods, EchoEvents, {}>;
+declare const pluginCtx: Context;
+const typedHandle = pluginCtx.services.provide(typedEcho, { echo: ({ text }) => ({ text }), count: () => ({ n: 1 }) });
+typedHandle.emit("said", { at: 1 });
+// @ts-expect-error the payload of said is { at }
+typedHandle.emit("said", { when: 1 });
+// @ts-expect-error a provider must implement every declared method
+pluginCtx.services.provide(typedEcho, { echo: ({ text }) => ({ text }) });
+const typedReply: Promise<{ text: string }> = pluginCtx.services.get(typedEcho).echo({ text: "hi" });
+const counted: Promise<{ n: number }> = pluginCtx.services.get(typedEcho).count();
+// @ts-expect-error echo needs its text
+void pluginCtx.services.get(typedEcho).echo({});
+const version: Promise<{ version: string }> = pluginCtx.rust.call<{ version: string }>("app.version", null, { timeoutMs: 1000 });
+void pluginCtx.rust.on("media", (data) => data);
+const proxy = createServiceProxy((method, params, options) => connection.call(method, params, options));
+const windowReply: Promise<{ text: string }> = proxy.get(typedEcho).echo({ text: "hi" });
+void proxy.get(typedEcho).on("said", (data) => data.at.toFixed());
+const callName: ServiceCallName = SERVICE_CALLS[0];
+const defaultTimeout: 30000 = SERVICE_TIMEOUT_MS;
+void [typedReply, counted, version, windowReply, callName, defaultTimeout];
+
+import { commandsV1, defineService as defineFromBase, pluginConfigV1, pluginWindowsV1 } from "@fuyu/plugin-base/services";
+const pingV1 = defineFromBase<{ ping(): { ok: boolean } }>("demo.ping/v1", { methods: { ping: true } });
+const pinged: Promise<{ ok: boolean }> = pluginCtx.services.get(pingV1).ping();
+const dirPath: string = pluginCtx.dataDir;
+const stopCommand: () => Promise<void> = pluginCtx.commands.register("open", () => ({ ok: true }));
+const cfgNow = pluginCtx.config.get<{ limit: number }>();
+const cfgNext: Promise<{ limit: number }> = pluginCtx.config.set<{ limit: number }>({ limit: 5 });
+const stopCfg: () => Promise<void> = pluginCtx.config.onChange<{ limit: number }>((vals) => vals.limit.toFixed());
+const httpRes = pluginCtx.http.fetch("https://api.example.com");
+const winCreated = pluginCtx.windows.create({ id: "hud", title: "HUD", alwaysOnTop: true });
+const stopSlot = pluginCtx.slots.add("plugin-window.view/v1", { id: "hud", windowId: "hud", title: "HUD", component: () => null });
+const cmdItems = pluginCtx.services.get(commandsV1).list();
+const cfgEntry = pluginCtx.services.get(pluginConfigV1).get({ id: "@ann/weather" });
+const winRules = pluginCtx.services.get(pluginWindowsV1).getRules({ id: "@ann/weather" });
+void [pinged, dirPath, stopCommand, cfgNow, cfgNext, stopCfg, httpRes, winCreated, stopSlot, cmdItems, cfgEntry, winRules];

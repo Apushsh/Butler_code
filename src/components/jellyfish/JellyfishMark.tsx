@@ -1,0 +1,183 @@
+import { useId, type CSSProperties } from "react";
+import { useJellyfishStyle } from "./jellyfishStyleContext";
+import { PixelJellyfish } from "./PixelJellyfish";
+import { useLivelyJelly, type LivelyJelly } from "./useLivelyJelly";
+import "./JellyfishMark.css";
+
+export const JELLY_VIEW_WIDTH = 58;
+export const JELLY_VIEW_HEIGHT = 43;
+export type JellyMood = "idle" | "running" | "waiting" | "failed" | "done" | "sleep" | "stale" | "compacting";
+
+const VIEW_BOX = `3 4 ${JELLY_VIEW_WIDTH} ${JELLY_VIEW_HEIGHT}`;
+const BELL = "M5 30.5C5 16 17 7 32 7S59 16 59 30.5c0 3-2.4 5.5-5.4 5.5H10.4C7.4 36 5 33.5 5 30.5Z";
+const LOBES = [18, 27.3, 36.7, 46];
+const LOBE_Y = 39;
+const LOBE_R = 6.6;
+
+function Shape() {
+  return (
+    <>
+      {LOBES.map((x) => (
+        <circle key={x} cx={x} cy={LOBE_Y} r={LOBE_R} />
+      ))}
+      <path d={BELL} />
+    </>
+  );
+}
+
+function Eyes() {
+  return (
+    <>
+      <ellipse className="center-jelly-eye" cx={24} cy={25} rx={2.9} ry={4.1} />
+      <ellipse className="center-jelly-eye" cx={40} cy={25} rx={2.9} ry={4.1} />
+    </>
+  );
+}
+
+function Face({ mood }: { mood: JellyMood }) {
+  if (mood === "sleep") {
+    return <path className="center-jelly-line" d="M20.6 25.2a3.4 3.4 0 0 0 6.8 0M36.6 25.2a3.4 3.4 0 0 0 6.8 0" />;
+  }
+  if (mood === "done") {
+    return (
+      <g className="center-jelly-lids">
+        <path className="center-jelly-line" d="M20.6 26.4a3.4 3.4 0 0 1 6.8 0M36.6 26.4a3.4 3.4 0 0 1 6.8 0" />
+      </g>
+    );
+  }
+  if (mood === "stale") {
+    return (
+      <>
+        <circle className="center-jelly-eye" cx={24} cy={26} r={2.3} />
+        <circle className="center-jelly-eye" cx={40} cy={26} r={2.3} />
+        <path className="center-jelly-line center-jelly-mouth" d="M28.6 32.2h6.8" />
+      </>
+    );
+  }
+  if (mood === "compacting") {
+    return (
+      <>
+        <path className="center-jelly-line" d="M21.6 21.8l4.8 3.4-4.8 3.4M42.4 21.8l-4.8 3.4 4.8 3.4" />
+        <path className="center-jelly-line center-jelly-mouth" d="M28.6 32.2h6.8" />
+      </>
+    );
+  }
+  if (mood === "running") {
+    return (
+      <>
+        <g className="center-jelly-lids" transform="translate(-2.2 .6)">
+          <Eyes />
+        </g>
+        <path className="center-jelly-line center-jelly-mouth" d="M27.4 31.8h4" />
+      </>
+    );
+  }
+  if (mood === "waiting") {
+    return (
+      <>
+        <g transform="translate(0 -1)">
+          <g className="center-jelly-lids">
+            <Eyes />
+          </g>
+        </g>
+        <path className="center-jelly-eye" d="M28.2 30.4h7.6a3.8 3.8 0 0 1-7.6 0Z" />
+        <ellipse className="center-jelly-tongue" cx={32} cy={33.1} rx={2} ry={1.1} />
+      </>
+    );
+  }
+  return (
+    <>
+      <g className="center-jelly-lids">
+        <Eyes />
+      </g>
+      {mood === "failed" && <path className="center-jelly-line" d="M18.5 17.2l8 3.2M45.5 17.2l-8 3.2" />}
+    </>
+  );
+}
+
+function star(cx: number, cy: number, r: number) {
+  return `M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z`;
+}
+
+function Effect({ mood }: { mood: JellyMood }) {
+  if (mood === "waiting") return <path className="center-jelly-fx center-jelly-tick" d="M55 6l1.4-5M59 9.5l4.2-3.4M61 15l5-1" />;
+  if (mood === "failed") {
+    return (
+      <path
+        className="center-jelly-fx center-jelly-anger"
+        d="M55.5 3.5c1.6 0 2.5-.9 2.5-2.5M62.5 3.5c-1.6 0-2.5-.9-2.5-2.5M55.5 7.5c1.6 0 2.5.9 2.5 2.5M62.5 7.5c-1.6 0-2.5.9-2.5 2.5"
+      />
+    );
+  }
+  if (mood === "done") {
+    return (
+      <>
+        <path className="center-jelly-fx center-jelly-spark" d={star(57, 4, 4.4)} />
+        <path className="center-jelly-fx center-jelly-spark" d={star(62.5, 12, 2.8)} />
+      </>
+    );
+  }
+  if (mood === "stale") return <path className="center-jelly-fx center-jelly-ask" d="M56.3 3.6a3.4 3.4 0 1 1 5 3c-1.1.6-1.6 1.3-1.6 2.6M59.7 13v.1" />;
+  if (mood === "compacting") return <path className="center-jelly-fx center-jelly-press" d="M-2.4 22.2l3.6 4-3.6 4M66.4 22.2l-3.6 4 3.6 4" />;
+  return null;
+}
+
+type JellyfishMarkProps = { mood: JellyMood; paused?: boolean; height?: number; lively?: boolean };
+type DrawnJellyfishProps = LivelyJelly & { paused?: boolean; height?: number };
+
+export function JellyfishMark({ lively = false, mood, paused, height }: JellyfishMarkProps) {
+  const style = useJellyfishStyle();
+  const live = useLivelyJelly(lively && !paused, mood);
+  const drawn = { ...live, paused, height };
+  return style === "vector" ? <VectorJellyfish {...drawn} /> : <PixelJellyfish style={style} {...drawn} />;
+}
+
+function VectorJellyfish({ mood, paused = false, height, look, wrap, onPoke }: DrawnJellyfishProps) {
+  const shade = `center-jelly-shade-${useId().replace(/:/g, "")}`;
+  const shadeFill = `url(#${shade})`;
+  return (
+    <span
+      ref={wrap}
+      className={onPoke ? "center-jelly center-jelly--lively" : "center-jelly"}
+      data-mood={mood}
+      data-paused={paused || undefined}
+      style={{ ...(height === undefined ? null : { "--center-jelly-height": `${height}px` }), ...(look.x || look.y ? { "--center-jelly-look-x": look.x, "--center-jelly-look-y": look.y } : null) } as CSSProperties}
+      aria-hidden="true"
+      onClick={onPoke}
+    >
+      <svg viewBox={VIEW_BOX}>
+        <defs>
+          <linearGradient id={shade} gradientUnits="userSpaceOnUse" x1={0} y1={6} x2={0} y2={48}>
+            <stop offset={0} stopColor="#fff" stopOpacity={0.5} />
+            <stop offset={0.5} stopColor="#fff" stopOpacity={0} />
+            <stop offset={1} stopColor="#000" stopOpacity={0.14} />
+          </linearGradient>
+        </defs>
+        <g className="center-jelly-pose">
+          <g className="center-jelly-body">
+            <g className="center-jelly-outline">
+              <Shape />
+            </g>
+            <g className="center-jelly-lobes">
+              {LOBES.map((x) => (
+                <g key={x} className="center-jelly-lobe" style={{ transformOrigin: `${x}px 33px` }}>
+                  <circle className="center-jelly-fill" cx={x} cy={LOBE_Y} r={LOBE_R} />
+                  <circle cx={x} cy={LOBE_Y} r={LOBE_R} fill={shadeFill} />
+                </g>
+              ))}
+            </g>
+            <g className="center-jelly-head">
+              <path className="center-jelly-fill" d={BELL} />
+              <path d={BELL} fill={shadeFill} />
+              <ellipse className="center-jelly-highlight" cx={19} cy={14} rx={7.5} ry={3.4} transform="rotate(-26 19 14)" />
+              <ellipse className="center-jelly-cheek" cx={17.6} cy={31.5} rx={3.6} ry={2.2} />
+              <ellipse className="center-jelly-cheek" cx={46.4} cy={31.5} rx={3.6} ry={2.2} />
+              <Face mood={mood} />
+            </g>
+          </g>
+        </g>
+        <Effect mood={mood} />
+      </svg>
+    </span>
+  );
+}

@@ -1,0 +1,26 @@
+{
+  "name": "fuyu",
+  "displayName": "Fuyu",
+  "description": "Lets Fuyu switch to the terminal running a Claude Code or Codex session when you click it on the island.",
+  "version": "0.2.0",
+  "publisher": "TixXin",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TixXin/fuyu.git",
+    "directory": "packages/vscode-extension"
+  },
+  "homepage": "https://github.com/TixXin/fuyu/blob/main/docs/features/agent-status-hooks.md",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Other"],
+  "keywords": ["claude code", "codex", "terminal", "fuyu"],
+  "extensionKind": ["ui", "workspace"],
+  "activationEvents": ["onUri"],
+  "main": "./extension.js",
+  "scripts": {
+    "package": "pnpm dlx @vscode/vsce package --no-dependencies"
+  }
+}

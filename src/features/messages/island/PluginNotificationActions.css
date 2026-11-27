@@ -1,0 +1,24 @@
+.plugin-notification-action {
+  flex: 0 1 auto;
+  max-width: 72px;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.plugin-notification-action:hover,
+.plugin-notification-action:focus-visible {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}

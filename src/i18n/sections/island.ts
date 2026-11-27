@@ -1,0 +1,314 @@
+export type IslandText = {
+  appName: string;
+  focusing: (taskTitle: string) => string;
+  pendingTodos: (count: number) => string;
+  agentSession: (provider: string, title: string) => string;
+  agentNeedsYou: (provider: string) => string;
+  agentFailed: (provider: string) => string;
+  lyricLine: (text: string) => string;
+  nowPlaying: (text: string) => string;
+  openMusic: string;
+  collapse: string;
+  collapseIsland: string;
+  minimizeToTray: string;
+  minimizeToMenuBar: string;
+  tuckToTop: string;
+  taskbarHandle: string;
+  resetPosition: string;
+  resetPositionLabel: string;
+  arrangeItems: string;
+  resize: {
+    menu: string;
+    reset: string;
+    done: string;
+    keys: string;
+    collapsedWidth: (extra: string) => string;
+    notchWing: (wing: number) => string;
+    detent: Record<"min" | "compact" | "default" | "wide" | "tall" | "max" | "plus60" | "plus120", string>;
+    preset: Record<"compact" | "default" | "large", string>;
+  };
+  screenshot: string;
+  editor: string;
+  todoList: string;
+  music: string;
+  clipboardHistory: string;
+  shelf: string;
+  screenshots: string;
+  timer: string;
+  calendar: string;
+  shelfCount: (count: number) => string;
+  sideMore: (count: number) => string;
+  overflowMore: (count: number) => string;
+  overflowPanel: string;
+  headerMore: (count: number) => string;
+  headerMoreMenu: string;
+  deviceInUse: Record<"camera" | "microphone", (apps: string) => string>;
+  deviceAppSeparator: string;
+  levelPopup: { volume: (percent: number) => string; brightness: (percent: number) => string; muted: string; mutedShort: string };
+  deviceAlert: {
+    connected: (name: string) => string;
+    disconnected: (name: string) => string;
+    batteryLow: (name: string) => string;
+    charging: string;
+    unplugged: string;
+    battery: (percent: number) => string;
+  };
+  capsLock: {
+    name: string;
+    on: string;
+    off: string;
+    short: string;
+    shortOff: string;
+    password: string;
+    passwordShort: string;
+    numOn: string;
+    numOff: string;
+    numShort: string;
+    numShortOff: string;
+    badge: string;
+    badgeClick: string;
+  };
+  layoutEditor: string;
+  firstHint: {
+    agent: string;
+    message: string;
+    tuck: string;
+    connectTools: string;
+    gotIt: string;
+  };
+  pluginWaiting: { title: (id: string) => string; body: (services: string) => string };
+  v2Migration: {
+    notice: (count: number) => string;
+    viewGuide: string;
+    gotIt: string;
+  };
+  layerNotice: (shortcut: string | null) => string;
+  pageArrow: { previous: (page: string) => string; next: (page: string) => string };
+  sideDock: {
+    title: string;
+    openAria: string;
+    pinAria: string;
+    closeAria: string;
+    openSettingsAria: string;
+    emptyHint: string;
+    pageNames: {
+      agents: string;
+      qq: string;
+      translation: string;
+    };
+  };
+};
+
+export const zhCN: IslandText = {
+  appName: "Fuyu",
+  focusing: (taskTitle) => `正在专注：${taskTitle}`,
+  pendingTodos: (count) => `剩余${count}个待办`,
+  agentSession: (provider, title) => `${provider} 正在处理：${title}`,
+  agentNeedsYou: (provider) => `${provider} 等你确认`,
+  agentFailed: (provider) => `${provider} 出错了`,
+  lyricLine: (text) => `正在唱：${text}`,
+  nowPlaying: (text) => `正在播放：${text}`,
+  openMusic: "打开音乐控制",
+  collapse: "收起",
+  collapseIsland: "收起岛屿",
+  minimizeToTray: "最小化到托盘",
+  minimizeToMenuBar: "最小化到菜单栏",
+  taskbarHandle: "拖动以在任务栏上移动",
+  tuckToTop: "收起到屏幕顶部",
+  resetPosition: "复位",
+  resetPositionLabel: "回到主屏顶部居中",
+  arrangeItems: "排列…",
+  resize: {
+    menu: "调整大小…",
+    reset: "恢复默认尺寸",
+    done: "完成",
+    keys: "方向键微调",
+    collapsedWidth: (extra) => `折叠宽度 ${extra}`,
+    notchWing: (wing) => `两侧最宽 ${wing}`,
+    detent: { min: "最小", compact: "适中", default: "默认", wide: "宽", tall: "高", max: "最大", plus60: "+60", plus120: "+120" },
+    preset: { compact: "紧凑", default: "默认", large: "宽大" },
+  },
+  screenshot: "截图",
+  editor: "岛屿编辑",
+  todoList: "任务清单",
+  music: "Music",
+  clipboardHistory: "剪贴板历史",
+  shelf: "文件中转",
+  screenshots: "截图历史",
+  timer: "计时器",
+  calendar: "日历",
+  shelfCount: (count) => `文件中转里有 ${count} 个文件`,
+  sideMore: (count) => `还有 ${count} 项，展开查看`,
+  overflowMore: (count) => `还有 ${count} 项放不下，点开查看`,
+  overflowPanel: "放不下的项目",
+  headerMore: (count) => `更多页面（还有 ${count} 个）`,
+  headerMoreMenu: "更多页面",
+  deviceInUse: {
+    camera: (apps) => (apps ? `${apps} 正在使用摄像头，点击打开隐私设置` : "摄像头正在使用，点击打开隐私设置"),
+    microphone: (apps) => (apps ? `${apps} 正在使用麦克风，点击打开隐私设置` : "麦克风正在使用，点击打开隐私设置"),
+  },
+  deviceAppSeparator: "、",
+  levelPopup: { volume: (percent) => `音量 ${percent}%`, brightness: (percent) => `亮度 ${percent}%`, muted: "已静音", mutedShort: "静音" },
+  deviceAlert: {
+    connected: (name) => `${name} 已连接`,
+    disconnected: (name) => `${name} 已断开`,
+    batteryLow: (name) => `${name} 电量低`,
+    charging: "正在充电",
+    unplugged: "已拔下电源",
+    battery: (percent) => `电量 ${percent}%`,
+  },
+  capsLock: {
+    name: "大写锁定",
+    on: "大写锁定已开启",
+    off: "大写锁定已关闭",
+    short: "大写",
+    shortOff: "小写",
+    password: "大写开着 · 正在输密码",
+    passwordShort: "密码",
+    numOn: "数字锁定已开启",
+    numOff: "数字锁定已关闭",
+    numShort: "数字",
+    numShortOff: "数字关",
+    badge: "大写锁定开着",
+    badgeClick: "大写锁定开着，点一下关掉",
+  },
+  layoutEditor: "布局编辑",
+  firstHint: {
+    agent: "Agent 会话显示在这里，点岛看全部",
+    message: "新消息来了，点一下岛就能看",
+    tuck: "岛藏在顶边，鼠标碰一下就回来",
+    connectTools: "连接更多工具",
+    gotIt: "知道了",
+  },
+  pluginWaiting: {
+    title: (id) => `插件 ${id} 仍在等待依赖`,
+    body: (services) => `等待服务：${services}`,
+  },
+  v2Migration: {
+    notice: (count) => `检测到 ${count} 个旧版插件，官方插件已换成新版 @fuyu/*`,
+    viewGuide: "查看迁移说明",
+    gotIt: "知道了",
+  },
+  layerNotice: (shortcut) => (shortcut ? `岛退到窗口下面，再按 ${shortcut} 回来` : "岛退到窗口下面，点托盘图标可以叫回来"),
+  pageArrow: { previous: (page) => `上一页：${page}`, next: (page) => `下一页：${page}` },
+  sideDock: {
+    title: "侧边翼",
+    openAria: "展开侧边翼",
+    pinAria: "钉住常驻",
+    closeAria: "收起侧边翼",
+    openSettingsAria: "配置侧边翼布局",
+    emptyHint: "这一侧还没有分配页面，可在设置 → 侧边翼里拖入任意页面。",
+    pageNames: {
+      agents: "AI Agent",
+      qq: "消息",
+      translation: "翻译",
+    },
+  },
+};
+
+export const en: IslandText = {
+  appName: "Fuyu",
+  focusing: (taskTitle) => `Focusing: ${taskTitle}`,
+  pendingTodos: (count) => (count === 1 ? "1 todo left" : `${count} todos left`),
+  agentSession: (provider, title) => `${provider} is working on: ${title}`,
+  agentNeedsYou: (provider) => `${provider} needs you`,
+  agentFailed: (provider) => `${provider} hit an error`,
+  lyricLine: (text) => `Now singing: ${text}`,
+  nowPlaying: (text) => `Now playing: ${text}`,
+  openMusic: "Open music controls",
+  collapse: "Collapse",
+  collapseIsland: "Collapse island",
+  minimizeToTray: "Minimize to tray",
+  minimizeToMenuBar: "Minimize to the menu bar",
+  taskbarHandle: "Drag to move along the taskbar",
+  tuckToTop: "Tuck to top edge",
+  resetPosition: "Reset",
+  resetPositionLabel: "Reset island to the top center of the primary screen",
+  arrangeItems: "Arrange…",
+  resize: {
+    menu: "Resize…",
+    reset: "Reset size",
+    done: "Done",
+    keys: "Arrow keys nudge",
+    collapsedWidth: (extra) => `Bar width ${extra}`,
+    notchWing: (wing) => `Side width ${wing}`,
+    detent: { min: "Min", compact: "Medium", default: "Default", wide: "Wide", tall: "Tall", max: "Max", plus60: "+60", plus120: "+120" },
+    preset: { compact: "Compact", default: "Default", large: "Large" },
+  },
+  screenshot: "Screenshot",
+  editor: "Island editor",
+  todoList: "Tasks",
+  music: "Music",
+  clipboardHistory: "Clipboard history",
+  shelf: "File shelf",
+  screenshots: "Screenshot history",
+  timer: "Timer",
+  calendar: "Calendar",
+  shelfCount: (count) => (count === 1 ? "1 file on the shelf" : `${count} files on the shelf`),
+  sideMore: (count) => `${count} more, open the island to see them`,
+  overflowMore: (count) => (count === 1 ? "1 more item that did not fit" : `${count} more items that did not fit`),
+  overflowPanel: "Items that did not fit",
+  headerMore: (count) => (count === 1 ? "More pages (1 more)" : `More pages (${count} more)`),
+  headerMoreMenu: "More pages",
+  deviceInUse: {
+    camera: (apps) => (apps ? `${apps} using the camera; click for privacy settings` : "Camera in use; click for privacy settings"),
+    microphone: (apps) => (apps ? `${apps} using the microphone; click for privacy settings` : "Microphone in use; click for privacy settings"),
+  },
+  deviceAppSeparator: ", ",
+  levelPopup: { volume: (percent) => `Volume ${percent}%`, brightness: (percent) => `Brightness ${percent}%`, muted: "Muted", mutedShort: "Off" },
+  deviceAlert: {
+    connected: (name) => `${name} connected`,
+    disconnected: (name) => `${name} disconnected`,
+    batteryLow: (name) => `${name} battery low`,
+    charging: "Charging",
+    unplugged: "On battery",
+    battery: (percent) => `Battery ${percent}%`,
+  },
+  capsLock: {
+    name: "Caps Lock",
+    on: "Caps Lock On",
+    off: "Caps Lock Off",
+    short: "CAPS",
+    shortOff: "caps",
+    password: "Caps Lock on · password",
+    passwordShort: "PW",
+    numOn: "Num Lock On",
+    numOff: "Num Lock Off",
+    numShort: "NUM",
+    numShortOff: "num",
+    badge: "Caps Lock is on",
+    badgeClick: "Caps Lock is on, click to turn it off",
+  },
+  layoutEditor: "Layout editor",
+  firstHint: {
+    agent: "Agent sessions show here; open to see all",
+    message: "When a message comes in, click the island",
+    tuck: "Hiding at the top edge; touch it to bring it back",
+    connectTools: "Connect more tools",
+    gotIt: "Got it",
+  },
+  pluginWaiting: {
+    title: (id) => `Plugin ${id} is still waiting for what it needs`,
+    body: (services) => `Waiting for: ${services}`,
+  },
+  v2Migration: {
+    notice: (count) => `${count} old ${count === 1 ? "plugin" : "plugins"} found; official plugins moved to @fuyu/*`,
+    viewGuide: "View upgrade guide",
+    gotIt: "Got it",
+  },
+  layerNotice: (shortcut) => (shortcut ? `Going behind windows; press ${shortcut} to bring it back` : "Going behind windows; the tray icon brings it back"),
+  pageArrow: { previous: (page) => `Previous: ${page}`, next: (page) => `Next: ${page}` },
+  sideDock: {
+    title: "Side dock",
+    openAria: "Open side dock",
+    pinAria: "Pin open",
+    closeAria: "Collapse side dock",
+    openSettingsAria: "Configure side docks",
+    emptyHint: "No pages assigned to this side yet. Drag any page here in Settings → Side docks.",
+    pageNames: {
+      agents: "AI Agent",
+      qq: "Messages",
+      translation: "Translate",
+    },
+  },
+};

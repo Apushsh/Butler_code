@@ -1,0 +1,103 @@
+import { useCallback, useEffect, useRef } from "react";
+import { visibilityInterval } from "../../lib/useVisibilityInterval";
+import { nextCarriedFrom } from "./deadline.ts";
+import { getTodoSignature, type TodoMarkdownOptions } from "./markdown.ts";
+import { hasNoteContent } from "./newTodoDefaults.ts";
+import { withoutFocus } from "./normalize.ts";
+import { isDateString } from "./schedule.ts";
+import { clearLastSavedSignature, createTodoId, loadLastSavedSignature, saveLastSavedSignature } from "./storage.ts";
+import { getLogicalTodoDate } from "./todoPrefs.ts";
+import type { TodoItem } from "./types.ts";
+
+type TodoRolloverOptions = {
+  currentTodoDate: string;
+  dayStartHour?: number;
+  markdownOptions?: TodoMarkdownOptions;
+  noteTemplate?: string;
+  todos: TodoItem[];
+  dailyNote: string;
+  carryOverIncompleteTodos: boolean;
+  saveDirectory: string;
+  saveTodosToDisk: (date: string, todoList: TodoItem[], nextDailyNote: string) => Promise<unknown>;
+  upsertArchive: (date: string, todoList: TodoItem[], nextDailyNote: string, savedToDisk: boolean) => void;
+  onStartDay: (nextDate: string, carriedTodos: TodoItem[]) => void;
+};
+
+export function useTodoRollover({
+  currentTodoDate,
+  dayStartHour = 0,
+  markdownOptions,
+  noteTemplate = "",
+  todos,
+  dailyNote,
+  carryOverIncompleteTodos,
+  saveDirectory,
+  saveTodosToDisk,
+  upsertArchive,
+  onStartDay,
+}: TodoRolloverOptions) {
+  const checkedDayStart = useRef<number | null>(null);
+
+  const rolloverToToday = useCallback(
+    async (nextDate: string) => {
+      const signature = getTodoSignature(currentTodoDate, todos, dailyNote, markdownOptions);
+      const lastSavedSignature = loadLastSavedSignature();
+      const carryOverCreatedAt = Date.now();
+      const carriedTodos = carryOverIncompleteTodos
+        ? todos
+            .filter((todo) => !todo.completed)
+            .map((todo, index) => {
+              const carriedFrom = nextCarriedFrom(todo, currentTodoDate);
+              return {
+                ...withoutFocus(todo),
+                id: createTodoId(),
+                completed: false,
+                createdAt: carryOverCreatedAt + index,
+                ...(carriedFrom ? { carriedFrom } : {}),
+              };
+            })
+        : [];
+
+      if ((todos.length > 0 || hasNoteContent(dailyNote, noteTemplate)) && signature !== lastSavedSignature) {
+        if (saveDirectory.trim()) {
+          try {
+            await saveTodosToDisk(currentTodoDate, todos, dailyNote);
+          } catch (error) {
+            console.error("Failed to auto-save todo markdown", error);
+            upsertArchive(currentTodoDate, todos, dailyNote, false);
+          }
+        } else {
+          upsertArchive(currentTodoDate, todos, dailyNote, false);
+        }
+      }
+
+      onStartDay(nextDate, carriedTodos);
+
+      if (carriedTodos.length > 0) {
+        clearLastSavedSignature();
+      } else {
+        saveLastSavedSignature(getTodoSignature(nextDate, [], noteTemplate, markdownOptions));
+      }
+    },
+    [carryOverIncompleteTodos, currentTodoDate, dailyNote, markdownOptions, noteTemplate, onStartDay, saveDirectory, saveTodosToDisk, todos, upsertArchive],
+  );
+
+  useEffect(() => {
+    if (checkedDayStart.current === dayStartHour) return;
+    checkedDayStart.current = dayStartHour;
+    const today = getLogicalTodoDate(new Date(), dayStartHour);
+    if (!isDateString(currentTodoDate) || currentTodoDate < today) {
+      void rolloverToToday(today);
+    }
+  }, [currentTodoDate, dayStartHour, rolloverToToday]);
+
+  useEffect(() => {
+    const checkForNewDay = () => {
+      const today = getLogicalTodoDate(new Date(), dayStartHour);
+      if (!isDateString(currentTodoDate) || currentTodoDate < today) {
+        void rolloverToToday(today);
+      }
+    };
+    return visibilityInterval(checkForNewDay, 30_000);
+  }, [currentTodoDate, dayStartHour, rolloverToToday]);
+}

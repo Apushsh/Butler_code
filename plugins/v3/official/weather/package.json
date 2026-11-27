@@ -1,0 +1,112 @@
+{
+  "name": "@fuyu/weather",
+  "version": "1.5.0",
+  "type": "module",
+  "description": "Current weather and the next few days' forecast on the island, with a heads-up before it rains.",
+  "keywords": [
+    "天气",
+    "天气预报",
+    "气温",
+    "温度",
+    "下雨",
+    "降水",
+    "空气质量",
+    "AQI",
+    "紫外线",
+    "极端天气",
+    "weather",
+    "forecast",
+    "temperature",
+    "rain",
+    "air quality",
+    "uv"
+  ],
+  "license": "MIT",
+  "author": "TixXin",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev --official",
+    "build": "fuyu-plugin build --official",
+    "check": "fuyu-plugin check --official --market",
+    "package": "fuyu-plugin pack --official",
+    "typecheck": "tsc",
+    "lint": "eslint ."
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "天气",
+      "en": "Weather"
+    },
+    "description": {
+      "zh-CN": "在岛上看现在的天气和未来几天的预报，快下雨时提醒你带伞。",
+      "en": "Current weather and the next few days' forecast on the island, with a heads-up before it rains."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：现在、逐小时和 7 天",
+          "en": "Island page: now, hourly and 7 days"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：天气图标和现在的温度",
+          "en": "Collapsed bar: a weather icon and the current temperature"
+        }
+      }
+    ],
+    "categories": [
+      "information"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "inject": {
+      "required": [
+        "commands",
+        "messages/v1"
+      ],
+      "optional": [
+        "http",
+        "settings"
+      ]
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "island.widget/v1",
+      "settings.section/v1"
+    ],
+    "commands": [
+      {
+        "id": "refresh",
+        "title": {
+          "zh-CN": "立即刷新天气",
+          "en": "Refresh weather now"
+        }
+      }
+    ],
+    "network": [
+      "api.open-meteo.com",
+      "geocoding-api.open-meteo.com",
+      "air-quality-api.open-meteo.com",
+      "photon.komoot.io",
+      "www.nmc.cn",
+      "api.met.no",
+      "wttr.in"
+    ]
+  }
+}

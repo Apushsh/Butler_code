@@ -1,0 +1,110 @@
+{
+  "name": "@fuyu/alarm",
+  "version": "1.2.0",
+  "type": "module",
+  "description": "Rings on the island at the time you set, repeats on the weekdays you pick, and lets you snooze.",
+  "keywords": [
+    "闹钟",
+    "闹铃",
+    "起床",
+    "提醒",
+    "贪睡",
+    "alarm",
+    "alarm clock",
+    "wake up",
+    "reminder",
+    "snooze"
+  ],
+  "author": "TixXin",
+  "license": "MIT",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev",
+    "build": "fuyu-plugin build",
+    "check": "fuyu-plugin check --market",
+    "package": "fuyu-plugin pack",
+    "typecheck": "tsc"
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "闹钟",
+      "en": "Alarm"
+    },
+    "description": {
+      "zh-CN": "到点在岛上响铃提醒，可以按星期重复，没睡醒就贪睡几分钟。",
+      "en": "Rings on the island at the time you set, repeats on the weekdays you pick, and lets you snooze."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：添加闹钟，看全部闹钟",
+          "en": "Island page: add alarms and see them all"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：可以常驻显示下一次闹钟",
+          "en": "Collapsed bar: can always show the next alarm"
+        }
+      },
+      {
+        "path": "screenshots/ringing.png",
+        "caption": {
+          "zh-CN": "到点在岛上响铃，可以贪睡",
+          "en": "Rings on the island, with snooze"
+        }
+      }
+    ],
+    "categories": [
+      "productivity",
+      "utilities"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "inject": {
+      "required": [
+        "commands",
+        "messages/v1"
+      ],
+      "optional": [
+        "reminders/v1"
+      ]
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "island.runner/v1",
+      "settings.section/v1"
+    ],
+    "commands": [
+      {
+        "id": "dismiss",
+        "title": {
+          "zh-CN": "停止闹钟响铃",
+          "en": "Dismiss ringing alarm"
+        }
+      },
+      {
+        "id": "snooze",
+        "title": {
+          "zh-CN": "闹钟贪睡",
+          "en": "Snooze ringing alarm"
+        }
+      }
+    ]
+  }
+}

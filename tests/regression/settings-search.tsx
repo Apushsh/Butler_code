@@ -1,0 +1,190 @@
+import { act, StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "../../src/styles/tokens.css";
+import "../../src/styles/fonts.css";
+import "../../src/styles/base.css";
+import { SettingsWindow } from "../../src/windows/settings/SettingsWindow";
+import { isSearchIndexLoaded } from "../../src/windows/settings/SettingsSidebar";
+import { DEFAULT_SETTINGS } from "../../src/lib/settings/settings";
+import { I18nProvider, LOCALE_STORAGE_KEY } from "../../src/i18n";
+import searchIndex from "../../src/windows/settings/searchIndex.json";
+import whatsNewIndex from "../../src/windows/settings/whatsNewIndex.json";
+import type { SettingsRowText, SettingsSearchEntry } from "../../src/windows/settings/settingsSearch";
+import { entryOf, sidebarItemOf, type SettingsCategory } from "../../src/windows/settings/categories";
+import "./settingsMocks";
+
+const query = new URLSearchParams(location.search);
+const collect = query.get("collect");
+Object.assign(globalThis, { isTauri: true, IS_REACT_ACT_ENVIRONMENT: true });
+const original = new Map(Object.entries(localStorage).filter(([key]) => key.startsWith("fuyu-")));
+window.addEventListener("beforeunload", () => {
+  for (const key of Object.keys(localStorage).filter((key) => key.startsWith("fuyu-"))) {
+    if (!original.has(key)) localStorage.removeItem(key);
+  }
+  for (const [key, value] of original) localStorage.setItem(key, value);
+});
+for (const key of Object.keys(localStorage).filter((key) => key.startsWith("fuyu-"))) localStorage.removeItem(key);
+localStorage.setItem(LOCALE_STORAGE_KEY, collect === "en" ? "en" : "zh-CN");
+localStorage.setItem("fuyu-save-directory", "");
+localStorage.setItem("fuyu-qq-notification-access-requested", "true");
+if (query.get("state") === "on") {
+  const allOn = Object.fromEntries(Object.entries(DEFAULT_SETTINGS).map(([key, value]) => [key, typeof value === "boolean" ? true : value]));
+  localStorage.setItem("fuyu-settings", JSON.stringify({ ...allOn, expandTrigger: "click", appearanceMode: "liquidGlass", glassColorSource: "custom", tuckStyle: "hidden", tuckHintColor: "custom" }));
+  localStorage.setItem("fuyu-agent-push", JSON.stringify({ enabled: true }));
+  localStorage.setItem("fuyu-voice-input", JSON.stringify({ enabled: true }));
+  localStorage.setItem("fuyu-agent-approval", JSON.stringify({ onIsland: true, whenInFront: true }));
+  localStorage.setItem("fuyu-agent-sounds", JSON.stringify({ enabled: true, quietHours: { enabled: true, start: "22:00", end: "08:00" } }));
+}
+
+const root = createRoot(document.getElementById("root")!);
+const results = document.getElementById("results")!;
+const messages: string[] = [];
+const check = (condition: unknown, message: string) => {
+  if (!condition) throw new Error(message);
+  messages.push(`PASS ${message}`);
+};
+const wait = (ms: number) => act(() => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+const text = (element: Element | null | undefined) => (element?.textContent ?? "").replace(/\s+/g, " ").trim();
+const categories = () => [...document.querySelectorAll<HTMLElement>(".settings-sidebar__item[data-category]")].map((item) => item.dataset.category!);
+const openPage = async (category: string) => {
+  const page = category as SettingsCategory;
+  await act(async () => { document.querySelector<HTMLButtonElement>(`.settings-sidebar__item[data-category='${sidebarItemOf(page)}']`)!.click(); });
+  if (entryOf(page)) await act(async () => { document.querySelector<HTMLButtonElement>(`.settings-tabs__tab[data-tab='${page}']`)!.click(); });
+  await wait(60);
+};
+const allPages = async () => {
+  const pages: string[] = [];
+  for (const item of categories()) {
+    await openPage(item);
+    const tabs = [...document.querySelectorAll<HTMLElement>(".settings-tabs__tab")].map((tab) => tab.dataset.tab!);
+    pages.push(...(tabs.length > 0 ? tabs : [item]));
+  }
+  return pages;
+};
+
+function rowsOnPage(within = ".editor-panel"): (SettingsRowText & { since?: string; indent?: boolean })[] {
+  const rows = [...document.querySelectorAll<HTMLElement>(`${within} .settings-row`)].filter((row) => !row.closest("[data-search='off']"));
+  return rows.flatMap((row) => {
+    const title = text(row.querySelector(".settings-row__title"));
+    if (!title) return [];
+    const descEl = row.querySelector(".settings-row__description");
+    const description = descEl && !descEl.querySelector("[data-search='off']") ? text(descEl) : "";
+    const options = [...row.querySelectorAll(".settings-row__control option, .settings-row__control .settings-choice__option")].map(text).filter(Boolean);
+    const group = text(row.closest(".settings-group")?.querySelector(".settings-group__title"));
+    const since = row.dataset.since?.trim() || "";
+    const indent = row.classList.contains("settings-row--indent");
+    return [{ group, title, ...(description ? { description } : {}), ...(options.length ? { options } : {}), ...(since ? { since } : {}), ...(indent ? { indent: true } : {}) }];
+  });
+}
+
+const type = async (value: string) => {
+  const input = document.querySelector<HTMLInputElement>(".settings-sidebar__search input")!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  await act(async () => {
+    input.focus();
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  for (let spent = 0; value.trim() !== "" && !isSearchIndexLoaded() && spent < 2000; spent += 20) {
+    await wait(20);
+  }
+};
+const pressEnter = () => act(async () => {
+  document.querySelector<HTMLInputElement>(".settings-sidebar__search input")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+});
+const hits = (page?: string) =>
+  [...document.querySelectorAll<HTMLElement>(`.settings-sidebar__hit${page ? `[data-page='${page}']` : ""}`)].map((hit) => text(hit));
+const current = () =>
+  document.querySelector<HTMLElement>(".settings-tabs__tab--active")?.dataset.tab ?? document.querySelector<HTMLElement>(".settings-sidebar__item--active")?.dataset.category;
+
+try {
+  await act(async () => { root.render(<StrictMode><I18nProvider><SettingsWindow /></I18nProvider></StrictMode>); });
+  if (collect) {
+    const rows: ({ page: string } & SettingsRowText)[] = [];
+    for (const category of await allPages()) {
+      await openPage(category);
+      rows.push(...rowsOnPage().map((row) => ({ page: category, ...row })));
+      for (const tab of [...document.querySelectorAll<HTMLElement>(".editor-panel [data-search-tab][aria-selected='false']")]) {
+        await act(async () => { tab.click(); });
+        await wait(60);
+        rows.push(...rowsOnPage(".editor-panel [role='tabpanel']").map((row) => ({ page: category, ...row })));
+      }
+    }
+    document.documentElement.dataset.index = JSON.stringify(rows);
+    results.textContent = `PASS collected ${rows.length} rows\nALL PASS`;
+    document.documentElement.dataset.testResult = "passed";
+  } else {
+    const entries = searchIndex.entries as SettingsSearchEntry[];
+    check(entries.length > 50, "The index lists the settings of every page (run pnpm settings:index if it is empty)");
+    const missing: string[] = [];
+    for (const category of await allPages()) {
+      await openPage(category);
+      const known = new Set(entries.filter((entry) => entry.page === category).map((entry) => entry["zh-CN"].title));
+      for (const row of rowsOnPage()) if (!known.has(row.title)) missing.push(`${category} › ${row.title}`);
+    }
+    check(missing.length === 0, `Every row the pages show is in searchIndex.json${missing.length ? ` (missing: ${missing.join("; ")}; run pnpm settings:index)` : ""}`);
+
+    const whatsNewEntries = whatsNewIndex.entries as { page: string; since: string; "zh-CN": { title: string } }[];
+    const expectedWhatsNew = entries.filter((entry) => entry.since).map((entry) => `${entry.page}:${entry.since}:${entry["zh-CN"].title}`);
+    const actualWhatsNew = whatsNewEntries.map((entry) => `${entry.page}:${entry.since}:${entry["zh-CN"].title}`);
+    check(expectedWhatsNew.join("\n") === actualWhatsNew.join("\n"), "whatsNewIndex.json stays in sync with since entries in searchIndex.json");
+    check(
+      whatsNewEntries.some((entry) => entry.page === "general" && entry["zh-CN"].title === "代理模式"),
+      "Auto-detected new settings appear in whatsNewIndex.json without manual since props",
+    );
+    await type("会话来源");
+    check(hits("agentSessions").includes("会话来源"), "A setting's title finds the setting under its page");
+    await pressEnter();
+    await wait(120);
+    check(current() === "agentSessions", "Enter on a title hit opens its page");
+    const found = document.querySelector(".editor-panel .settings-row--found");
+    check(text(found?.querySelector(".settings-row__title")) === "会话来源", "…and marks the row it found");
+
+    await type("弹出提醒");
+    check(document.querySelector(".settings-sidebar__hit--tab[data-tab='agentAlerts']") && categories().includes("agentAlerts"),
+      "Words written together find a page whose keywords have them apart, shown as a tab under its sidebar item");
+    await type("隐藏已退出的会话");
+    check(hits("agentSessions").includes("隐藏已退出的会话"), "A switch's title finds it");
+    await type("进程");
+    check(hits("agentSessions").includes("隐藏已退出的会话"), "A word of a setting's description finds it");
+    await type("zzqxjv");
+    check(document.querySelector(".settings-sidebar__empty"), "Nothing found says so");
+    await type("天气插件");
+    await wait(200);
+    check(document.querySelector(".settings-sidebar__empty") && !document.querySelector("[data-market-hits]"), "With the plugin host not connected there is no market group, only the empty message");
+    await type("hide sessions");
+    check(hits("agentSessions").includes("隐藏已退出的会话"), "English words find a setting in the Chinese interface, shown in Chinese");
+    await type("水母画风");
+    check(hits("islandLayout").includes("水母画风"), "A row behind another item's style tab is found too");
+    await pressEnter();
+    let behindTab: Element | null = null;
+    for (let spent = 0; !behindTab && spent < 2500; spent += 50) {
+      await wait(50);
+      behindTab = document.querySelector(".editor-panel [role='tabpanel'] .settings-row--found");
+    }
+    check(text(behindTab?.querySelector(".settings-row__title")) === "水母画风" && behindTab?.checkVisibility(), "…and opening it switches to that item's tab and marks the row");
+    await type("");
+    await openPage("themeStyle");
+    await act(async () => { [...document.querySelectorAll<HTMLButtonElement>(".editor-panel button")].find((button) => button.textContent === "液态玻璃")!.click(); });
+    await type("扫光");
+    await pressEnter();
+    await wait(120);
+    const folded = document.querySelector<HTMLElement>(".editor-panel .settings-row--found");
+    check(text(folded?.querySelector(".settings-row__title")) === "扫光" && folded?.closest<HTMLDetailsElement>("details.settings-advanced")?.open && folded.checkVisibility(),
+      "A hit inside a folded Advanced group unfolds it and marks the row");
+    await type("");
+    await openPage("themeStyle");
+    await act(async () => { [...document.querySelectorAll<HTMLButtonElement>(".editor-panel button")].find((button) => button.textContent === "经典")!.click(); });
+    await openPage("agentSessions");
+    await type("外观");
+    check(categories().includes("appearance"), "A page's name still finds the page");
+    for (let spent = 0; document.querySelector(".settings-row--found") && spent < 4000; spent += 50) await wait(50);
+    check(!document.querySelector(".settings-row--found"), "The found row's mark fades after a moment");
+
+    results.textContent = `${messages.join("\n")}\nALL PASS`;
+    document.documentElement.dataset.testResult = "passed";
+  }
+} catch (error) {
+  results.textContent = `${messages.join("\n")}\nFAIL ${error instanceof Error ? error.message : String(error)}`;
+  document.documentElement.dataset.testResult = "failed";
+}

@@ -1,0 +1,702 @@
+mod background;
+#[cfg(any(windows, test))]
+mod blank;
+#[cfg_attr(target_os = "macos", path = "capture_macos.rs")]
+mod capture;
+#[cfg_attr(target_os = "macos", path = "clipboard_macos.rs")]
+mod clipboard;
+mod delay;
+#[cfg_attr(target_os = "macos", path = "front_window_macos.rs")]
+mod front_window;
+mod history;
+mod history_text;
+#[cfg_attr(target_os = "macos", path = "hotkeys_macos.rs")]
+mod hotkeys;
+mod kept;
+mod long;
+mod output;
+mod pin;
+pub(crate) mod pin_commands;
+mod pin_edit;
+mod pin_store;
+pub(crate) mod qr;
+mod session;
+mod shortcuts;
+mod source;
+mod stitch;
+#[cfg_attr(target_os = "macos", path = "targets_macos.rs")]
+mod targets;
+pub(crate) mod window_shadow;
+#[cfg(test)]
+mod tests;
+
+use std::sync::Arc;
+
+use tauri::{AppHandle, Emitter, WebviewWindow};
+
+pub(crate) use output::is_screenshot_file;
+pub(crate) use output::sanitized_name;
+pub(crate) use pin::{forget as forget_pin, WINDOW_PREFIX as PIN_PREFIX};
+pub(crate) use session::WINDOW_PREFIX;
+pub(crate) const PLUGIN_ID: &str = "screenshot";
+const TEXT_EVENT: &str = "screenshot-text";
+const TRANSLATE_EVENT: &str = "screenshot-translate";
+const TAKEN_EVENT: &str = "screenshot-taken";
+const HISTORY_EVENT: &str = "screenshot-history-changed";
+const PASTE_TEXT_LIMIT: usize = 4000;
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Taken {
+    path: String,
+    thumbnail: Option<String>,
+    saved: bool,
+    source: Option<source::Source>,
+}
+
+fn announce(app: &AppHandle, picture: &Picture, path: &std::path::Path, saved: bool) {
+    let taken = Taken { path: path.display().to_string(), thumbnail: output::thumbnail(picture), saved, source: source::current() };
+    let _ = app.emit_to(crate::island::WINDOW_LABEL, TAKEN_EVENT, taken);
+}
+use output::Picture;
+use session::{OverlaySession, PixelRect};
+use targets::LocalTarget;
+
+pub(crate) fn init(app: &AppHandle) {
+    capture::prewarm();
+    hotkeys::init(app);
+    background::register(app);
+    output::prune_at_start(app);
+}
+
+pub(crate) fn cancel(app: &AppHandle) {
+    delay::cancel(app);
+    session::end(app);
+}
+
+pub(crate) fn is_enabled() -> bool {
+    crate::plugin_kernel::builtins::is_enabled(PLUGIN_ID) && hotkeys::is_enabled()
+}
+
+#[tauri::command]
+pub async fn screenshot_configure(
+    app: AppHandle,
+    enabled: bool,
+    shortcuts: Option<Vec<shortcuts::ShortcutConfig>>,
+    print_screen: Option<bool>,
+    history_days: Option<u32>,
+    history_text: Option<bool>,
+    delay_seconds: Option<u8>,
+) {
+    hotkeys::configure(enabled, shortcuts, print_screen);
+    if let Some(seconds) = delay_seconds {
+        delay::set_default_seconds(seconds);
+    }
+    if let Some(read) = history_text {
+        history_text::set_enabled(read);
+    }
+    if let Some(days) = history_days {
+        history::set_keep_days(days);
+        output::prune_at_start(&app);
+    }
+}
+
+pub(crate) fn is_capturing() -> bool {
+    session::id().is_some()
+}
+
+pub(super) fn is_capturable_own_window(label: &str) -> bool {
+    matches!(
+        label,
+        crate::translation::WINDOW_LABEL
+            | crate::clipboard_history::POPUP_WINDOW_LABEL
+            | crate::clipboard_history::preview_window::WINDOW_LABEL
+            | crate::settings_window::WINDOW_LABEL
+            | crate::tray_menu::WINDOW_LABEL
+    ) || label.starts_with(PIN_PREFIX)
+}
+
+pub(crate) fn start_from_tray(app: &AppHandle) {
+    if !is_enabled() {
+        return;
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        session::start(&app, session::Mode::Region);
+    });
+}
+
+pub(crate) fn start_delayed_from_tray(app: &AppHandle, seconds: Option<u8>) {
+    if !is_enabled() {
+        return;
+    }
+    delay::start(app, seconds);
+}
+
+#[tauri::command]
+pub fn screenshot_shortcut_status() -> Vec<shortcuts::ShortcutStatus> {
+    hotkeys::status()
+}
+
+#[tauri::command]
+pub fn screenshot_start(app: AppHandle, mode: session::Mode) -> Result<(), String> {
+    if !is_enabled() {
+        return Err("Screenshots are turned off in Settings.".to_string());
+    }
+    delay::cancel(&app);
+    session::start(&app, mode);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn screenshot_start_delayed(app: AppHandle, seconds: Option<u8>) -> Result<(), String> {
+    if !is_enabled() {
+        return Err("Screenshots are turned off in Settings.".to_string());
+    }
+    delay::start(&app, seconds);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn screenshot_cancel_delay(app: AppHandle) -> bool {
+    delay::cancel(&app)
+}
+
+#[tauri::command]
+pub fn screenshot_delay_status() -> delay::DelayState {
+    delay::status()
+}
+
+#[tauri::command]
+pub fn screenshot_session(window: WebviewWindow) -> Option<OverlaySession> {
+    session::current(window.label())
+}
+
+#[tauri::command]
+pub async fn screenshot_frame(window: WebviewWindow) -> Result<tauri::ipc::Response, String> {
+    wait_for_capture().await;
+    let Some((id, width, height, rgba)) = session::frame_with_meta(window.label()) else {
+        return Err("No screenshot is open.".to_string());
+    };
+    if deliver_shared_frame(&window, id, width, height, &rgba).await {
+        return Ok(tauri::ipc::Response::new(Vec::new()));
+    }
+    Ok(tauri::ipc::Response::new(Arc::unwrap_or_clone(rgba)))
+}
+
+#[cfg(windows)]
+async fn deliver_shared_frame(
+    window: &WebviewWindow,
+    id: u64,
+    width: u32,
+    height: u32,
+    rgba: &Arc<Vec<u8>>,
+) -> bool {
+    let window = window.clone();
+    let rgba = Arc::clone(rgba);
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::win32::webview_shared_buffer::post_rgba(&window, id, width, height, rgba).is_ok()
+    })
+    .await
+    .unwrap_or(false)
+}
+
+#[cfg(not(windows))]
+async fn deliver_shared_frame(
+    _window: &WebviewWindow,
+    _id: u64,
+    _width: u32,
+    _height: u32,
+    _rgba: &Arc<Vec<u8>>,
+) -> bool {
+    false
+}
+
+async fn wait_for_capture() {
+    let _ = tauri::async_runtime::spawn_blocking(session::wait_for_capture).await;
+}
+
+#[tauri::command]
+pub fn screenshot_targets(window: WebviewWindow) -> Vec<LocalTarget> {
+    session::targets_for(window.label())
+}
+
+#[tauri::command]
+pub fn screenshot_overlay_ready(window: WebviewWindow, session: u64) {
+    session::overlay_ready(&window, session);
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Action {
+    Copy,
+    Save,
+    Pin,
+    Text,
+    Translate,
+    Long,
+    Record,
+}
+
+impl Action {
+    pub(crate) fn parse(text: &str) -> Option<Self> {
+        match text {
+            "copy" => Some(Self::Copy),
+            "save" => Some(Self::Save),
+            "pin" => Some(Self::Pin),
+            "text" => Some(Self::Text),
+            "translate" => Some(Self::Translate),
+            "long" => Some(Self::Long),
+            "record" => Some(Self::Record),
+            _ => None,
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn screenshot_finish(app: AppHandle, window: WebviewWindow, request: tauri::ipc::Request<'_>) -> Result<Option<String>, String> {
+    let tauri::ipc::InvokeBody::Raw(body) = request.body() else {
+        return Err("The screenshot pixels must come as raw bytes.".to_string());
+    };
+    let header = |name: &str| request.headers().get(name).and_then(|value| value.to_str().ok());
+    let number = |name: &str| header(name).and_then(|value| value.parse::<u32>().ok());
+    let action = header("x-action").and_then(Action::parse).ok_or_else(|| "Unknown screenshot action.".to_string())?;
+    let (width, height) = number("x-width").zip(number("x-height")).ok_or_else(|| "The screenshot size is missing.".to_string())?;
+    let (left, top) = (number("x-left").unwrap_or(0), number("x-top").unwrap_or(0));
+    wait_for_capture().await;
+    let (width, height, rgba) = session::selection(window.label(), PixelRect { x: left, y: top, width, height }).ok_or_else(|| "Nothing is selected.".to_string())?;
+    let mut picture = Picture { width, height, rgba };
+    let window_shadow = header("x-window-shadow") == Some("true") && matches!(action, Action::Copy | Action::Save | Action::Pin);
+    let native_handle = if window_shadow { number("x-window-id").and_then(session::native_window) } else { None };
+    let scale = session::scale(window.label()).unwrap_or_else(|| window.scale_factor().unwrap_or(1.0));
+    let mut used_native_shadow = false;
+    if window_shadow {
+        if body.is_empty() {
+            if let Some(handle) = native_handle {
+                if let Some((w, h, rgba)) = tauri::async_runtime::spawn_blocking(move || capture::window_with_native_shadow(handle, scale)).await.ok().flatten() {
+                    picture = Picture { width: w, height: h, rgba };
+                    used_native_shadow = true;
+                } else if let Some((w, h, rgba)) = tauri::async_runtime::spawn_blocking(move || capture::window_image(handle, scale)).await.ok().flatten() {
+                    picture = Picture { width: w, height: h, rgba };
+                }
+            }
+        } else if let Some(handle) = native_handle {
+            if let Some((w, h, rgba)) = tauri::async_runtime::spawn_blocking(move || capture::window_image(handle, scale)).await.ok().flatten() {
+                if (w, h) == (picture.width, picture.height) {
+                    picture = Picture { width: w, height: h, rgba };
+                }
+            }
+        }
+    }
+    if !body.is_empty() {
+        let patch = PixelRect {
+            x: number("x-patch-left").unwrap_or(0),
+            y: number("x-patch-top").unwrap_or(0),
+            width: number("x-patch-width").unwrap_or(0),
+            height: number("x-patch-height").unwrap_or(0),
+        };
+        if !output::lay_over(&mut picture, patch, body) {
+            return Err("The annotated pixels do not fit the selection.".to_string());
+        }
+    }
+    if window_shadow && !used_native_shadow {
+        picture = window_shadow::add_shadow(&picture, scale);
+    }
+    match action {
+        Action::Long => {
+            let at = session::global_point(window.label(), left, top).ok_or_else(|| "No screenshot is open.".to_string())?;
+            let (width, height) = pin::shown_size((picture.width, picture.height), session::scale(window.label()).unwrap_or(1.0));
+            long::start(&app, window.label().to_string(), (at.0, at.1, width, height), deliver_long);
+            Ok(None)
+        }
+        Action::Record => {
+            let (x, y) = session::global_point(window.label(), left, top).ok_or_else(|| "No screenshot is open.".to_string())?;
+            let folder_name = header("x-folder-name").and_then(percent_decode).unwrap_or_default();
+            session::end(&app);
+            let flag = |name: &str| header(name).map(|value| value == "true");
+            let request = crate::recording::Request {
+                x,
+                y,
+                width: picture.width,
+                height: picture.height,
+                fps: number("x-fps"),
+                quality: header("x-quality").map(str::to_string),
+                system_audio: flag("x-system-audio"),
+                microphone: flag("x-microphone"),
+                gif: Some(header("x-format") == Some("gif")),
+                own_windows: flag("x-own-windows"),
+                folder_name,
+            };
+            crate::recording::begin(&app, request);
+            Ok(None)
+        }
+        Action::Copy => {
+            session::end(&app);
+            if let Some(path) = output::copy(&app, &picture).inspect_err(|error| eprintln!("{error}"))? {
+                announce(&app, &picture, &path, false);
+            }
+            Ok(None)
+        }
+        Action::Save => {
+            let folder = header("x-folder").and_then(percent_decode);
+            let name = header("x-folder-name").and_then(percent_decode).unwrap_or_default();
+            let path = output::save(&picture, folder.as_deref(), &name)?;
+            session::end(&app);
+            remember(&app, &picture);
+            announce(&app, &picture, &path, true);
+            Ok(Some(path.display().to_string()))
+        }
+        Action::Pin => {
+            let at = session::global_point(window.label(), left, top).ok_or_else(|| "No screenshot is open.".to_string())?;
+            let scale = window.scale_factor().unwrap_or(1.0);
+            remember(&app, &picture);
+            pin::open(&app, picture, at, scale, session::id());
+            Ok(None)
+        }
+        Action::Text | Action::Translate => {
+            session::end(&app);
+            let text = read_text(picture).await;
+            if action == Action::Translate {
+                let _ = app.emit_to(crate::island::WINDOW_LABEL, TRANSLATE_EVENT, text);
+            } else {
+                if !text.is_empty() {
+                    clipboard::copy_text(&text)?;
+                }
+                let _ = app.emit(TEXT_EVENT, text);
+            }
+            Ok(None)
+        }
+    }
+}
+
+fn deliver_long(app: &AppHandle, ending: long::Ending, picture: Picture) {
+    session::end(app);
+    match ending {
+        long::Ending::Cancel => {}
+        long::Ending::Copy => match output::copy(app, &picture) {
+            Ok(Some(path)) => announce(app, &picture, &path, false),
+            Ok(None) => {}
+            Err(error) => eprintln!("{error}"),
+        },
+        long::Ending::Save { folder, name } => match output::save(&picture, folder.as_deref(), &name) {
+            Ok(path) => {
+                remember(app, &picture);
+                announce(app, &picture, &path, true);
+            }
+            Err(error) => eprintln!("the long screenshot was not saved: {error}"),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn screenshot_long_bar(window: WebviewWindow, x: f64, y: f64, width: f64, height: f64) {
+    long::set_bar(window.label(), (x, y, width, height));
+}
+
+#[tauri::command]
+pub fn screenshot_long_pause(paused: Option<bool>) -> Option<bool> {
+    long::set_paused(paused)
+}
+
+#[tauri::command]
+pub fn screenshot_long_end(action: String, folder: Option<String>, folder_name: Option<String>) -> Result<(), String> {
+    let ending = match action.as_str() {
+        "copy" => long::Ending::Copy,
+        "save" => long::Ending::Save { folder: folder.filter(|folder| !folder.trim().is_empty()), name: folder_name.unwrap_or_default() },
+        "cancel" => long::Ending::Cancel,
+        _ => return Err("Unknown way to end the long screenshot.".to_string()),
+    };
+    if let long::Ending::Save { folder: Some(folder), .. } = &ending {
+        output::chosen_folder(folder)?;
+    }
+    if long::end_with(ending) { Ok(()) } else { Err("No long screenshot is running.".to_string()) }
+}
+
+fn remember(app: &AppHandle, picture: &Picture) {
+    let app = app.clone();
+    let png = match output::encode_png(picture) {
+        Ok(png) => png,
+        Err(error) => {
+            eprintln!("screenshot not kept in the history: {error}");
+            return;
+        }
+    };
+    std::thread::spawn(move || {
+        match output::keep_png(&app, &png) {
+            Ok(_) => {
+                let _ = app.emit(HISTORY_EVENT, ());
+            }
+            Err(error) => eprintln!("screenshot not kept in the history: {error}"),
+        }
+    });
+}
+
+fn history_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    output::screenshots_dir(app).ok_or_else(|| "The app data folder is unavailable.".to_string())
+}
+
+#[tauri::command]
+pub async fn screenshot_history(app: AppHandle) -> Result<Vec<history::HistoryItem>, String> {
+    let dir = history_dir(&app)?;
+    tauri::async_runtime::spawn_blocking(move || history::list(&dir))
+        .await
+        .map_err(|error| format!("Failed to list the screenshots: {error}"))
+}
+
+#[tauri::command]
+pub async fn screenshot_history_copy(app: AppHandle, path: String) -> Result<(), String> {
+    let path = history::history_file(&history_dir(&app)?, &path)?;
+    tauri::async_runtime::spawn_blocking(move || output::copy_file(&path))
+        .await
+        .map_err(|error| format!("Failed to copy the screenshot: {error}"))?
+}
+
+#[tauri::command]
+pub async fn screenshot_history_pin(app: AppHandle, path: String) -> Result<(), String> {
+    let dir = history_dir(&app)?;
+    let path = history::history_file(&dir, &path).or_else(|_| kept::kept_file(&dir, &path))?;
+    let picture = tauri::async_runtime::spawn_blocking(move || history::read_picture(&path))
+        .await
+        .map_err(|error| format!("Failed to read the screenshot: {error}"))??;
+    let pointer = crate::island::screen::cursor_position().map(|(x, y)| (x.round() as i32, y.round() as i32));
+    let monitor = match pointer {
+        Some((x, y)) => app.monitor_from_point(f64::from(x), f64::from(y)).ok().flatten(),
+        None => None,
+    }
+    .or_else(|| app.primary_monitor().ok().flatten())
+    .ok_or_else(|| "No monitor was found.".to_string())?;
+    let (position, size) = (crate::island::screen::monitor_origin(&monitor), crate::island::screen::monitor_size(&monitor));
+    let scale = monitor.scale_factor();
+    let shown = pin::shown_size((picture.width, picture.height), scale / capture::units_per_css(scale));
+    let at = history::pin_origin(pointer, (position.x, position.y, size.width, size.height), shown);
+    pin::open(&app, picture, at, scale, None);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn screenshot_history_delete(app: AppHandle, path: String) -> Result<(), String> {
+    let path = history::history_file(&history_dir(&app)?, &path)?;
+    std::fs::remove_file(&path).map_err(|error| format!("Failed to delete {}: {error}", path.display()))?;
+    history_text::remove(&path);
+    let _ = app.emit(HISTORY_EVENT, ());
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn screenshot_keep(app: AppHandle, path: String) -> Result<String, String> {
+    let dir = history_dir(&app)?;
+    let source = card_file(&path)?;
+    tauri::async_runtime::spawn_blocking(move || kept::keep(&dir, &source).map(|kept| kept.display().to_string()))
+        .await
+        .map_err(|error| format!("Failed to keep the screenshot: {error}"))?
+}
+
+#[tauri::command]
+pub async fn screenshot_kept_image(app: AppHandle, path: String) -> Result<Option<String>, String> {
+    let path = kept::kept_file(&history_dir(&app)?, &path)?;
+    tauri::async_runtime::spawn_blocking(move || history::read_picture(&path).ok().and_then(|picture| output::thumbnail(&picture)))
+        .await
+        .map_err(|error| format!("Failed to read the picture: {error}"))
+}
+
+pub(crate) fn offset_words(lines: Vec<Vec<crate::platform::ocr::OcrWord>>, left: u32, top: u32) -> Vec<Vec<crate::platform::ocr::OcrWord>> {
+    let (dx, dy) = (left as f32, top as f32);
+    lines
+        .into_iter()
+        .map(|words| words.into_iter().map(|word| crate::platform::ocr::OcrWord { x: word.x + dx, y: word.y + dy, ..word }).collect())
+        .collect()
+}
+
+#[tauri::command]
+pub async fn screenshot_find_words(window: WebviewWindow, x: u32, y: u32, width: u32, height: u32) -> Result<Vec<Vec<crate::platform::ocr::OcrWord>>, String> {
+    wait_for_capture().await;
+    let (cut_width, cut_height, rgba) = session::selection(window.label(), PixelRect { x, y, width, height }).ok_or_else(|| "Nothing is selected.".to_string())?;
+    let lines = tauri::async_runtime::spawn_blocking(move || crate::platform::ocr::recognize_words(cut_width, cut_height, &rgba))
+        .await
+        .map_err(|error| format!("Failed to read the text: {error}"))?
+        .unwrap_or_default();
+    Ok(offset_words(lines, x, y))
+}
+
+async fn read_text(picture: Picture) -> String {
+    tauri::async_runtime::spawn_blocking(move || crate::platform::ocr::recognize(picture.width, picture.height, &picture.rgba))
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+}
+
+pub(crate) fn pixels_fit(len: usize, width: u32, height: u32) -> bool {
+    width > 0 && height > 0 && (width as usize).checked_mul(height as usize).and_then(|pixels| pixels.checked_mul(4)) == Some(len)
+}
+
+pub(crate) fn percent_decode(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'%' {
+            let hex = text.get(index + 1..index + 3)?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            index += 3;
+        } else {
+            out.push(bytes[index]);
+            index += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+#[tauri::command]
+pub fn screenshot_cancel(app: AppHandle) {
+    if delay::cancel(&app) {
+        return;
+    }
+    if long::end_with(long::Ending::Cancel) {
+        return;
+    }
+    session::end(&app);
+}
+
+#[tauri::command]
+pub fn screenshot_pin_info(window: WebviewWindow) -> Option<pin::PinInfo> {
+    pin::info(window.label())
+}
+
+#[tauri::command]
+pub async fn screenshot_pin_image(window: WebviewWindow) -> Result<tauri::ipc::Response, String> {
+    let picture = pin::picture(window.label()).ok_or_else(|| "This pin is closed.".to_string())?;
+    output::encode_png(&picture).map(tauri::ipc::Response::new)
+}
+
+#[tauri::command]
+pub fn screenshot_pin_ready(app: AppHandle, window: WebviewWindow) {
+    pin::ready(&app, &window);
+}
+
+#[tauri::command]
+pub fn screenshot_pin_zoom(window: WebviewWindow, scale: f64, anchor_x: f64, anchor_y: f64) -> Result<(), String> {
+    pin::zoom(&window, scale, (anchor_x, anchor_y))
+}
+
+#[tauri::command]
+pub fn screenshot_pin_click_through(window: WebviewWindow, through: bool) -> Result<(), String> {
+    pin::click_through(&window, through)
+}
+
+#[tauri::command]
+pub async fn screenshot_pin_copy(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    let picture = pin::picture(window.label()).ok_or_else(|| "This pin is closed.".to_string())?;
+    output::copy(&app, &picture).map(|_| ())
+}
+
+#[tauri::command]
+pub async fn screenshot_pin_save(window: WebviewWindow, folder: Option<String>, folder_name: String) -> Result<String, String> {
+    let picture = pin::picture(window.label()).ok_or_else(|| "This pin is closed.".to_string())?;
+    output::save(&picture, folder.as_deref(), &folder_name).map(|path| path.display().to_string())
+}
+
+#[tauri::command]
+pub fn screenshot_pin_close(window: WebviewWindow) {
+    pin::close(&window);
+}
+
+#[tauri::command]
+pub fn screenshot_pins_toggle(app: AppHandle) {
+    pin::toggle_all(&app);
+}
+
+#[tauri::command]
+pub fn screenshot_pins_close_all(app: AppHandle) {
+    pin::close_all(&app);
+}
+
+fn card_file(path: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::PathBuf::from(path);
+    let png = path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("png"));
+    if png && path.is_file() {
+        Ok(path)
+    } else {
+        Err("The screenshot file is gone.".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn screenshot_drag(window: WebviewWindow, path: String) -> Result<(), String> {
+    let path = card_file(&path)?;
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let target = window.clone();
+    window
+        .run_on_main_thread(move || {
+            let _ = sender.send(capture::drag_file(&target, path));
+        })
+        .map_err(|error| format!("Failed to start the drag: {error}"))?;
+    tauri::async_runtime::spawn_blocking(move || receiver.recv())
+        .await
+        .map_err(|error| format!("Failed to finish the drag: {error}"))?
+        .map_err(|_| "The drag ended unexpectedly.".to_string())?
+}
+
+#[tauri::command]
+pub async fn screenshot_paste_to_front(path: String, text: Option<String>) -> Result<(), String> {
+    let path = card_file(&path)?;
+    let text = text.filter(|text| !text.trim().is_empty() && text.chars().count() <= PASTE_TEXT_LIMIT);
+    tauri::async_runtime::spawn_blocking(move || clipboard::paste_path(&path, text.as_deref()))
+        .await
+        .map_err(|error| format!("Failed to paste the screenshot: {error}"))?
+}
+
+#[cfg(windows)]
+pub(crate) fn coexist_refresh() {
+    hotkeys::coexist_refresh();
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::screenshot::screenshot_configure,
+            crate::screenshot::screenshot_shortcut_status,
+            crate::screenshot::screenshot_start,
+            crate::screenshot::screenshot_start_delayed,
+            crate::screenshot::screenshot_cancel_delay,
+            crate::screenshot::screenshot_delay_status,
+            crate::screenshot::screenshot_find_words,
+            crate::screenshot::qr::screenshot_read_qr,
+            crate::screenshot::screenshot_long_bar,
+            crate::screenshot::screenshot_long_pause,
+            crate::screenshot::screenshot_long_end,
+            crate::screenshot::screenshot_history,
+            crate::screenshot::screenshot_history_copy,
+            crate::screenshot::screenshot_history_pin,
+            crate::screenshot::screenshot_history_delete,
+            crate::screenshot::screenshot_keep,
+            crate::screenshot::screenshot_kept_image,
+            crate::screenshot::screenshot_session,
+            crate::screenshot::screenshot_frame,
+            crate::screenshot::screenshot_targets,
+            crate::screenshot::screenshot_overlay_ready,
+            crate::screenshot::screenshot_finish,
+            crate::screenshot::screenshot_cancel,
+            crate::screenshot::screenshot_pin_info,
+            crate::screenshot::screenshot_pin_image,
+            crate::screenshot::screenshot_pin_ready,
+            crate::screenshot::screenshot_pin_zoom,
+            crate::screenshot::screenshot_pin_click_through,
+            crate::screenshot::screenshot_pin_copy,
+            crate::screenshot::screenshot_pin_save,
+            crate::screenshot::screenshot_pin_close,
+            crate::screenshot::screenshot_pins_toggle,
+            crate::screenshot::screenshot_pins_close_all,
+            crate::screenshot::pin_commands::screenshot_pin_turn,
+            crate::screenshot::pin_commands::screenshot_pin_collapse,
+            crate::screenshot::pin_commands::screenshot_pin_reserve,
+            crate::screenshot::pin_commands::screenshot_pin_replace,
+            crate::screenshot::pin_commands::screenshot_pin_opacity,
+            crate::screenshot::pin_commands::screenshot_pin_text,
+            crate::screenshot::pin_commands::screenshot_pins_remember,
+            crate::screenshot::screenshot_drag,
+            crate::screenshot::screenshot_paste_to_front,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

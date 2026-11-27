@@ -1,0 +1,82 @@
+{
+  "name": "@fuyu/todo-ring",
+  "version": "1.1.1",
+  "type": "module",
+  "description": "A ring shows how much of today's to-do list is done, with what's next listed beside it.",
+  "keywords": [
+    "待办",
+    "进度",
+    "圆环",
+    "完成度",
+    "今日任务",
+    "todo",
+    "to-do",
+    "progress",
+    "ring",
+    "tasks"
+  ],
+  "author": "TixXin",
+  "license": "MIT",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev",
+    "build": "fuyu-plugin build",
+    "check": "fuyu-plugin check --market",
+    "package": "fuyu-plugin pack",
+    "typecheck": "tsc"
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "待办进度环",
+      "en": "To-do progress ring"
+    },
+    "description": {
+      "zh-CN": "用一个圆环显示今天的待办完成了多少，接下来要做的也列在旁边。",
+      "en": "A ring shows how much of today's to-do list is done, with what's next listed beside it."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：完成进度和接下来的待办",
+          "en": "Island page: progress and what's next"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：小圆环和完成数",
+          "en": "Collapsed bar: a small ring and the count"
+        }
+      }
+    ],
+    "categories": [
+      "todos",
+      "productivity"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "inject": {
+      "required": [
+        "todos/v1"
+      ]
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "settings.section/v1"
+    ]
+  }
+}

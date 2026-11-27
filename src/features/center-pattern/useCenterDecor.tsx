@@ -1,0 +1,64 @@
+import { useMemo, type ComponentProps } from "react";
+import { usePageHidden } from "../../lib/usePageHidden";
+import type { IslandDecor } from "../plugin-kernel/islandDecor";
+import { defineSlot, type IslandCollapsedCenterMeta, type SlotWidth } from "../plugin-kernel/slots";
+import { SlotView } from "../plugin-kernel/SlotView";
+import { useSlotEntries } from "../plugin-kernel/useSlotEntries";
+import { CenterPattern } from "./CenterPattern";
+import { AGENT_ICON_PET_HEIGHT, CollapsedCenter, agentIconMarkExtraWidth, centerHeight } from "./CollapsedCenter";
+import { centerPatternChoice, centerPatternSize, type AgentActivity } from "./centerSettings";
+import { petMoodOf } from "./patterns";
+import { PetSprite } from "./PetSprite";
+import { usePetMood } from "./usePetMood";
+import { usePetSheet } from "./usePetSheet";
+import { useMarkLightShown } from "./useStatusLightDecor";
+
+type CenterContext = ComponentProps<typeof CollapsedCenter> & { enabled: boolean };
+
+const centerSlot = defineSlot<CenterContext, IslandCollapsedCenterMeta<CenterContext>>("island.collapsed-center/v1");
+
+const NO_SETTINGS: Readonly<Record<string, unknown>> = {};
+
+type CenterDecorOptions = {
+  paused: boolean;
+  agents: readonly AgentActivity[];
+  markLight: boolean;
+  doze?: boolean;
+  enabled?: boolean;
+  settings?: Readonly<Record<string, unknown>>;
+};
+
+function slotWidth<Context>(width: SlotWidth<Context> | undefined, context: Context) {
+  return typeof width === "function" ? width(context) : width ?? 0;
+}
+
+export function useCenterDecor({ paused, agents, markLight, doze = false, enabled = false, settings = NO_SETTINGS }: CenterDecorOptions): IslandDecor {
+  const lightShown = useMarkLightShown(markLight);
+  const mood = usePetMood(agents, enabled, doze);
+  const choice = useMemo(() => centerPatternChoice(settings), [settings]);
+  const size = centerPatternSize(settings);
+  const sheet = usePetSheet(enabled ? choice.petId : null, settings);
+  const hidden = usePageHidden();
+  const still = paused || hidden;
+  const [centerEntry] = useSlotEntries(centerSlot);
+  const centerContext = useMemo<CenterContext>(
+    () => ({ enabled, choice, sheet, mood, paused: still, size }),
+    [enabled, choice, sheet, mood, still, size],
+  );
+  return useMemo(() => {
+    const decor: IslandDecor = {};
+    if (centerEntry && (centerEntry.shown?.(centerContext) ?? true)) {
+      decor.center = <SlotView slot={centerSlot} props={centerContext} />;
+      decor.centerWidth = slotWidth(centerEntry.width, centerContext);
+    }
+    if (enabled) {
+      const pet = typeof sheet === "string" ? sheet : null;
+      if (pet) decor.agentIcon = <PetSprite src={pet} mood={petMoodOf(mood)} paused={still} height={AGENT_ICON_PET_HEIGHT} />;
+      else if (choice.pattern === "mark" && !lightShown) {
+        decor.agentIcon = <CenterPattern pattern="mark" mood={mood} paused={still} height={centerHeight("mark", size)} />;
+        decor.agentIconWidth = agentIconMarkExtraWidth(size);
+      }
+    }
+    return decor;
+  }, [centerEntry, centerContext, enabled, choice, size, sheet, mood, still, lightShown]);
+}

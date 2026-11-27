@@ -1,0 +1,262 @@
+<body>
+  <div id="sidebar">
+    <nav aria-label="设置分类" class="settings-sidebar">
+      <div class="settings-sidebar__search">
+        <svg aria-hidden="true" class="lucide lucide-search" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+        <input aria-label="搜索设置" placeholder="搜索设置" spellcheck="false" type="text" value="">
+      </div>
+      <div class="settings-sidebar__list">
+        <ul class="settings-sidebar__top">
+          <li>
+            <button class="settings-sidebar__item" data-category="overview" type="button">
+              <svg aria-hidden="true" class="lucide lucide-compass" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+              <span>
+                概览
+              </span>
+            </button>
+          </li>
+        </ul>
+        <section aria-label="基础" class="settings-sidebar__group">
+          <button aria-expanded="true" aria-label="折叠「基础」" class="settings-sidebar__folder settings-sidebar__folder--holds-active" data-group="basics" type="button">
+            <svg aria-hidden="true" class="lucide lucide-settings2 lucide-settings-2" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+            <span>
+              基础
+            </span>
+            <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <ul class="settings-sidebar__children">
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="general" type="button">
+                <svg aria-hidden="true" class="lucide lucide-sliders-horizontal" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  通用
+                </span>
+              </button>
+            </li>
+            <li>
+              <button aria-current="page" class="settings-sidebar__item settings-sidebar__item--nested settings-sidebar__item--active" data-category="appearance" type="button">
+                <svg aria-hidden="true" class="lucide lucide-layout-template" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  外观
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="islandLayout" type="button">
+                <svg aria-hidden="true" class="lucide lucide-layout-dashboard" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  岛屿布局
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="sideDocks" type="button">
+                <svg aria-hidden="true" class="lucide lucide-panel-right" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  侧边翼
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="behavior" type="button">
+                <svg aria-hidden="true" class="lucide lucide-mouse-pointer-click" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  行为
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="shortcuts" type="button">
+                <svg aria-hidden="true" class="lucide lucide-keyboard" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  快捷键
+                </span>
+              </button>
+            </li>
+          </ul>
+        </section>
+        <section aria-label="功能" class="settings-sidebar__group">
+          <button aria-expanded="true" aria-label="折叠「功能」" class="settings-sidebar__folder" data-group="features" type="button">
+            <svg aria-hidden="true" class="lucide lucide-layout-grid" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+            <span>
+              功能
+            </span>
+            <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <ul class="settings-sidebar__children">
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="todos" type="button">
+                <svg aria-hidden="true" class="lucide lucide-list-todo" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  待办
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="calendar" type="button">
+                <svg aria-hidden="true" class="lucide lucide-calendar-days" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  日历
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="music" type="button">
+                <svg aria-hidden="true" class="lucide lucide-music" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  音乐
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="translation" type="button">
+                <svg aria-hidden="true" class="lucide lucide-languages" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  翻译
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="clipboard" type="button">
+                <svg aria-hidden="true" class="lucide lucide-clipboard-list" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  剪贴板
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="shelf" type="button">
+                <svg aria-hidden="true" class="lucide lucide-inbox" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  文件中转
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="screenshot" type="button">
+                <svg aria-hidden="true" class="lucide lucide-crop" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  截图
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="voiceInput" type="button">
+                <svg aria-hidden="true" class="lucide lucide-mic" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  语音输入
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="behaviorAlerts" type="button">
+                <svg aria-hidden="true" class="lucide lucide-timer" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  计时与提醒
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="messages" type="button">
+                <svg aria-hidden="true" class="lucide lucide-message-circle" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  消息
+                </span>
+              </button>
+            </li>
+          </ul>
+        </section>
+        <section aria-label="AI Agent" class="settings-sidebar__group">
+          <button aria-expanded="true" aria-label="折叠「AI Agent」" class="settings-sidebar__folder" data-group="agents" type="button">
+            <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+            <span>
+              AI Agent
+            </span>
+            <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <ul class="settings-sidebar__children">
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agents" type="button">
+                <svg aria-hidden="true" class="lucide lucide-bot" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  Agent
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentAppearance" type="button">
+                <svg aria-hidden="true" class="lucide lucide-palette" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  外观
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentAlerts" type="button">
+                <svg aria-hidden="true" class="lucide lucide-bell" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  提醒
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="agentRemote" type="button">
+                <svg aria-hidden="true" class="lucide lucide-server" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  SSH 远程
+                </span>
+              </button>
+            </li>
+          </ul>
+        </section>
+        <section aria-label="扩展" class="settings-sidebar__group">
+          <button aria-expanded="true" aria-label="折叠「扩展」" class="settings-sidebar__folder" data-group="extensions" type="button">
+            <svg aria-hidden="true" class="lucide lucide-blocks" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+            <span>
+              扩展
+            </span>
+            <svg aria-hidden="true" class="lucide lucide-chevron-right settings-sidebar__chevron" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+          </button>
+          <ul class="settings-sidebar__children">
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="pluginsV3" type="button">
+                <svg aria-hidden="true" class="lucide lucide-blocks" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  插件
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="pluginMarket" type="button">
+                <svg aria-hidden="true" class="lucide lucide-store" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  插件市场
+                </span>
+              </button>
+            </li>
+            <li>
+              <button class="settings-sidebar__item settings-sidebar__item--nested" data-category="generalApi" type="button">
+                <svg aria-hidden="true" class="lucide lucide-cable" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+                <span>
+                  本机接口
+                </span>
+              </button>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <div class="settings-sidebar__footer">
+        <ul>
+          <li>
+            <button class="settings-sidebar__item" data-category="about" type="button">
+              <svg aria-hidden="true" class="lucide lucide-info" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+              <span>
+                关于
+              </span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+</body>

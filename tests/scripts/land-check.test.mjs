@@ -1,0 +1,88 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { attributedCommits, checksFor, docsOnly, needsRust, recordPass, releaseBumpOnly, versionMismatch, versionOnlyChange } from "../../scripts/land-check.mjs";
+
+test("a landing of Markdown docs alone runs the doc checks, except docs a test checks against the code", () => {
+  assert.equal(docsOnly(["docs/tasks/F1.md", "AGENTS.md"]), true);
+  assert.equal(docsOnly(["docs/plugins/services-and-slots.md"]), false);
+  assert.equal(docsOnly(["docs/plugins/README.md"]), true);
+  assert.equal(docsOnly(["docs/a.md", "scripts/x.mjs"]), false);
+  assert.equal(docsOnly([]), false);
+  assert.deepEqual(checksFor(["docs/tasks/F1.md"]), { frontend: "docs", rust: false });
+  assert.deepEqual(checksFor(["src-tauri/src/lib.rs", "docs/a.md"]), { frontend: "full", rust: true });
+  assert.deepEqual(checksFor(null), { frontend: "full", rust: true });
+});
+
+test("passed trees are remembered per kind, newest first, up to a limit", () => {
+  let passes = recordPass({}, "t1", ["check"], 1);
+  passes = recordPass(passes, "t1", ["cargo"], 2);
+  assert.deepEqual(passes.t1, { check: 1, cargo: 2 });
+  for (let i = 0; i < 45; i += 1) passes = recordPass(passes, `x${i}`, ["check"], 10 + i);
+  assert.equal(Object.keys(passes).length, 40);
+  assert.equal(passes.t1, undefined);
+  assert.ok(passes.x44);
+});
+
+test("commits carrying a Claude attribution line are caught", () => {
+  const commits = [
+    { subject: "feat: a", body: "feat: a\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>" },
+    { subject: "fix: b", body: "fix: b\n\nCo-Authored-By: Louis <x@y.z>" },
+    { subject: "docs: c", body: "docs: c\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)" },
+  ];
+  assert.deepEqual(attributedCommits(commits), ["feat: a", "docs: c"]);
+});
+
+test("only this repo's own commits are held to it; a contributor's may carry the line", () => {
+  const line = "\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>";
+  const commits = [
+    { subject: "feat: mine", author: "Me@Example.com", body: `feat: mine${line}` },
+    { subject: "feat: theirs", author: "louis@example.com", body: `feat: theirs${line}` },
+  ];
+  assert.deepEqual(attributedCommits(commits, "me@example.com"), ["feat: mine"]);
+  assert.deepEqual(attributedCommits(commits, ""), ["feat: mine", "feat: theirs"]);
+});
+
+test("cargo test runs only when a landing touches what the Rust side reads", () => {
+  assert.equal(needsRust(["src/App.tsx", "docs/plugins/README.md"]), false);
+  assert.equal(needsRust(["src-tauri/src/lib.rs"]), true);
+  assert.equal(needsRust(["src-tauri/src/agent_status/hooks/fuyu-agent-status.ps1"]), true);
+  assert.equal(needsRust(["scripts/release/release.mjs"]), false);
+  assert.equal(needsRust(["plugins/index.json"]), true);
+  assert.equal(needsRust([]), false);
+});
+
+test("a release bump that changes only the app version does not call for cargo test", () => {
+  const bump = ["package.json", "src-tauri/tauri.conf.json", "src-tauri/Cargo.toml", "src-tauri/Cargo.lock", "docs/releases/v0.3.6.md"];
+  const versionOnly = (file) => file !== "src-tauri/src/lib.rs";
+  assert.equal(needsRust(bump, versionOnly), false);
+  assert.equal(needsRust([...bump, "src-tauri/src/lib.rs"], versionOnly), true);
+  assert.deepEqual(checksFor(bump, versionOnly), { frontend: "release", rust: false });
+  assert.deepEqual(checksFor([...bump, "src/main.tsx"], versionOnly), { frontend: "full", rust: false });
+  assert.deepEqual(checksFor(bump, () => false), { frontend: "full", rust: true });
+  assert.equal(releaseBumpOnly(["docs/releases/v0.3.6.md"], versionOnly), false);
+});
+
+test("the four version fields must agree", () => {
+  const files = { "package.json": '{ "version": "1.2.3" }', "src-tauri/tauri.conf.json": '{ "version": "1.2.3" }', "src-tauri/Cargo.toml": '[package]\nname = "fuyu"\nversion = "1.2.3"\n', "src-tauri/Cargo.lock": '[[package]]\nname = "fuyu"\nversion = "1.2.3"\n' };
+  assert.equal(versionMismatch((file) => files[file]), null);
+  assert.match(versionMismatch((file) => (file === "package.json" ? '{ "version": "1.2.4" }' : files[file])), /disagree/);
+});
+
+test("a version file counts as version-only when nothing but the app version changed", () => {
+  const toml = (version, extra = "") => `[package]\nname = "fuyu"\nversion = "${version}"\n${extra}\n[dependencies]\nserde = "1"\n`;
+  assert.equal(versionOnlyChange("src-tauri/Cargo.toml", toml("0.3.5"), toml("0.3.6-beta.1")), true);
+  assert.equal(versionOnlyChange("src-tauri/Cargo.toml", toml("0.3.5"), toml("0.3.6").replace(/\n/g, "\r\n")), true);
+  assert.equal(versionOnlyChange("src-tauri/Cargo.toml", toml("0.3.5"), toml("0.3.6", 'edition = "2024"')), false);
+  assert.equal(versionOnlyChange("src-tauri/Cargo.toml", toml("0.3.5"), toml("0.3.6").replace('serde = "1"', 'serde = "2"')), false);
+
+  const lock = (app, dep) => `[[package]]\nname = "fuyu"\nversion = "${app}"\n\n[[package]]\nname = "serde"\nversion = "${dep}"\n`;
+  assert.equal(versionOnlyChange("src-tauri/Cargo.lock", lock("0.3.5", "1.0.1"), lock("0.3.6", "1.0.1")), true);
+  assert.equal(versionOnlyChange("src-tauri/Cargo.lock", lock("0.3.5", "1.0.1"), lock("0.3.6", "1.0.2")), false);
+
+  const conf = (version, name = "fly-island") => `{\n  "productName": "${name}",\n  "version": "${version}"\n}\n`;
+  assert.equal(versionOnlyChange("src-tauri/tauri.conf.json", conf("0.3.5"), conf("0.3.6")), true);
+  assert.equal(versionOnlyChange("src-tauri/tauri.conf.json", conf("0.3.5"), conf("0.3.6", "x")), false);
+
+  assert.equal(versionOnlyChange("src-tauri/src/lib.rs", "a", "a"), false);
+  assert.equal(versionOnlyChange("src-tauri/Cargo.toml", null, toml("0.3.6")), false);
+});

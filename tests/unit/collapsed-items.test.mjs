@@ -1,0 +1,103 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  arrangeCollapsedItems,
+  filterCollapsedItemEntries,
+  isCollapsedItemHidden,
+  moveCollapsedItem,
+  setCollapsedItemHidden,
+  setCollapsedItemShelf,
+  setCollapsedItemZone,
+  shelfIds,
+  zoneIds,
+} from "../../src/lib/settings/collapsedItems.ts";
+
+const offered = ["status-light", "mail", "update", "plugin:dev.a/clock", "device-use", "shelf", "music", "usage:claudeCode", "usage:codex", "session-count"];
+const ids = (placements) => placements.map(({ id, zone }) => `${zone[0]}:${id}`);
+
+test("with nothing saved, the layout is the bar as it was", () => {
+  const placements = arrangeCollapsedItems(offered, []);
+  assert.deepEqual(zoneIds(placements, "left", offered), ["status-light"]);
+  assert.deepEqual(zoneIds(placements, "right", offered), offered.slice(1));
+});
+
+test("a new item goes right after the item that comes before it by default", () => {
+  const saved = [{ id: "status-light", zone: "left" }, { id: "music", zone: "left" }, { id: "session-count", zone: "right" }, { id: "mail", zone: "right" }];
+  const placements = arrangeCollapsedItems(["status-light", "music", "session-count", "mail", "usage:glm", "update"], saved);
+  assert.deepEqual(ids(placements), ["l:status-light", "l:music", "r:session-count", "r:mail", "r:update", "r:usage:glm"]);
+  assert.deepEqual(ids(arrangeCollapsedItems(["session-count", "mail"], [{ id: "session-count", zone: "right" }])), ["r:mail", "r:session-count"]);
+});
+
+test("a saved item that is not offered keeps its place and comes back to it", () => {
+  const saved = [{ id: "plugin:dev.a/clock", zone: "left" }, { id: "status-light", zone: "left" }];
+  const placements = arrangeCollapsedItems(["status-light", "music"], saved);
+  assert.deepEqual(zoneIds(placements, "left", ["status-light", "music"]), ["status-light"]);
+  assert.deepEqual(zoneIds(placements, "left", ["status-light", "music", "plugin:dev.a/clock"]), ["plugin:dev.a/clock", "status-light"]);
+});
+
+test("moving skips items of the other zone and the ones not listed", () => {
+  const placements = arrangeCollapsedItems(offered, []);
+  const listed = offered.filter((id) => id !== "update");
+  const moved = moveCollapsedItem(placements, "plugin:dev.a/clock", -1, listed);
+  assert.deepEqual(zoneIds(moved, "right", offered).slice(0, 3), ["plugin:dev.a/clock", "update", "mail"]);
+  assert.deepEqual(moveCollapsedItem(placements, "status-light", -1, listed), placements);
+  assert.deepEqual(moveCollapsedItem(placements, "session-count", 1, listed), placements);
+});
+
+test("changing sides puts the item last on the other side; hiding keeps its place", () => {
+  const placements = setCollapsedItemZone(arrangeCollapsedItems(offered, []), "session-count", "left");
+  assert.deepEqual(zoneIds(placements, "left", offered), ["status-light", "session-count"]);
+  const hidden = setCollapsedItemHidden(placements, "status-light", true);
+  assert.ok(isCollapsedItemHidden(hidden, "status-light"));
+  assert.deepEqual(zoneIds(hidden, "left", offered), ["session-count"]);
+  assert.deepEqual(setCollapsedItemHidden(hidden, "status-light", false), placements);
+});
+
+test("switching a built-in plugin or mail source off filters its collapsed item out while keeping saved placements", () => {
+  const entries = [
+    ["status-light", "Status light"],
+    ["mail", "Mail"],
+    ["update", "Update"],
+    ["plugin:dev.a/clock", "Clock"],
+    ["device-use", "Camera"],
+    ["shelf", "Shelf"],
+    ["music", "Music"],
+    ["session-count", "Sessions"],
+  ];
+  const filtered = filterCollapsedItemEntries(entries, new Set(["music", "agents", "file-shelf"]), false);
+  assert.deepEqual(filtered.map(([id]) => id), ["status-light", "update", "plugin:dev.a/clock", "device-use"]);
+  const saved = [{ id: "music", zone: "left" }, { id: "status-light", zone: "left" }];
+  const whileOff = arrangeCollapsedItems(filtered.map(([id]) => id), saved);
+  assert.deepEqual(zoneIds(whileOff, "left", filtered.map(([id]) => id)), ["status-light"]);
+  assert.deepEqual(zoneIds(whileOff, "left", entries.map(([id]) => id)), ["music", "status-light"]);
+});
+
+test("an item kept in the panel leaves its zone, keeps its place in the order, and comes back to it", () => {
+  const placements = arrangeCollapsedItems(offered, []);
+  const panel = setCollapsedItemShelf(placements, "music", true);
+  assert.deepEqual(shelfIds(panel, offered), ["music"]);
+  assert.ok(!zoneIds(panel, "right", offered).includes("music"));
+  assert.deepEqual(ids(panel), ids(placements));
+  assert.deepEqual(setCollapsedItemShelf(panel, "music", false), placements);
+});
+
+test("hiding wins over the panel, and showing again keeps the panel choice", () => {
+  const panel = setCollapsedItemShelf(arrangeCollapsedItems(offered, []), "music", true);
+  const hidden = setCollapsedItemHidden(panel, "music", true);
+  assert.deepEqual(shelfIds(hidden, offered), []);
+  assert.deepEqual(shelfIds(setCollapsedItemHidden(hidden, "music", false), offered), ["music"]);
+  assert.deepEqual(shelfIds(setCollapsedItemZone(panel, "music", "left"), offered), ["music"]);
+  assert.deepEqual(shelfIds(panel, offered.filter((id) => id !== "music")), []);
+});
+
+test("the peripheral battery item stays off the bar until it is shown, then stays on", () => {
+  const listed = ["status-light", "timer", "peripheral-battery"];
+  assert.equal(isCollapsedItemHidden([], "peripheral-battery"), true);
+  const placements = arrangeCollapsedItems(listed, []);
+  assert.deepEqual(zoneIds(placements, "right", listed), ["timer"]);
+  assert.equal(isCollapsedItemHidden(placements, "peripheral-battery"), true);
+  const shown = setCollapsedItemHidden(placements, "peripheral-battery", false);
+  assert.equal(isCollapsedItemHidden(shown, "peripheral-battery"), false);
+  assert.deepEqual(zoneIds(arrangeCollapsedItems(listed, shown), "right", listed), ["timer", "peripheral-battery"]);
+  assert.equal(isCollapsedItemHidden([], "timer"), false);
+});

@@ -1,0 +1,400 @@
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { emitTo, listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
+import type { ClipboardPreviewCommand, ClipboardPreviewDragPhase, ClipboardPreviewEditEnd, ClipboardPreviewEdge, ClipboardPreviewReport, ClipboardPreviewSize, ClipboardPreviewSizeRequest } from "./previewCommands";
+
+export type ClipboardHistorySettings = {
+  enabled: boolean;
+  captureImages: boolean;
+  maxItems: number;
+  shortcut: string;
+  shortcutEnabled: boolean;
+  openIn: ClipboardOpenIn;
+  popupPosition: ClipboardPopupPosition;
+  popupLayout?: ClipboardPopupLayout;
+  autoPaste: boolean;
+  terminalImagePath: boolean;
+  retentionDays: number;
+  skipSensitive: boolean;
+  winV: boolean;
+  secrets: ClipboardSecretHandling;
+  excludedApps: string[];
+  captureFiles: boolean;
+  captureHtml: boolean;
+  ocr: boolean;
+  hideFromCapture?: boolean;
+  linkPreview?: boolean;
+  flattenTerminalCommands?: boolean;
+  localApiRead?: boolean;
+  aiPrompts?: ClipboardAiPrompt[];
+  popupPinned?: boolean;
+  popupPinX?: number | null;
+  popupPinY?: number | null;
+  copyCardSeconds?: number;
+  pinFavorites?: boolean;
+  previewSize?: ClipboardPreviewSize;
+  previewWidth?: number;
+  previewHeight?: number;
+} & ClipboardPrivacySettings & { prewarmWindow?: boolean };
+
+export type ClipboardPrivacySettings = {
+  forgetCleared: boolean;
+  secretExpiryMinutes: number;
+  maxTextKb: number;
+  recordRemote: boolean;
+};
+
+export type ClipboardAiPrompt = { id: string; title: string; prompt: string };
+
+export type ClipboardCaptureStatus = { paused: boolean; pausedUntil?: number | null; ignoreNext: boolean };
+
+export type ClipboardSecretHandling = "mask" | "skip" | "keep";
+
+export type ClipboardSource = { path: string; name: string };
+
+export type ClipboardOpenIn = "window" | "island";
+export type ClipboardPopupPosition = "cursor" | "center";
+export type ClipboardPopupLayout = "standard" | "wide";
+
+export type ClipboardHistoryImage = {
+  width: number;
+  height: number;
+  byteSize: number;
+  originalPath: string;
+  thumbnailPath: string;
+  thumbnailDataUrl?: string;
+};
+
+export type ClipboardFileImage = {
+  width: number;
+  height: number;
+  byteSize: number;
+  thumbnailDataUrl: string;
+};
+
+export type ClipboardHistoryItem = {
+  id: string;
+  kind: "text" | "image" | "files";
+  hash: string;
+  createdAt: number;
+  copiedAt: number;
+  favorite?: boolean;
+  note?: string;
+  preview: string;
+  text?: string;
+  image?: ClipboardHistoryImage;
+  html?: string;
+  files?: string[];
+  fileImage?: ClipboardFileImage;
+  source?: ClipboardSource;
+  tags?: string[];
+  ocrText?: string;
+  masked?: boolean;
+  pinKey?: string;
+  pinOrder?: number;
+  truncated?: boolean;
+  editedAt?: number;
+};
+
+export type ClipboardHistorySnapshot = {
+  settings: ClipboardHistorySettings;
+  items: ClipboardHistoryItem[];
+  snippets?: ClipboardSnippet[];
+  capture?: ClipboardCaptureStatus;
+};
+
+export type ClipboardSnippet = { id: string; title: string; text: string };
+
+export const CLIPBOARD_HISTORY_CHANGED_EVENT = "clipboard-history-changed";
+export const CLIPBOARD_HISTORY_SHORTCUT_EVENT = "clipboard-history-shortcut";
+export const CLIPBOARD_SHORTCUT_STATUS_EVENT = "clipboard-history-shortcut-status";
+export const CLIPBOARD_ITEM_COPIED_EVENT = "clipboard-item-copied";
+
+export type ClipboardCopiedNotice = { item: ClipboardHistoryItem; seconds: number; origin?: "history" | "capture"; pasted?: boolean; pasteBlocked?: "accessibility" };
+
+export const CLIPBOARD_LINKS_CHANGED_EVENT = "clipboard-links-changed";
+export type ClipboardLinkMatching = "any" | "web";
+export type ClipboardLinkSettings = { notice: boolean; matching: ClipboardLinkMatching; blockedSites: string[]; onlySites: string[] };
+export type ClipboardLink = { id: string; url: string; title: string; addedAt: number };
+export type ClipboardLinks = { version: number; settings: ClipboardLinkSettings; links: ClipboardLink[] };
+
+export function getClipboardHistory() {
+  return invoke<ClipboardHistorySnapshot>("get_clipboard_history");
+}
+
+export function getClipboardShortcutError() {
+  return invoke<string | null>("get_clipboard_shortcut_error");
+}
+
+export function setClipboardHistorySettings(settings: ClipboardHistorySettings) {
+  return invoke<ClipboardHistorySnapshot>("set_clipboard_history_settings", { settings });
+}
+
+export type ClipboardCopyAs = "original" | "file" | "path" | "plain" | "text" | "textFile";
+
+export function copyClipboardItem(id: string, copyAs: ClipboardCopyAs = "original") {
+  return copyAs === "original"
+    ? invoke<ClipboardHistorySnapshot>("copy_clipboard_history_item", { id })
+    : invoke<ClipboardHistorySnapshot>("copy_clipboard_history_item_as", { id, copyAs });
+}
+
+const CLIPBOARD_POPUP_OPENED_EVENT = "clipboard-popup-opened";
+
+export function pasteClipboardItem(id: string, plain = false, options: { enter?: boolean; copyAs?: ClipboardCopyAs } = {}) {
+  return invoke<void>("paste_clipboard_history_item", { id, plain, enter: options.enter ?? false, copyAs: options.copyAs ?? null });
+}
+
+export function pasteClipboardText(text: string, enter = false) {
+  return invoke<void>("paste_clipboard_text", { text, enter });
+}
+
+export function addClipboardHistoryText(text: string) {
+  return invoke<ClipboardHistorySnapshot>("add_clipboard_history_text", { text });
+}
+
+export const editClipboardHistoryText = (id: string, text: string) => invoke<ClipboardHistorySnapshot>("edit_clipboard_history_text", { id, text });
+export const undoClipboardHistoryEdit = (id: string) => invoke<ClipboardHistorySnapshot>("undo_clipboard_history_edit", { id });
+export const readClipboardHistoryImage = (id: string) => invoke<ArrayBuffer>("read_clipboard_history_image", { id });
+export const saveClipboardHistoryImage = (id: string, image: ImageData, mode: "replace" | "new") =>
+  invoke<ClipboardHistorySnapshot>("save_clipboard_history_image", new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength), {
+    headers: { "x-id": id, "x-width": String(image.width), "x-height": String(image.height), "x-mode": mode },
+  });
+
+export function pauseClipboardCapture(minutes: number | null) {
+  return invoke<ClipboardHistorySnapshot>("pause_clipboard_capture", { minutes });
+}
+
+export function resumeClipboardCapture() {
+  return invoke<ClipboardHistorySnapshot>("resume_clipboard_capture");
+}
+
+export function ignoreNextClipboardCopy() {
+  return invoke<ClipboardHistorySnapshot>("ignore_next_clipboard_copy");
+}
+
+export function convertChineseText(text: string, to: "simplified" | "traditional") {
+  return invoke<string>("convert_chinese_text", { text, to });
+}
+
+export function readClipboardImageQr(id: string) {
+  return invoke<string | null>("read_clipboard_image_qr", { id });
+}
+
+export type ClipboardLinkPreview = { title?: string | null; icon?: string | null };
+
+export function getClipboardLinkPreview(url: string) {
+  return invoke<ClipboardLinkPreview>("get_clipboard_link_preview", { url });
+}
+
+export function getAppIcon(path: string) {
+  return invoke<string | null>("get_agent_host_icon", { path });
+}
+
+export function saveClipboardSnippet(id: string | null, title: string, text: string) {
+  return invoke<ClipboardHistorySnapshot>("save_clipboard_snippet", { id, title, text });
+}
+
+export function deleteClipboardSnippet(id: string) {
+  return invoke<ClipboardHistorySnapshot>("delete_clipboard_snippet", { id });
+}
+
+export function pasteClipboardSnippet(id: string) {
+  return invoke<void>("paste_clipboard_snippet", { id });
+}
+
+export function pasteClipboardSequence(ids: string[]) {
+  return invoke<void>("paste_clipboard_sequence", { ids });
+}
+
+export function exportClipboardHistory() {
+  return invoke<string>("export_clipboard_history");
+}
+
+export function importClipboardHistory(content: string) {
+  return invoke<{ items: number; snippets: number }>("import_clipboard_history", { content });
+}
+
+export function revealExportedFile(path: string) {
+  return revealItemInDir(path);
+}
+
+export function startClipboardDrag(id: string) {
+  return invoke<void>("start_clipboard_drag", { id });
+}
+
+export function hideClipboardPopup(blurred = false) {
+  return invoke<void>("hide_clipboard_popup", { blurred });
+}
+
+export function setClipboardPopupPin(pinned: boolean | null = null) {
+  return invoke<ClipboardHistorySnapshot>("set_clipboard_popup_pin", { pinned });
+}
+
+export function listenClipboardPopupMoved(handler: () => void) {
+  return getCurrentWindow().onMoved(() => handler());
+}
+
+export function listenClipboardPopupOpened(handler: (trace: boolean) => void) {
+  return listen<{ trace?: boolean } | null>(CLIPBOARD_POPUP_OPENED_EVENT, ({ payload }) => handler(payload?.trace === true));
+}
+
+export function listenClipboardPopupBlur(handler: () => void) {
+  return getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+    if (!focused) handler();
+  });
+}
+
+export const listenClipboardPreviewBlur = listenClipboardPopupBlur;
+
+export function toggleClipboardFavorite(id: string) {
+  return invoke<ClipboardHistorySnapshot>("toggle_clipboard_history_favorite", { id });
+}
+
+export function setClipboardPinKey(id: string, key: string | null) {
+  return invoke<ClipboardHistorySnapshot>("set_clipboard_pin_key", { id, key });
+}
+
+export function setClipboardPinOrder(ids: readonly string[]) {
+  return invoke<ClipboardHistorySnapshot>("set_clipboard_pin_order", { ids });
+}
+
+export function setClipboardItemNote(id: string, note: string) {
+  return invoke<ClipboardHistorySnapshot>("set_clipboard_history_item_note", { id, note });
+}
+
+export function deleteClipboardItem(id: string) {
+  return invoke<ClipboardHistorySnapshot>("delete_clipboard_history_item", { id });
+}
+
+export function restoreClipboardItem(id: string) {
+  return invoke<ClipboardHistorySnapshot>("restore_clipboard_history_item", { id });
+}
+
+export function deleteClipboardItems(ids: readonly string[]) {
+  return invoke<ClipboardHistorySnapshot>("delete_clipboard_history_items", { ids });
+}
+
+export function restoreClipboardItems(ids: readonly string[]) {
+  return invoke<ClipboardHistorySnapshot>("restore_clipboard_history_items", { ids });
+}
+
+export function setClipboardPopupExpanded(expanded: boolean) {
+  return invoke<void>("set_clipboard_popup_expanded", { expanded });
+}
+
+export function clearClipboardHistory() {
+  return invoke<ClipboardHistorySnapshot>("clear_clipboard_history");
+}
+
+export function listenClipboardHistoryChanged(handler: () => void) {
+  return listen(CLIPBOARD_HISTORY_CHANGED_EVENT, handler);
+}
+
+export function listenClipboardItemCopied(handler: (notice: ClipboardCopiedNotice) => void) {
+  return listen<ClipboardCopiedNotice>(CLIPBOARD_ITEM_COPIED_EVENT, ({ payload }) => handler(payload));
+}
+
+export function getClipboardLinks() {
+  return invoke<ClipboardLinks>("get_clipboard_links");
+}
+
+export function addClipboardLink(url: string, title?: string) {
+  return invoke<ClipboardLinks>("add_clipboard_link", { url, title: title ?? null });
+}
+
+export function removeClipboardLink(id: string) {
+  return invoke<ClipboardLinks>("remove_clipboard_link", { id });
+}
+
+export function moveClipboardLink(id: string, to: number) {
+  return invoke<ClipboardLinks>("move_clipboard_link", { id, to });
+}
+
+export function setClipboardLinkSettings(settings: ClipboardLinkSettings) {
+  return invoke<ClipboardLinks>("set_clipboard_link_settings", { settings });
+}
+
+export function exportClipboardLinks() {
+  return invoke<string>("export_clipboard_links");
+}
+
+export function importClipboardLinks(content: string) {
+  return invoke<number>("import_clipboard_links", { content });
+}
+
+export function openClipboardLink(url: string) {
+  return openUrl(url);
+}
+
+export function listenClipboardLinksChanged(handler: (links: ClipboardLinks) => void) {
+  return listen<ClipboardLinks>(CLIPBOARD_LINKS_CHANGED_EVENT, ({ payload }) => handler(payload));
+}
+
+export function listenClipboardHistoryShortcut(handler: () => void) {
+  return listen(CLIPBOARD_HISTORY_SHORTCUT_EVENT, handler);
+}
+
+export function listenClipboardShortcutStatus(handler: (error: string | null) => void) {
+  return listen<string | null>(CLIPBOARD_SHORTCUT_STATUS_EVENT, (event) => handler(event.payload));
+}
+
+export const CLIPBOARD_PREVIEW_WINDOW = "clipboard-preview";
+const ITEM_EVENT = "clipboard-preview-item";
+const OPENED_EVENT = "clipboard-preview-opened";
+const CLOSING_EVENT = "clipboard-preview-closing";
+const LAYOUT_EVENT = "clipboard-preview-layout";
+const COMMAND_EVENT = "clipboard-preview-command";
+const REPORT_EVENT = "clipboard-preview-report";
+const IMAGE_SCHEME = "fuyu-clip";
+
+export type ClipboardPreviewSide = "left" | "right";
+
+export type ClipboardPreviewPayload = {
+  item: ClipboardHistoryItem;
+  holding: boolean;
+  linkPreview: boolean;
+  prefetch: string[];
+  stay?: boolean;
+};
+
+export type ClipboardPeek = { item: ClipboardHistoryItem; holding: boolean; prefetch: string[]; stay?: boolean };
+export type ClipboardPreviewLayout = { side: ClipboardPreviewSide; size: ClipboardPreviewSize };
+
+export function clipboardImageUrl(id: string, version?: string) {
+  const url = convertFileSrc(id, IMAGE_SCHEME);
+  return version ? `${url}?v=${encodeURIComponent(version.slice(0, 16))}` : url;
+}
+
+export function showClipboardPreview() {
+  return invoke<ClipboardPreviewSide>("show_clipboard_preview");
+}
+
+export function hideClipboardPreview() {
+  return invoke<void>("hide_clipboard_preview");
+}
+
+export function sendClipboardPreview(payload: ClipboardPreviewPayload) {
+  return emitTo(CLIPBOARD_PREVIEW_WINDOW, ITEM_EVENT, payload);
+}
+
+export function listenClipboardPreviewItem(handler: (payload: ClipboardPreviewPayload) => void) {
+  return listen<ClipboardPreviewPayload>(ITEM_EVENT, ({ payload }) => handler(payload));
+}
+
+export function listenClipboardPreviewOpened(handler: (side: ClipboardPreviewSide) => void) {
+  return listen<ClipboardPreviewSide>(OPENED_EVENT, ({ payload }) => handler(payload));
+}
+
+export const listenClipboardPreviewClosing = (handler: () => void) => listen(CLOSING_EVENT, () => handler());
+
+export const listenClipboardPreviewLayout = (handler: (layout: ClipboardPreviewLayout) => void) => listen<ClipboardPreviewLayout>(LAYOUT_EVENT, ({ payload }) => handler(payload));
+export const setClipboardPreviewSize = (size: ClipboardPreviewSizeRequest) => invoke<ClipboardPreviewLayout>("set_clipboard_preview_size", { size });
+export const resizeClipboardPreview = (edge: ClipboardPreviewEdge, dx: number, dy: number, phase: ClipboardPreviewDragPhase) => invoke<void>("resize_clipboard_preview", { edge, dx, dy, phase });
+export const clipboardPreviewHasPointer = () => invoke<boolean>("clipboard_preview_has_pointer");
+export const setClipboardPreviewEditing = (editing: boolean, then: ClipboardPreviewEditEnd = "refocus") => invoke<void>("set_clipboard_preview_editing", { editing, then });
+export const sendClipboardPreviewCommand = (command: ClipboardPreviewCommand) => emitTo(CLIPBOARD_PREVIEW_WINDOW, COMMAND_EVENT, command);
+export const listenClipboardPreviewCommand = (handler: (command: ClipboardPreviewCommand) => void) => listen<ClipboardPreviewCommand>(COMMAND_EVENT, ({ payload }) => handler(payload));
+export const reportClipboardPreview = (report: ClipboardPreviewReport) => emitTo("clipboard", REPORT_EVENT, report);
+export const listenClipboardPreviewReport = (handler: (report: ClipboardPreviewReport) => void) => listen<ClipboardPreviewReport>(REPORT_EVENT, ({ payload }) => handler(payload));
+export const getClipboardTexts = (limit: number | undefined) => invoke<unknown>("get_clipboard_texts", { limit: limit ?? null });

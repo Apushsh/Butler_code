@@ -1,0 +1,80 @@
+import type { CommonText } from "./sections/common";
+import type { MessagesText } from "./sections/messages";
+import type { QqText } from "./sections/qq";
+import type { WechatText } from "./sections/wechat";
+import type { MailText } from "./sections/mail";
+import type { TranslatorText } from "./sections/translator";
+import type { IslandText } from "./sections/island";
+import type { AgentText } from "./sections/agent";
+import type { AgentNoticeText } from "./sections/agentNotice";
+import type { AgentNoticeStackText } from "./sections/agentNoticeStack";
+import type { ClaudeUsageText } from "./sections/claudeUsage";
+import type { SessionRingText } from "./sections/sessionRing";
+import type { NotebookText } from "./sections/notebook";
+import type { ArchiveText } from "./sections/archive";
+import type { TodoIslandText } from "./sections/todoIsland";
+import type { MusicText } from "./sections/music";
+import type { CalendarText } from "./sections/calendar";
+import type { TodoText } from "./sections/todo";
+import type { ClipboardText } from "./sections/clipboard";
+import type { ClipboardListText } from "./sections/clipboardList";
+import type { ClipboardPrivacyText } from "./sections/clipboardPrivacy";
+import type { FileShelfText } from "./sections/fileShelf";
+import type { ScreenshotText } from "./sections/screenshot";
+import type { TimerText } from "./sections/timer";
+import type { SettingsText } from "./sections/settings/index";
+import type { OnboardingText } from "./sections/onboarding";
+import type { ErrorsText } from "./sections/errors";
+import type { VoiceInputText } from "./sections/voiceInput";
+import type { TrayMenuText } from "./sections/trayMenu";
+import type { SyncText } from "./sections/sync";
+import type { IslandWidgetsText } from "./sections/islandWidgets";
+
+export type LocaleCode = "zh-CN" | "en";
+
+export type Translations = {
+  localeLabel: string;
+  localeTag: string;
+
+  common: CommonText;
+  messages: MessagesText;
+  qq: QqText;
+  wechat: WechatText;
+  mail: MailText;
+  translator: TranslatorText;
+
+  island: IslandText;
+  islandWidgets: IslandWidgetsText;
+
+  agent: AgentText;
+  agentNotice: AgentNoticeText;
+  agentNoticeStack: AgentNoticeStackText;
+  claudeUsage: ClaudeUsageText;
+  sessionRing: SessionRingText;
+
+  notebook: NotebookText;
+
+  archive: ArchiveText;
+  todoIsland: TodoIslandText;
+
+  music: MusicText;
+  calendar: CalendarText;
+
+  todo: TodoText;
+
+  clipboard: ClipboardText;
+  clipboardList: ClipboardListText;
+  clipboardPrivacy: ClipboardPrivacyText;
+
+  fileShelf: FileShelfText;
+
+  screenshot: ScreenshotText;
+  timer: TimerText;
+
+  settings: SettingsText;
+  onboarding: OnboardingText;
+  errors: ErrorsText;
+  voiceInput: VoiceInputText;
+  trayMenu: TrayMenuText;
+  sync: SyncText;
+};

@@ -1,0 +1,84 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { advanceClock, alignClock, clockPosition, hasTimeline, holdIntentTimeline, keepIslandTimeline, NO_CLOCK, settleClockAt, startClockAt } from "../../src/features/media/trackClock.ts";
+
+test("players that report no position are timed by the island", () => {
+  assert.equal(hasTimeline({ positionMs: 0, durationMs: 0 }), false);
+  assert.equal(hasTimeline({ positionMs: 0, durationMs: 200_000 }), true);
+});
+
+test("the clock counts only playing time and restarts for another track", () => {
+  let clock = advanceClock(NO_CLOCK, "余香", true, 1000);
+  assert.equal(clockPosition(clock, 4000), 3000);
+  clock = advanceClock(clock, "余香", false, 5000);
+  assert.equal(clockPosition(clock, 60_000), 4000);
+  clock = advanceClock(clock, "余香", true, 70_000);
+  assert.equal(clockPosition(clock, 71_000), 5000);
+  assert.equal(advanceClock(clock, "余香", true, 72_000), clock);
+  clock = advanceClock(clock, "晴天", false, 80_000);
+  assert.equal(clockPosition(clock, 90_000), 0);
+});
+
+test("only a track the island saw start counts as timed from its start", () => {
+  const first = advanceClock(NO_CLOCK, "余香", true, 1000);
+  assert.equal(first.fromStart, false);
+  assert.equal(advanceClock(first, "晴天", true, 9000).fromStart, true);
+});
+
+test("aligning sets the position and makes the clock trusted", () => {
+  const playing = alignClock(advanceClock(NO_CLOCK, "余香", true, 1000), 42_000, 5000);
+  assert.equal(clockPosition(playing, 6000), 43_000);
+  assert.equal(playing.fromStart, true);
+  const paused = alignClock(advanceClock(advanceClock(NO_CLOCK, "余香", true, 1000), "余香", false, 2000), 30_000, 9000);
+  assert.equal(clockPosition(paused, 20_000), 30_000);
+  assert.equal(alignClock(NO_CLOCK, 5000, 1000), NO_CLOCK);
+});
+
+test("a track the player says started at a time is timed from then, even after the poll saw it", () => {
+  const polled = advanceClock(advanceClock(NO_CLOCK, "余香", true, 0), "晴天", true, 10_000);
+  const clock = startClockAt(polled, "晴天", true, 9200, 10_300);
+  assert.equal(clockPosition(clock, 11_200), 2000);
+  assert.equal(clock.fromStart, true);
+  assert.equal(clockPosition(startClockAt(NO_CLOCK, "晴天", true, 9200, 9500), 10_200), 1000);
+  assert.equal(startClockAt(NO_CLOCK, "晴天", true, 9200, 9500).fromStart, true);
+});
+
+test("a start the clock is already well past leaves it alone", () => {
+  const playing = advanceClock(advanceClock(NO_CLOCK, "余香", true, 0), "晴天", true, 1000);
+  assert.equal(startClockAt(playing, "晴天", true, 60_000, 60_100), playing);
+});
+
+test("a play or pause a poll saw first is moved back to when the player says it happened", () => {
+  const polledPause = advanceClock(advanceClock(NO_CLOCK, "余香", true, 0), "余香", false, 10_400);
+  const paused = settleClockAt(polledPause, "余香", false, 10_000, 10_450);
+  assert.equal(clockPosition(paused, 20_000), 10_000);
+  const polledPlay = advanceClock(paused, "余香", true, 30_300);
+  const playing = settleClockAt(polledPlay, "余香", true, 30_000, 30_350);
+  assert.equal(clockPosition(playing, 31_000), 11_000);
+  assert.equal(settleClockAt(polledPlay, "余香", true, 20_000, 30_350), polledPlay);
+});
+
+test("a command's answer without a position keeps the island's timing of the same track", () => {
+  const current = { title: "安和桥", artist: "宋冬野", sourceApp: "cloudmusic.exe", positionMs: 42_000, durationMs: 0, updatedAt: 5000, positionEstimate: "timed" };
+  const answer = { ...current, positionMs: 0, updatedAt: 9000, positionEstimate: undefined };
+  assert.equal(keepIslandTimeline(answer, current).positionMs, 42_000);
+  assert.equal(keepIslandTimeline(answer, current).updatedAt, 5000);
+  assert.equal(keepIslandTimeline({ ...answer, title: "董小姐" }, current).positionMs, 0);
+  assert.equal(keepIslandTimeline({ ...answer, positionMs: 1000, durationMs: 200_000 }, current).positionMs, 1000);
+});
+
+test("a start announced while paused waits for play", () => {
+  const clock = startClockAt(NO_CLOCK, "晴天", false, 5000, 5100);
+  assert.equal(clockPosition(clock, 9000), 0);
+  assert.equal(clockPosition(advanceClock(clock, "晴天", true, 9000), 10_000), 1000);
+});
+
+test("right after play or pause the island keeps its own position instead of the one read back", () => {
+  const current = { title: "晴天", artist: "周杰伦", sourceApp: "cloudmusic", positionMs: 61_000, durationMs: 269_000, updatedAt: 9000 };
+  const answer = { ...current, positionMs: 57_500, updatedAt: 9300 };
+  assert.equal(holdIntentTimeline(answer, current).positionMs, 61_000);
+  assert.equal(holdIntentTimeline(answer, current).updatedAt, 9000);
+  assert.equal(holdIntentTimeline({ ...answer, title: "七里香" }, current).positionMs, 57_500);
+  assert.equal(holdIntentTimeline(answer, { ...current, positionEstimate: "timed" }).positionMs, 57_500);
+  assert.equal(holdIntentTimeline({ ...answer, positionMs: 0, durationMs: 0 }, current).positionMs, 0);
+});

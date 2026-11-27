@@ -1,0 +1,225 @@
+export type LunarDate = { month: string; day: number };
+export type LunarParts = { year: number; month: number; day: number; leap: boolean };
+
+const LUNAR_YEARS = [
+  0x04bd8, 0x04ae0, 0x0a570, 0x054d5, 0x0d260, 0x0d950, 0x16554, 0x056a0, 0x09ad0, 0x055d2,
+  0x04ae0, 0x0a5b6, 0x0a4d0, 0x0d250, 0x1d255, 0x0b540, 0x0d6a0, 0x0ada2, 0x095b0, 0x14977,
+  0x04970, 0x0a4b0, 0x0b4b5, 0x06a50, 0x06d40, 0x1ab54, 0x02b60, 0x09570, 0x052f2, 0x04970,
+  0x06566, 0x0d4a0, 0x0ea50, 0x16a95, 0x05ad0, 0x02b60, 0x186e3, 0x092e0, 0x1c8d7, 0x0c950,
+  0x0d4a0, 0x1d8a6, 0x0b550, 0x056a0, 0x1a5b4, 0x025d0, 0x092d0, 0x0d2b2, 0x0a950, 0x0b557,
+  0x06ca0, 0x0b550, 0x15355, 0x04da0, 0x0a5b0, 0x14573, 0x052b0, 0x0a9a8, 0x0e950, 0x06aa0,
+  0x0aea6, 0x0ab50, 0x04b60, 0x0aae4, 0x0a570, 0x05260, 0x0f263, 0x0d950, 0x05b57, 0x056a0,
+  0x096d0, 0x04dd5, 0x04ad0, 0x0a4d0, 0x0d4d4, 0x0d250, 0x0d558, 0x0b540, 0x0b6a0, 0x195a6,
+  0x095b0, 0x049b0, 0x0a974, 0x0a4b0, 0x0b27a, 0x06a50, 0x06d40, 0x0af46, 0x0ab60, 0x09570,
+  0x04af5, 0x04970, 0x064b0, 0x074a3, 0x0ea50, 0x06b58, 0x05ac0, 0x0ab60, 0x096d5, 0x092e0,
+  0x0c960, 0x0d954, 0x0d4a0, 0x0da50, 0x07552, 0x056a0, 0x0abb7, 0x025d0, 0x092d0, 0x0cab5,
+  0x0a950, 0x0b4a0, 0x0baa4, 0x0ad50, 0x055d9, 0x04ba0, 0x0a5b0, 0x15176, 0x052b0, 0x0a930,
+  0x07954, 0x06aa0, 0x0ad50, 0x05b52, 0x04b60, 0x0a6e6, 0x0a4e0, 0x0d260, 0x0ea65, 0x0d530,
+  0x05aa0, 0x076a3, 0x096d0, 0x04afb, 0x04ad0, 0x0a4d0, 0x1d0b6, 0x0d250, 0x0d520, 0x0dd45,
+  0x0b5a0, 0x056d0, 0x055b2, 0x049b0, 0x0a577, 0x0a4b0, 0x0aa50, 0x1b255, 0x06d20, 0x0ada0,
+  0x14b63, 0x09370, 0x049f8, 0x04970, 0x064b0, 0x168a6, 0x0ea50, 0x06b20, 0x1a6c4, 0x0aae0,
+  0x092e0, 0x0d2e3, 0x0c960, 0x0d557, 0x0d4a0, 0x0da50, 0x05d55, 0x056a0, 0x0a6d0, 0x055d4,
+  0x052d0, 0x0a9b8, 0x0a950, 0x0b4a0, 0x0b6a6, 0x0ad50, 0x055a0, 0x0aba4, 0x0a5b0, 0x052b0,
+  0x0b273, 0x06930, 0x07337, 0x06aa0, 0x0ad50, 0x14b55, 0x04b60, 0x0a570, 0x054e4, 0x0d160,
+  0x0e968, 0x0d520, 0x0daa0, 0x16aa6, 0x056d0, 0x04ae0, 0x0a9d4, 0x0a2d0, 0x0d150, 0x0f252,
+  0x0d520,
+];
+const LUNAR_BASE = Date.UTC(1900, 0, 31);
+export const LUNAR_MIN_YEAR = 1900;
+export const LUNAR_MAX_YEAR = LUNAR_MIN_YEAR + LUNAR_YEARS.length - 1;
+const MONTH_NAMES = ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "腊月"];
+
+const monthDays = (info: number, month: number) => (info & (0x10000 >> month) ? 30 : 29);
+const leapDays = (info: number) => (info & 0xf ? (info & 0x10000 ? 30 : 29) : 0);
+const yearDays = (info: number) => {
+  let days = leapDays(info);
+  for (let month = 1; month <= 12; month++) days += monthDays(info, month);
+  return days;
+};
+
+export function lunarLeapMonth(year: number): number {
+  if (!Number.isInteger(year) || year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return 0;
+  return LUNAR_YEARS[year - LUNAR_MIN_YEAR] & 0xf;
+}
+
+export function lunarMonthDays(year: number, month: number, leap = false): number {
+  if (!Number.isInteger(year) || year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return 0;
+  if (!Number.isInteger(month) || month < 1 || month > 12) return 0;
+  const info = LUNAR_YEARS[year - LUNAR_MIN_YEAR];
+  if (leap) return (info & 0xf) === month ? leapDays(info) : 0;
+  return monthDays(info, month);
+}
+
+export function lunarParts(date: Date): LunarParts | null {
+  let offset = Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - LUNAR_BASE) / 86_400_000);
+  if (offset < 0) return null;
+  let year = 0;
+  while (year < LUNAR_YEARS.length && offset >= yearDays(LUNAR_YEARS[year])) offset -= yearDays(LUNAR_YEARS[year++]);
+  if (year >= LUNAR_YEARS.length) return null;
+  const info = LUNAR_YEARS[year];
+  const leap = info & 0xf;
+  for (let month = 1; month <= 12; month++) {
+    const days = monthDays(info, month);
+    if (offset < days) return { year: LUNAR_MIN_YEAR + year, month, day: offset + 1, leap: false };
+    offset -= days;
+    if (month === leap) {
+      if (offset < leapDays(info)) return { year: LUNAR_MIN_YEAR + year, month, day: offset + 1, leap: true };
+      offset -= leapDays(info);
+    }
+  }
+  return null;
+}
+
+export function lunarToSolar(year: number, month: number, day: number, leap = false, strictLeap = false): Date | null {
+  if (!Number.isInteger(year) || year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) return null;
+  if (!Number.isInteger(month) || month < 1 || month > 12) return null;
+  if (!Number.isInteger(day) || day < 1 || day > 30) return null;
+  const index = year - LUNAR_MIN_YEAR;
+  let offset = 0;
+  for (let y = 0; y < index; y++) offset += yearDays(LUNAR_YEARS[y]);
+  const info = LUNAR_YEARS[index];
+  const yearLeap = info & 0xf;
+  for (let m = 1; m < month; m++) {
+    offset += monthDays(info, m);
+    if (m === yearLeap) offset += leapDays(info);
+  }
+  let maxDays: number;
+  if (leap) {
+    if (yearLeap === month) {
+      offset += monthDays(info, month);
+      maxDays = leapDays(info);
+    } else if (strictLeap) {
+      return null;
+    } else {
+      maxDays = monthDays(info, month);
+    }
+  } else {
+    maxDays = monthDays(info, month);
+  }
+  offset += Math.min(day, maxDays) - 1;
+  const utc = new Date(LUNAR_BASE + offset * 86_400_000);
+  return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate());
+}
+
+export function lunarDate(date: Date): LunarDate | null {
+  const parts = lunarParts(date);
+  if (!parts) return null;
+  const name = MONTH_NAMES[parts.month - 1];
+  return { month: parts.leap ? `闰${name}` : name, day: parts.day };
+}
+
+export function formatLunarDate(month: number, day: number, leap = false, year?: number): string {
+  const name = MONTH_NAMES[month - 1];
+  if (!name || day < 1 || day > 30) return "";
+  const label = `${leap ? "闰" : ""}${name}${lunarDayName(day)}`;
+  return year !== undefined ? `${year}年${label}` : label;
+}
+
+const DAY_DIGITS = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+
+export function lunarDayName(day: number) {
+  if (day <= 10) return `初${DAY_DIGITS[day]}`;
+  if (day < 20) return `十${DAY_DIGITS[day - 10]}`;
+  if (day === 20) return "二十";
+  if (day < 30) return `廿${DAY_DIGITS[day - 20]}`;
+  return "三十";
+}
+
+const TERMS: [string, number][] = [
+  ["小寒", 5.4055], ["大寒", 20.12], ["立春", 3.87], ["雨水", 18.73], ["惊蛰", 5.63], ["春分", 20.646],
+  ["清明", 4.81], ["谷雨", 20.1], ["立夏", 5.52], ["小满", 21.04], ["芒种", 5.678], ["夏至", 21.37],
+  ["小暑", 7.108], ["大暑", 22.83], ["立秋", 7.5], ["处暑", 23.13], ["白露", 7.646], ["秋分", 23.042],
+  ["寒露", 8.318], ["霜降", 23.438], ["立冬", 7.438], ["小雪", 22.36], ["大雪", 7.18], ["冬至", 21.94],
+];
+
+const TERM_CORRECTIONS: Record<string, number> = {
+  "2002:14": 1, "2008:9": 1, "2016:12": 1, "2019:0": -1, "2021:23": -1,
+  "2026:3": -1, "2082:1": 1,"2089:19": 1, "2089:20": 1,
+};
+
+export function solarTermDay(year: number, month: number, which: 0 | 1) {
+  if (year < 2000 || year > 2099) return null;
+  const index = month * 2 + which;
+  const y = year % 100;
+  const leapBase = index < 4 ? y - 1 : y;
+  const day = Math.floor(y * 0.2422 + TERMS[index][1]) - Math.floor(leapBase / 4);
+  return day + (TERM_CORRECTIONS[`${year}:${index}`] ?? 0);
+}
+
+export function solarTerm(date: Date) {
+  const [year, month, day] = [date.getFullYear(), date.getMonth(), date.getDate()];
+  for (const which of [0, 1] as const) {
+    if (solarTermDay(year, month, which) === day) return TERMS[month * 2 + which][0];
+  }
+  return null;
+}
+
+const SOLAR_FESTIVALS: Record<string, string> = {
+  "1-1": "元旦", "2-14": "情人节", "3-8": "妇女节", "3-12": "植树节", "4-1": "愚人节", "5-1": "劳动节", "5-4": "青年节",
+  "6-1": "儿童节", "7-1": "建党节", "8-1": "建军节", "9-10": "教师节", "10-1": "国庆节", "12-24": "平安夜", "12-25": "圣诞节",
+};
+
+const LUNAR_FESTIVALS: Record<string, string> = {
+  "正月-1": "春节", "正月-15": "元宵节", "二月-2": "龙抬头", "五月-5": "端午节", "七月-7": "七夕",
+  "七月-15": "中元节", "八月-15": "中秋节", "九月-9": "重阳节", "腊月-8": "腊八节", "腊月-23": "小年",
+};
+
+const WEEKDAY_FESTIVALS: [month: number, nth: number, weekday: number, name: string][] = [
+  [5, 2, 0, "母亲节"], [6, 3, 0, "父亲节"],
+];
+
+const MEMORIALS: Record<string, string> = {
+  "5-12": "护士节", "9-3": "抗战胜利", "9-18": "九一八", "9-30": "烈士纪念", "11-8": "记者节", "12-4": "宪法日", "12-13": "公祭日",
+};
+
+function weekdayFestival(date: Date) {
+  const nth = Math.ceil(date.getDate() / 7);
+  const found = WEEKDAY_FESTIVALS.find(([month, which, weekday]) => month === date.getMonth() + 1 && which === nth && weekday === date.getDay());
+  return found ? found[3] : null;
+}
+
+export function memorial(date: Date) {
+  return MEMORIALS[`${date.getMonth() + 1}-${date.getDate()}`] ?? null;
+}
+
+export function festival(date: Date, lunar: LunarDate | null = lunarDate(date)) {
+  if (lunar) {
+    const named = LUNAR_FESTIVALS[`${lunar.month}-${lunar.day}`];
+    if (named) return named;
+    if (lunar.month === "腊月" && lunar.day >= 29) {
+      const next = lunarDate(new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1));
+      if (next?.month === "正月" && next.day === 1) return "除夕";
+    }
+  }
+  return SOLAR_FESTIVALS[`${date.getMonth() + 1}-${date.getDate()}`] ?? weekdayFestival(date);
+}
+
+export type ChineseDay = {
+  lunar: string;
+  label: string;
+  special: boolean;
+  festival: string | null;
+  term: string | null;
+  memorial: string | null;
+};
+
+export function chineseDay(date: Date): ChineseDay {
+  const lunar = lunarDate(date);
+  const named = festival(date, lunar);
+  const term = solarTerm(date);
+  const remembered = memorial(date);
+  const plain = lunar ? (lunar.day === 1 ? lunar.month : lunarDayName(lunar.day)) : "";
+  return {
+    lunar: lunar ? `${lunar.month}${lunarDayName(lunar.day)}` : "",
+    label: named ?? term ?? remembered ?? plain,
+    special: Boolean(named ?? term ?? remembered),
+    festival: named,
+    term,
+    memorial: remembered,
+  };
+}
+
+export const CHINESE_DAY_NAMES: ReadonlySet<string> = new Set([
+  ...TERMS.map(([name]) => name), ...Object.values(SOLAR_FESTIVALS), ...Object.values(LUNAR_FESTIVALS), "除夕",
+  ...WEEKDAY_FESTIVALS.map(([, , , name]) => name), ...Object.values(MEMORIALS),
+]);

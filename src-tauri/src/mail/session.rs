@@ -1,0 +1,500 @@
+use crate::user_error::UserError;
+use imap::{
+    extensions::idle::{SetReadTimeout, WaitOutcome},
+    types::{Fetch, Flag, UnsolicitedResponse},
+    Session,
+};
+use imap_proto::types::StatusAttribute;
+use mailparse::MailHeaderMap;
+use std::{
+    fmt,
+    io::{Read, Write},
+    net::{Shutdown, TcpStream},
+    sync::{mpsc, Arc, Mutex},
+    time::Duration,
+};
+
+use super::client_id::{send_client_id, SharedStream};
+use super::credentials::read_secret;
+use super::service::Work;
+use super::MailMessage;
+
+const MAX_ITEMS: u32 = 20;
+
+pub(super) const IO_TIMEOUT: Duration = Duration::from_secs(15);
+
+pub(super) const HEADER_QUERY: &str = "(UID FLAGS INTERNALDATE BODY.PEEK[HEADER]<0.65536>)";
+
+pub(super) const FLAGS_QUERY: &str = "(UID FLAGS INTERNALDATE)";
+
+#[derive(Clone, Copy)]
+pub(super) struct Cursor {
+    pub(super) validity: u32,
+    pub(super) high_water: u32,
+}
+
+#[derive(Clone)]
+pub(super) struct Inbox {
+    pub(super) cursor: Cursor,
+    pub(super) unread_count: usize,
+    pub(super) items: Vec<MailMessage>,
+    pub(super) needs_refresh: bool,
+}
+
+#[derive(Debug)]
+pub(super) struct MailFailure {
+    pub(super) authentication: bool,
+    pub(super) error: UserError,
+}
+
+impl MailFailure {
+    pub(super) fn sync(step: &str, cause: impl fmt::Display) -> Self {
+        Self {
+            authentication: false,
+            error: UserError::new("mail.sync", "Could not sync the mailbox; check the network or try again later.")
+                .detail(step_detail(step, cause)),
+        }
+    }
+
+    fn redact(mut self, secret: &str) -> Self {
+        self.error = self.error.redact(secret);
+        self
+    }
+
+    pub(super) fn authentication() -> Self {
+        Self {
+            authentication: true,
+            error: UserError::new("mail.imapRefused", "The mailbox refused the connection; check that IMAP is on and enter the authorization code again."),
+        }
+    }
+}
+
+const MAX_DETAIL: usize = 200;
+
+fn step_detail(step: &str, cause: impl fmt::Display) -> String {
+    let cause = cause.to_string().split_whitespace().collect::<Vec<_>>().join(" ");
+    format!("{step}: {cause}").chars().take(MAX_DETAIL).collect()
+}
+
+fn failed_at<E: fmt::Display>(step: &'static str) -> impl Fn(E) -> MailFailure {
+    move |cause| MailFailure::sync(step, cause)
+}
+
+#[derive(Debug)]
+pub(super) struct BoundedStream<T>(pub(super) T);
+
+impl<T: Read> Read for BoundedStream<T> {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.0.read(buffer)
+    }
+}
+
+impl<T: Write> Write for BoundedStream<T> {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        self.0.write(buffer)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.0.flush()
+    }
+}
+
+impl<T: SetReadTimeout> SetReadTimeout for BoundedStream<T> {
+    fn set_read_timeout(&mut self, timeout: Option<Duration>) -> imap::Result<()> {
+        self.0.set_read_timeout(Some(timeout.unwrap_or(IO_TIMEOUT)))
+    }
+}
+
+type MailSession = Session<BoundedStream<SharedStream<native_tls::TlsStream<TcpStream>>>>;
+
+pub(super) enum MailWake {
+    Work(Work),
+    Changed,
+    TimedOut,
+    Failed(imap::Error),
+    Closed,
+}
+
+fn queued_work(receiver: &mpsc::Receiver<Work>) -> Option<MailWake> {
+    match receiver.try_recv() {
+        Ok(work) => Some(MailWake::Work(work)),
+        Err(mpsc::TryRecvError::Disconnected) => Some(MailWake::Closed),
+        Err(mpsc::TryRecvError::Empty) => None,
+    }
+}
+
+pub(super) fn interrupt_idle(socket: &Mutex<Option<TcpStream>>) {
+    if let Ok(socket) = socket.lock() {
+        if let Some(socket) = socket.as_ref() {
+            let _ = socket.shutdown(Shutdown::Both);
+        }
+    }
+}
+
+pub(super) fn wait_for_mail<T: Read + Write + SetReadTimeout>(
+    session: &mut Session<T>,
+    socket: &TcpStream,
+    interrupt: &Mutex<Option<TcpStream>>,
+    receiver: &mpsc::Receiver<Work>,
+    timeout: Duration,
+) -> MailWake {
+    let cloned = match socket.try_clone() {
+        Ok(socket) => socket,
+        Err(error) => return MailWake::Failed(imap::Error::Io(error)),
+    };
+    let Ok(mut registered) = interrupt.lock() else {
+        return MailWake::Closed;
+    };
+    *registered = Some(cloned);
+    drop(registered);
+    let result = if let Some(work) = queued_work(receiver) {
+        work
+    } else {
+        match session
+            .idle()
+            .timeout(timeout)
+            .keepalive(false)
+            .wait_while(imap::extensions::idle::stop_on_any)
+        {
+            Ok(WaitOutcome::MailboxChanged) => MailWake::Changed,
+            Ok(WaitOutcome::TimedOut) => MailWake::TimedOut,
+            Err(error) => MailWake::Failed(error),
+        }
+    };
+    if let Ok(mut registered) = interrupt.lock() {
+        *registered = None;
+    }
+    match result {
+        MailWake::Work(_) | MailWake::Closed => result,
+        _ => queued_work(receiver).unwrap_or(result),
+    }
+}
+
+#[derive(Default)]
+pub(super) struct SyncConnection {
+    generation: u64,
+    pub(super) session: Option<MailSession>,
+    pub(super) socket: Option<TcpStream>,
+    cached: Option<Inbox>,
+    pub(super) idle_supported: bool,
+    pub(super) idle_rejected: bool,
+}
+
+impl SyncConnection {
+    pub(super) fn reset(&mut self, generation: u64) {
+        if self.generation != generation {
+            *self = Self::default();
+            self.generation = generation;
+        }
+    }
+
+    pub(super) fn fetch(
+        &mut self,
+        host: &str,
+        email: &str,
+        secret: Option<&str>,
+    ) -> Result<Inbox, MailFailure> {
+        if let Some(session) = &mut self.session {
+            if let Ok(inbox) = fetch_inbox_cached(session, self.cached.as_ref()) {
+                self.cached = Some(inbox.clone());
+                return Ok(inbox);
+            }
+            self.session = None;
+            self.socket = None;
+        }
+        let stored_secret;
+        let secret = match secret {
+            Some(secret) => secret,
+            None => {
+                stored_secret = read_secret(email).map_err(|_| MailFailure {
+                    authentication: true,
+                    error: UserError::new("mail.readCode", "Could not read the saved code from Windows Credential Manager; connect again."),
+                })?;
+                stored_secret
+                    .as_deref()
+                    .ok_or_else(MailFailure::authentication)?
+            }
+        };
+        let (mut session, socket) = open_connection(host, email, secret)?;
+        self.idle_supported = session
+            .capabilities()
+            .map_err(failed_at("CAPABILITY"))?
+            .has_str("IDLE")
+            && !self.idle_rejected;
+        let inbox = fetch_inbox_cached(&mut session, self.cached.as_ref())?;
+        self.cached = Some(inbox.clone());
+        self.session = Some(session);
+        self.socket = Some(socket);
+        Ok(inbox)
+    }
+}
+
+pub(super) fn login_failure(error: imap::Error) -> MailFailure {
+    match error {
+        imap::Error::No(_) | imap::Error::Bad(_) => {
+            let mut failure = MailFailure::authentication();
+            failure.error = failure.error.detail(step_detail("LOGIN", error));
+            failure
+        }
+        _ => MailFailure::sync("LOGIN", error),
+    }
+}
+
+pub(super) fn open_session(
+    host: &str,
+    email: &str,
+    secret: &str,
+) -> Result<MailSession, MailFailure> {
+    open_connection(host, email, secret).map(|(session, _)| session)
+}
+
+fn open_connection(
+    host: &str,
+    email: &str,
+    secret: &str,
+) -> Result<(MailSession, TcpStream), MailFailure> {
+    connect(host, email, secret).map_err(|failure| failure.redact(secret))
+}
+
+fn connect(
+    host: &str,
+    email: &str,
+    secret: &str,
+) -> Result<(MailSession, TcpStream), MailFailure> {
+    let (host, port) = super::credentials::server_address(host);
+    let stream = crate::system::proxy::connect_tcp(host, port, Duration::from_secs(10))
+        .map_err(failed_at("TCP"))?;
+    stream
+        .set_read_timeout(Some(IO_TIMEOUT))
+        .map_err(failed_at("TCP"))?;
+    stream
+        .set_write_timeout(Some(IO_TIMEOUT))
+        .map_err(failed_at("TCP"))?;
+    let interrupt = stream.try_clone().map_err(failed_at("TCP"))?;
+    let tls = native_tls::TlsConnector::new().map_err(failed_at("TLS"))?;
+    let stream = tls
+        .connect(host, stream)
+        .map_err(failed_at("TLS"))?;
+    let shared = Arc::new(Mutex::new(stream));
+    let mut client = imap::Client::new(BoundedStream(SharedStream(shared.clone())));
+    client.read_greeting().map_err(failed_at("GREETING"))?;
+    let mut session = client
+        .login(email, secret)
+        .map_err(|(error, _)| login_failure(error))?;
+    if session
+        .capabilities()
+        .is_ok_and(|capabilities| capabilities.has_str("ID"))
+    {
+        send_client_id(&shared).map_err(failed_at("ID"))?;
+    }
+    Ok((session, interrupt))
+}
+
+#[cfg(test)]
+pub(super) fn fetch_inbox<T: Read + Write>(session: &mut Session<T>) -> Result<Inbox, MailFailure> {
+    fetch_inbox_cached(session, None)
+}
+
+fn header_message(message: &Fetch, validity: u32) -> Option<MailMessage> {
+    let uid = message.uid?;
+    let (sender, subject) = parse_header(message.header()?);
+    Some(MailMessage {
+        id: format!("{validity}:{uid}"),
+        uid,
+        sender,
+        subject,
+        received_at: message.internal_date().map(|date| date.timestamp_millis()),
+        unread: !message.flags().contains(&Flag::Seen),
+    })
+}
+
+fn drain_mail_updates<T: Read + Write>(
+    session: &mut Session<T>,
+    exists: u32,
+    unread: &mut Option<usize>,
+    needs_refresh: &mut bool,
+) {
+    for response in session.take_all_unsolicited() {
+        match response {
+            UnsolicitedResponse::Status {
+                mailbox,
+                attributes,
+            } if mailbox.eq_ignore_ascii_case("INBOX") => {
+                if let Some(count) = attributes
+                    .into_iter()
+                    .find_map(|attribute| match attribute {
+                        StatusAttribute::Unseen(count) => Some(count as usize),
+                        _ => None,
+                    })
+                {
+                    *unread = Some(count);
+                }
+            }
+            UnsolicitedResponse::Exists(count) if count != exists => *needs_refresh = true,
+            UnsolicitedResponse::Expunge(_) => *needs_refresh = true,
+            _ => {}
+        }
+    }
+}
+
+pub(super) fn fetch_inbox_cached<T: Read + Write>(
+    session: &mut Session<T>,
+    cached: Option<&Inbox>,
+) -> Result<Inbox, MailFailure> {
+    let mailbox = session
+        .examine("INBOX")
+        .map_err(failed_at("EXAMINE"))?;
+    let validity = mailbox
+        .uid_validity
+        .filter(|value| *value > 0)
+        .ok_or_else(|| MailFailure::sync("EXAMINE", "no UIDVALIDITY"))?;
+    session.take_all_unsolicited().for_each(drop);
+    let mut unread_count = match session.status("INBOX", "(UNSEEN)") {
+        Ok(status) => status.unseen.map(|count| count as usize),
+        Err(imap::Error::MissingStatusResponse) => None,
+        Err(error) => return Err(MailFailure::sync("STATUS", error)),
+    };
+    let mut needs_refresh = false;
+    drain_mail_updates(
+        session,
+        mailbox.exists,
+        &mut unread_count,
+        &mut needs_refresh,
+    );
+    let mut items = Vec::new();
+    if mailbox.exists > 0 {
+        let first = mailbox.exists.saturating_sub(MAX_ITEMS - 1).max(1);
+        let cached = cached.filter(|previous| previous.cursor.validity == validity);
+        if let Some(cached) = cached {
+            let mut missing = Vec::new();
+            let messages = session
+                .fetch(format!("{first}:{}", mailbox.exists), FLAGS_QUERY)
+                .map_err(failed_at("FETCH"))?;
+            for message in messages
+                .iter()
+                .filter(|message| (first..=mailbox.exists).contains(&message.message))
+            {
+                let Some(uid) = message.uid else {
+                    continue;
+                };
+                if let Some(previous) = cached.items.iter().find(|item| item.uid == uid) {
+                    let mut item = previous.clone();
+                    item.unread = !message.flags().contains(&Flag::Seen);
+                    item.received_at = message
+                        .internal_date()
+                        .map(|date| date.timestamp_millis())
+                        .or(item.received_at);
+                    items.push(item);
+                } else if !missing.contains(&uid) {
+                    missing.push(uid);
+                }
+            }
+            if !missing.is_empty() {
+                let sequence = missing
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let messages = session
+                    .uid_fetch(sequence, HEADER_QUERY)
+                    .map_err(failed_at("UID FETCH"))?;
+                for message in messages.iter() {
+                    if let Some(item) = header_message(message, validity) {
+                        if missing.contains(&item.uid)
+                            && !items.iter().any(|old| old.uid == item.uid)
+                        {
+                            items.push(item);
+                        }
+                    }
+                }
+                if missing
+                    .iter()
+                    .any(|uid| !items.iter().any(|item| item.uid == *uid))
+                {
+                    return Err(MailFailure::sync("UID FETCH", "requested messages missing"));
+                }
+            }
+        } else {
+            let messages = session
+                .fetch(format!("{first}:{}", mailbox.exists), HEADER_QUERY)
+                .map_err(failed_at("FETCH"))?;
+            for message in messages
+                .iter()
+                .filter(|message| (first..=mailbox.exists).contains(&message.message))
+            {
+                if let Some(item) = header_message(message, validity) {
+                    items.push(item);
+                }
+            }
+        }
+    }
+    items.sort_by_key(|item| std::cmp::Reverse(item.uid));
+    items.dedup_by_key(|item| item.uid);
+    items.truncate(MAX_ITEMS as usize);
+    let expected = mailbox.exists.min(MAX_ITEMS) as usize;
+    if items.len() != expected {
+        return Err(MailFailure::sync("FETCH", format!("{} of {expected} messages", items.len())));
+    }
+    let high_water = items.iter().map(|item| item.uid).max().unwrap_or(0);
+    drain_mail_updates(
+        session,
+        mailbox.exists,
+        &mut unread_count,
+        &mut needs_refresh,
+    );
+    Ok(Inbox {
+        cursor: Cursor {
+            validity,
+            high_water,
+        },
+        unread_count: unread_count.ok_or_else(|| MailFailure::sync("STATUS", "no UNSEEN"))?,
+        items,
+        needs_refresh,
+    })
+}
+
+pub(super) fn parse_header(raw: &[u8]) -> (String, String) {
+    let headers = mailparse::parse_headers(raw)
+        .map(|(headers, _)| headers)
+        .unwrap_or_default();
+    let sender = headers.get_first_value("From").unwrap_or_default();
+    let subject = headers.get_first_value("Subject").unwrap_or_default();
+    (
+        display_header(&sender, "未知发件人"),
+        display_header(&subject, "（无主题）"),
+    )
+}
+
+pub(super) fn mark_seen<T: Read + Write>(session: &mut Session<T>, message_id: &str) -> Result<(), UserError> {
+    let (validity, uid) = super::content::parse_message_id(message_id)?;
+    let mailbox = session.select("INBOX").map_err(|_| UserError::new("mail.inbox", "Could not open the inbox; try again later."))?;
+    if mailbox.uid_validity != Some(validity) {
+        return Err(UserError::new("mail.inboxChanged", "The inbox changed; refresh the list and try again."));
+    }
+    session
+        .uid_store(uid.to_string(), "+FLAGS.SILENT (\\Seen)")
+        .map_err(|_| UserError::new("mail.markReadLater", "Could not mark the mail as read; try again later."))?;
+    Ok(())
+}
+
+pub(super) fn mark_all_seen<T: Read + Write>(session: &mut Session<T>) -> Result<(u32, Vec<u32>), UserError> {
+    let later = || UserError::new("mail.markReadLater", "Could not mark the mail as read; try again later.");
+    let mailbox = session.select("INBOX").map_err(|_| UserError::new("mail.inbox", "Could not open the inbox; try again later."))?;
+    let validity = mailbox.uid_validity.ok_or_else(later)?;
+    let mut uids = session.uid_search("UNSEEN").map_err(|_| later())?.into_iter().collect::<Vec<_>>();
+    uids.sort_unstable();
+    for chunk in uids.chunks(500) {
+        let set = chunk.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+        session.uid_store(set, "+FLAGS.SILENT (\\Seen)").map_err(|_| later())?;
+    }
+    Ok((validity, uids))
+}
+
+pub(super) fn display_header(value: &str, fallback: &str) -> String {
+    let value = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if value.is_empty() {
+        fallback.into()
+    } else {
+        value.chars().take(1_000).collect()
+    }
+}

@@ -1,0 +1,202 @@
+<body>
+  <main>
+    <div class="box" id="marks">
+      <span aria-hidden="true" class="dev-watermark dev-watermark--collapsed">
+        DEV
+      </span>
+      <span aria-hidden="true" class="dev-watermark dev-watermark--panel">
+        DEV
+      </span>
+    </div>
+    <div id="rows">
+      <section class="settings-group">
+        <div class="settings-group__header">
+          <h2 class="settings-group__title">
+            启动与语言
+          </h2>
+        </div>
+        <div class="settings-group__card">
+          <div class="settings-row">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <label class="settings-row__title" for="_id1_">
+                  开机自启动
+                </label>
+                <span class="settings-row__description">
+                  这是开发版，不改开机自启。请在安装的正式版里设置。
+                </span>
+              </div>
+              <div class="settings-row__control">
+                <span class="settings-switch">
+                  <input disabled="" id="_id1_" role="switch" type="checkbox">
+                  <span aria-hidden="true" class="settings-switch__track"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <label class="settings-row__title" for="_id2_">
+                  在托盘显示图标
+                </label>
+              </div>
+              <div class="settings-row__control">
+                <span class="settings-switch">
+                  <input checked="" id="_id2_" role="switch" type="checkbox">
+                  <span aria-hidden="true" class="settings-switch__track"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-row settings-row--indent">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <span class="settings-row__title">
+                  托盘卡片样式
+                </span>
+                <span class="settings-row__description">
+                  点托盘图标（左键或右键）弹出的卡片。
+                </span>
+              </div>
+            </div>
+            <fieldset class="tray-card-layout">
+              <div aria-label="托盘卡片样式" class="settings-cards" role="group" style="--cards-columns: 3">
+                <button aria-pressed="true" class="settings-cards__card settings-cards__card--active" type="button">
+                  <span aria-hidden="true" class="settings-cards__art">
+                    <span class="tray-card-glyph">
+                      <span class="tray-card-glyph__head"></span>
+                      <span class="tray-card-glyph__tiles"></span>
+                      <span class="tray-card-glyph__strip"></span>
+                      <span class="tray-card-glyph__line"></span>
+                      <span class="tray-card-glyph__line"></span>
+                      <span class="tray-card-glyph__foot"></span>
+                    </span>
+                  </span>
+                  <span class="settings-cards__text">
+                    <span class="settings-cards__label">
+                      入口型
+                    </span>
+                    <span class="settings-cards__hint">
+                      常用功能一眼都在
+                    </span>
+                  </span>
+                  <svg aria-hidden="true" class="lucide lucide-check settings-cards__check" fill="none" height="14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" viewBox="0 0 24 24" width="14" xmlns="http://www.w3.org/2000/svg"></svg>
+                </button>
+                <button aria-pressed="false" class="settings-cards__card" type="button">
+                  <span aria-hidden="true" class="settings-cards__art">
+                    <span class="tray-card-glyph">
+                      <span class="tray-card-glyph__head"></span>
+                      <span class="tray-card-glyph__block"></span>
+                      <span class="tray-card-glyph__block"></span>
+                      <span class="tray-card-glyph__pills"></span>
+                      <span class="tray-card-glyph__foot"></span>
+                    </span>
+                  </span>
+                  <span class="settings-cards__text">
+                    <span class="settings-cards__label">
+                      状态型
+                    </span>
+                    <span class="settings-cards__hint">
+                      看歌、会议和 Agent
+                    </span>
+                  </span>
+                </button>
+                <button aria-pressed="false" class="settings-cards__card" type="button">
+                  <span aria-hidden="true" class="settings-cards__art">
+                    <span class="tray-card-glyph">
+                      <span class="tray-card-glyph__head"></span>
+                      <span class="tray-card-glyph__tiles"></span>
+                      <span class="tray-card-glyph__line"></span>
+                      <span class="tray-card-glyph__line"></span>
+                    </span>
+                  </span>
+                  <span class="settings-cards__text">
+                    <span class="settings-cards__label">
+                      精简型
+                    </span>
+                    <span class="settings-cards__hint">
+                      最小最快
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </fieldset>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row__main">
+              <div class="settings-row__text">
+                <span class="settings-row__title">
+                  界面语言
+                </span>
+              </div>
+              <div class="settings-row__control">
+                <div class="settings-select">
+                  <div class="select-control">
+                    <button aria-controls="_id3_" aria-expanded="false" aria-haspopup="listbox" aria-label="界面语言" class="select-control__trigger" role="combobox" type="button">
+                      <span>
+                        简体中文
+                      </span>
+                      <svg aria-hidden="true" class="lucide lucide-chevron-down select-control__chevron" fill="none" height="15" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="15" xmlns="http://www.w3.org/2000/svg"></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div class="update-status update-status--muted">
+        <div class="update-status__row update-status__row--solo">
+          <span aria-hidden="true" class="update-status__dot"></span>
+          <strong class="update-status__headline" role="status">
+            开发版 · 不自动更新
+          </strong>
+        </div>
+        <p class="update-status__sub">
+          <span>
+            这是开发版，不检查也不安装更新。新版本请在安装的正式版里更新。
+          </span>
+          <a class="update-status__link" href="https://fuyu.ing/releases/" rel="noopener noreferrer" target="_blank">
+            查看最新版本
+            ↗
+          </a>
+        </p>
+      </div>
+      <div id="bar" style="position: relative; height: 40px">
+        <div class="dev-bar">
+          <span aria-hidden="true" class="dev-bar__mark">
+            DEV
+          </span>
+          <div aria-label="快捷键和提醒归谁" class="settings-choice" role="group">
+            <button aria-pressed="false" class="settings-choice__option" type="button">
+              正式版优先
+            </button>
+            <button aria-pressed="true" class="settings-choice__option settings-choice__option--active" type="button">
+              开发版优先
+            </button>
+          </div>
+          <span class="dev-bar__status" role="status">
+            正式版已让出，审批也到这里
+          </span>
+        </div>
+      </div>
+      <div id="hooks">
+        <div class="agent-hooks-summary-stack">
+          <div class="agent-hooks-summary agent-hooks-summary--warn" role="status">
+            <svg aria-hidden="true" class="lucide lucide-circle-alert" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+            <span class="agent-hooks-summary__text">
+              还没有给任何 Agent 装钩子，状态灯和会话标题不会工作。
+            </span>
+            <button class="agent-hook-action agent-hook-action--fix" type="button">
+              全部安装
+            </button>
+          </div>
+          <span class="agent-hooks-message">
+            开发版读的是正式版的 Agent 状态。在这里装的是正式版的钩子：脚本放在正式版的数据目录，审批走正式版的端口，开发版关掉后照样能用。
+          </span>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>

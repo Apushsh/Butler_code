@@ -1,0 +1,138 @@
+.settings-row {
+  min-width: 0;
+  min-height: 50px;
+  display: grid;
+  align-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-xl) 16px;
+}
+
+.settings-row--indent {
+  min-height: 44px;
+  margin: 0 12px 0 30px;
+  padding: 9px 14px;
+  background: var(--color-white-a04);
+  border-left: 2px solid var(--color-white-a12);
+  transition:
+    background-color var(--motion-medium) var(--motion-ease),
+    border-color var(--motion-medium) var(--motion-ease);
+}
+
+.settings-row--indent-2 {
+  margin-left: 50px;
+}
+
+.settings-row--indent-3 {
+  margin-left: 70px;
+}
+
+:is(.settings-group__card, .settings-advanced__body) > .settings-row--indent::before {
+  right: 14px;
+  left: 14px;
+}
+
+:is(.settings-group__card, .settings-advanced__body) > :not(.settings-row--indent) + .settings-row--indent::before,
+.settings-advanced__body > .settings-row--indent:first-child::before {
+  display: none;
+}
+
+:is(.settings-group__card, .settings-advanced__body) > :not(.settings-row--indent) + .settings-row--indent,
+.settings-advanced__body > .settings-row--indent:first-child {
+  border-top-right-radius: var(--radius-lg);
+}
+
+:is(.settings-group__card, .settings-advanced__body) > .settings-row--indent:has(+ :not(.settings-row--indent)),
+:is(.settings-group__card, .settings-advanced__body) > .settings-row--indent:last-child {
+  margin-bottom: 12px;
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.settings-row__main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.settings-row__text {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.settings-row__heading {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-row__new {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 85%, var(--color-text));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.island-light .settings-row__new {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
+}
+
+.settings-row__title {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+  transition: color var(--motion-medium) var(--motion-ease);
+}
+
+label.settings-row__title {
+  cursor: pointer;
+}
+
+.settings-row__description {
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+  transition: color var(--motion-medium) var(--motion-ease);
+}
+
+.settings-row__control {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.settings-row--found {
+  border-radius: var(--radius-md, 10px);
+  animation: settings-row-found 1.8s var(--motion-ease);
+}
+
+@keyframes settings-row-found {
+  0%,
+  40% {
+    background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-row--found {
+    animation-timing-function: steps(1, end);
+  }
+}

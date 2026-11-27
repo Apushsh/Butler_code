@@ -1,0 +1,812 @@
+pub(crate) mod actions;
+mod background;
+mod capture_pause;
+mod clipboard_io;
+mod command_text;
+mod copy_notice;
+pub(crate) mod deletion;
+pub(crate) mod edit;
+pub(crate) mod edit_image;
+pub(crate) mod expand;
+mod favorites_sync;
+pub(crate) mod drag;
+#[cfg_attr(target_os = "macos", path = "hotkey_macos.rs")]
+mod hotkey;
+pub(crate) mod host;
+mod link_guard;
+pub(crate) mod links;
+mod links_order;
+mod links_transfer;
+mod link_preview;
+mod file_image;
+pub(crate) mod image_protocol;
+#[cfg_attr(target_os = "macos", path = "listener_macos.rs")]
+mod listener;
+#[cfg(windows)]
+mod open_trace;
+mod persist;
+pub(crate) mod pins;
+mod plugin_view;
+#[cfg_attr(target_os = "macos", path = "popup_macos.rs")]
+mod popup;
+mod popup_place;
+pub(crate) mod preview_window;
+pub(crate) mod preview_size;
+mod privacy;
+mod secrets;
+mod sequence;
+#[cfg(target_os = "macos")]
+mod sequence_watch_macos;
+mod service;
+pub(crate) mod shortcut;
+#[cfg(target_os = "macos")]
+pub(crate) mod shortcut_macos;
+mod snippets;
+mod store;
+#[cfg_attr(target_os = "macos", path = "system_macos.rs")]
+mod system;
+mod transfer;
+mod workers;
+
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant},
+};
+use tauri::{AppHandle, Manager};
+
+use store::{HISTORY_FILE_NAME, IMAGE_DIRECTORY_NAME};
+
+pub(crate) use shortcut::{parse_shortcut_binding, ShortcutBinding};
+#[cfg(target_os = "macos")]
+pub(crate) use shortcut_macos::{mac_label, to_hotkey};
+pub(crate) use capture_pause::paused as clipboard_capture_paused;
+pub(crate) use plugin_view::local_api_history;
+pub(crate) use links::{links_for_sync, replace_links_from_sync};
+pub(crate) use links_order::key_between as link_key_between;
+pub(crate) use snippets::{replace_snippets_from_sync, snippets_for_sync};
+#[cfg(test)]
+pub(crate) use favorites_sync::apply_sync_doc as sync_favorites_apply;
+pub(crate) use favorites_sync::{favorites_for_sync, replace_favorites_from_sync, to_sync_doc as sync_favorites_to_doc};
+pub(crate) use pins::checked_key as checked_pin_key;
+pub(crate) use secrets::looks_like_secret as is_secret_clipboard_text;
+pub(crate) use edit::text_hash as text_clipboard_hash;
+pub(crate) use popup::WINDOW_LABEL as POPUP_WINDOW_LABEL;
+
+pub(crate) const PLUGIN_ID: &str = "clipboard";
+
+const HISTORY_CHANGED_EVENT: &str = "clipboard-history-changed";
+
+const DEFAULT_MAX_ITEMS: usize = 30;
+
+#[cfg(not(target_os = "macos"))]
+const DEFAULT_SHORTCUT: &str = "Ctrl+Shift+W";
+#[cfg(target_os = "macos")]
+const DEFAULT_SHORTCUT: &str = "Shift+Win+V";
+
+const LEGACY_DEFAULT_SHORTCUT: &str = "Ctrl+X";
+
+const MIN_MAX_ITEMS: usize = 5;
+
+const MAX_MAX_ITEMS: usize = 500;
+
+const SHORT_DUPLICATE_WINDOW_MS: i64 = 2_000;
+
+const MAX_NOTE_CHARACTERS: usize = 80;
+
+static CLIPBOARD_HISTORY: OnceLock<ClipboardHistoryService> = OnceLock::new();
+
+static CAPTURE_SUSPENDED_UNTIL: Mutex<Option<Instant>> = Mutex::new(None);
+
+pub(crate) fn suspend_clipboard_capture(duration: Duration) {
+    let until = Instant::now() + duration;
+    let Ok(mut slot) = CAPTURE_SUSPENDED_UNTIL.lock() else {
+        return;
+    };
+    if slot.is_none_or(|current| current < until) {
+        *slot = Some(until);
+    }
+}
+
+pub(crate) fn clipboard_capture_suspended() -> bool {
+    CAPTURE_SUSPENDED_UNTIL
+        .lock()
+        .ok()
+        .and_then(|slot| *slot)
+        .is_some_and(|until| Instant::now() < until)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardHistorySnapshot {
+    settings: ClipboardHistorySettings,
+    items: Vec<ClipboardHistoryItem>,
+    snippets: Vec<snippets::ClipboardSnippet>,
+    #[serde(default)]
+    capture: capture_pause::CaptureStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardHistorySettings {
+    enabled: bool,
+    capture_images: bool,
+    max_items: usize,
+    #[serde(default = "default_clipboard_shortcut")]
+    shortcut: String,
+    #[serde(default = "default_true")]
+    shortcut_enabled: bool,
+    #[serde(default)]
+    open_in: OpenIn,
+    #[serde(default)]
+    popup_position: PopupPosition,
+    #[serde(default)]
+    popup_layout: PopupLayout,
+    #[serde(default = "default_true")]
+    auto_paste: bool,
+    #[serde(default = "default_true")]
+    terminal_image_path: bool,
+    #[serde(default)]
+    retention_days: u32,
+    #[serde(default = "default_true")]
+    skip_sensitive: bool,
+    #[serde(default)]
+    win_v: bool,
+    #[serde(default)]
+    secrets: SecretHandling,
+    #[serde(default)]
+    excluded_apps: Vec<String>,
+    #[serde(default = "default_true")]
+    capture_files: bool,
+    #[serde(default = "default_true")]
+    capture_html: bool,
+    #[serde(default = "default_true")]
+    ocr: bool,
+    #[serde(default)]
+    hide_from_capture: bool,
+    #[serde(default)]
+    link_preview: bool,
+    #[serde(default)]
+    flatten_terminal_commands: bool,
+    #[serde(default)]
+    local_api_read: bool,
+    #[serde(default)]
+    ai_prompts: Vec<AiPrompt>,
+    #[serde(default)]
+    popup_pinned: bool,
+    #[serde(default)]
+    popup_pin_x: Option<i32>,
+    #[serde(default)]
+    popup_pin_y: Option<i32>,
+    #[serde(default = "default_copy_card_seconds")]
+    copy_card_seconds: u32,
+    #[serde(default = "default_true")]
+    pin_favorites: bool,
+    #[serde(flatten, default)]
+    privacy: privacy::PrivacySettings,
+    #[serde(flatten, default)]
+    preview: preview_size::PreviewSettings,
+    #[serde(flatten, default)]
+    windows: background::WindowSettings,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiPrompt {
+    id: String,
+    title: String,
+    prompt: String,
+}
+
+const MAX_AI_PROMPTS: usize = 20;
+const MAX_AI_PROMPT_TITLE: usize = 24;
+const MAX_AI_PROMPT_CHARACTERS: usize = 2_000;
+
+fn normalized_ai_prompts(prompts: &[AiPrompt]) -> Vec<AiPrompt> {
+    let mut kept: Vec<AiPrompt> = Vec::new();
+    for prompt in prompts {
+        let title: String = prompt.title.trim().chars().take(MAX_AI_PROMPT_TITLE).collect();
+        let text: String = prompt.prompt.trim().chars().take(MAX_AI_PROMPT_CHARACTERS).collect();
+        let id = prompt.id.trim().chars().take(64).collect::<String>();
+        if title.is_empty() || text.is_empty() || id.is_empty() || kept.iter().any(|kept| kept.id == id) || kept.len() == MAX_AI_PROMPTS {
+            continue;
+        }
+        kept.push(AiPrompt { id, title, prompt: text });
+    }
+    kept
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum SecretHandling {
+    #[default]
+    Mask,
+    Skip,
+    Keep,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardSource {
+    path: String,
+    name: String,
+}
+
+const MAX_EXCLUDED_APPS: usize = 50;
+const MAX_TAGS: usize = 8;
+const MAX_TAG_CHARACTERS: usize = 16;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum OpenIn {
+    #[default]
+    Window,
+    Island,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum PopupPosition {
+    #[default]
+    Cursor,
+    Center,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum PopupLayout {
+    #[default]
+    Standard,
+    Wide,
+}
+
+const MAX_RETENTION_DAYS: u32 = 365;
+
+impl Default for ClipboardHistorySettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            capture_images: true,
+            max_items: DEFAULT_MAX_ITEMS,
+            shortcut: default_clipboard_shortcut(),
+            shortcut_enabled: true,
+            open_in: OpenIn::Window,
+            popup_position: PopupPosition::Cursor,
+            popup_layout: PopupLayout::Standard,
+            auto_paste: true,
+            terminal_image_path: true,
+            retention_days: 0,
+            skip_sensitive: true,
+            win_v: false,
+            secrets: SecretHandling::Mask,
+            excluded_apps: Vec::new(),
+            capture_files: true,
+            capture_html: true,
+            ocr: true,
+            hide_from_capture: false,
+            link_preview: false,
+            flatten_terminal_commands: false,
+            local_api_read: false,
+            ai_prompts: Vec::new(),
+            popup_pinned: false,
+            popup_pin_x: None,
+            popup_pin_y: None,
+            copy_card_seconds: copy_notice::DEFAULT_CARD_SECONDS,
+            pin_favorites: true,
+            privacy: privacy::PrivacySettings::default(),
+            preview: preview_size::PreviewSettings::default(),
+            windows: background::WindowSettings::default(),
+        }
+    }
+}
+
+impl ClipboardHistorySettings {
+    fn normalized(mut self) -> Self {
+        self.max_items = self.max_items.clamp(MIN_MAX_ITEMS, MAX_MAX_ITEMS);
+        self.retention_days = self.retention_days.min(MAX_RETENTION_DAYS);
+        self.copy_card_seconds = copy_notice::normalized_seconds(self.copy_card_seconds);
+        self.excluded_apps = normalized_app_names(&self.excluded_apps);
+        self.ai_prompts = normalized_ai_prompts(&self.ai_prompts);
+        self.privacy = self.privacy.normalized();
+        self.preview = self.preview.normalized();
+        self.shortcut = parse_shortcut_binding(&self.shortcut)
+            .filter(|binding| binding.label != LEGACY_DEFAULT_SHORTCUT)
+            .map_or_else(default_clipboard_shortcut, |binding| binding.label);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum CopyAs {
+    #[default]
+    Original,
+    File,
+    Path,
+    Plain,
+    Text,
+    TextFile,
+}
+
+fn default_copy_card_seconds() -> u32 {
+    copy_notice::DEFAULT_CARD_SECONDS
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_clipboard_shortcut() -> String {
+    DEFAULT_SHORTCUT.to_string()
+}
+
+fn default_shortcut_binding() -> Option<ShortcutBinding> {
+    parse_shortcut_binding(DEFAULT_SHORTCUT)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ClipboardHistoryItemKind {
+    Files,
+    Text,
+    Image,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardHistoryItem {
+    id: String,
+    kind: ClipboardHistoryItemKind,
+    hash: String,
+    created_at: i64,
+    copied_at: i64,
+    #[serde(default)]
+    favorite: bool,
+    #[serde(default)]
+    note: String,
+    preview: String,
+    text: Option<String>,
+    image: Option<ClipboardHistoryImage>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    html: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    files: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    file_image: Option<ClipboardFileImage>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source: Option<ClipboardSource>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    ocr_text: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    masked: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pin_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pin_order: Option<u32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    truncated: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    edited_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    private: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    from_sync: bool,
+    #[serde(default, deserialize_with = "crate::sync::clock::lenient", skip_serializing_if = "Option::is_none")]
+    updated_at: Option<crate::sync::Hlc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    device_id: Option<String>,
+}
+
+fn normalized_app_names(names: &[String]) -> Vec<String> {
+    let mut seen = Vec::new();
+    for name in names {
+        let name = name.trim().to_lowercase();
+        if !name.is_empty() && !seen.contains(&name) && seen.len() < MAX_EXCLUDED_APPS {
+            seen.push(name);
+        }
+    }
+    seen
+}
+
+pub(crate) fn split_note_tags(note: &str) -> (String, Vec<String>) {
+    let (tags, words): (Vec<&str>, Vec<&str>) = note
+        .split_whitespace()
+        .partition(|word| word.len() > 1 && (word.starts_with('#') || word.starts_with('＃')));
+    let tags: Vec<String> = tags.iter().map(|tag| tag.trim_start_matches(['#', '＃']).to_string()).collect();
+    (words.join(" ").chars().take(MAX_NOTE_CHARACTERS).collect(), normalized_tags(&tags))
+}
+
+pub(crate) fn normalized_tags(tags: &[String]) -> Vec<String> {
+    let mut kept: Vec<String> = Vec::new();
+    for tag in tags {
+        let tag: String = tag.trim().trim_start_matches('#').trim().chars().take(MAX_TAG_CHARACTERS).collect();
+        if !tag.is_empty() && !kept.iter().any(|kept| kept.eq_ignore_ascii_case(&tag)) && kept.len() < MAX_TAGS {
+            kept.push(tag);
+        }
+    }
+    kept
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardHistoryImage {
+    width: usize,
+    height: usize,
+    byte_size: u64,
+    original_path: String,
+    thumbnail_path: String,
+    thumbnail_data_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardFileImage {
+    width: u32,
+    height: u32,
+    byte_size: u64,
+    thumbnail_data_url: String,
+}
+
+#[derive(Default)]
+struct ClipboardHistoryState {
+    settings: ClipboardHistorySettings,
+    items: Vec<ClipboardHistoryItem>,
+    snippets: Vec<snippets::ClipboardSnippet>,
+    snippet_tombstones: Vec<crate::sync::Tombstone>,
+    favorite_tombstones: Vec<crate::sync::Tombstone>,
+    last_capture_hash: Option<String>,
+    recently_deleted: deletion::Removed,
+}
+
+struct ClipboardHistoryService {
+    app: AppHandle,
+    history_path: PathBuf,
+    image_dir: PathBuf,
+    loaded: OnceLock<bool>,
+    writer: persist::HistoryWriter,
+    state: Mutex<ClipboardHistoryState>,
+}
+
+#[tauri::command]
+pub fn get_clipboard_history() -> Result<ClipboardHistorySnapshot, String> {
+    service()?.snapshot()
+}
+
+#[tauri::command]
+pub fn get_clipboard_shortcut_error() -> Option<String> {
+    hotkey::hotkey_error()
+}
+
+#[tauri::command]
+pub fn set_clipboard_history_settings(
+    settings: ClipboardHistorySettings,
+) -> Result<ClipboardHistorySnapshot, String> {
+    let enabled = settings.enabled;
+    let svc = service()?;
+    let snapshot = svc.set_settings(settings)?;
+    restore_capture_protection(&svc.app);
+    background::follow_setting(enabled);
+    Ok(snapshot)
+}
+
+#[tauri::command]
+pub async fn copy_clipboard_history_item(id: String) -> Result<ClipboardHistorySnapshot, String> {
+    workers::run_blocking(move || {
+        let snapshot = service()?.copy_item(&id)?;
+        copy_notice::notify_copied(&id);
+        Ok(snapshot)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn copy_clipboard_history_item_as(id: String, copy_as: CopyAs) -> Result<ClipboardHistorySnapshot, String> {
+    workers::run_blocking(move || {
+        let snapshot = service()?.copy_item_as(&id, copy_as)?;
+        copy_notice::notify_copied(&id);
+        Ok(snapshot)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn paste_clipboard_history_item(
+    app: AppHandle,
+    id: String,
+    plain: Option<bool>,
+    enter: Option<bool>,
+    copy_as: Option<CopyAs>,
+) -> Result<(), String> {
+    let options = popup::PasteOptions { plain: plain.unwrap_or(false), enter: enter.unwrap_or(false), copy_as };
+    workers::run_blocking(move || {
+        popup::paste(&app, &id, options)?;
+        Ok(())
+    })
+    .await
+}
+
+#[tauri::command]
+pub fn save_clipboard_snippet(id: Option<String>, title: String, text: String) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.save_snippet(id.as_deref(), &title, &text)
+}
+
+#[tauri::command]
+pub fn delete_clipboard_snippet(id: String) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.delete_snippet(&id)
+}
+
+#[tauri::command]
+pub async fn paste_clipboard_snippet(app: AppHandle, id: String) -> Result<(), String> {
+    workers::run_blocking(move || {
+        let text = service()?.snippet_text(&id)?;
+        popup::paste_text(&app, &text, false)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn paste_clipboard_sequence(app: AppHandle, ids: Vec<String>) -> Result<(), String> {
+    workers::run_blocking(move || sequence::start(&app, ids)).await
+}
+
+#[tauri::command]
+pub async fn export_clipboard_history() -> Result<String, crate::user_error::UserError> {
+    tauri::async_runtime::spawn_blocking(|| service()?.export())
+        .await
+        .map_err(|error| crate::user_error::UserError::new("internal", "Something went wrong inside the island.").detail(error))?
+}
+
+#[tauri::command]
+pub async fn import_clipboard_history(content: String) -> Result<transfer::ImportReport, crate::user_error::UserError> {
+    tauri::async_runtime::spawn_blocking(move || service()?.import(&content))
+        .await
+        .map_err(|error| crate::user_error::UserError::new("internal", "Something went wrong inside the island.").detail(error))?
+}
+
+#[tauri::command]
+pub async fn hide_clipboard_popup(app: AppHandle, blurred: Option<bool>) -> Result<(), String> {
+    if blurred != Some(true) {
+        return popup::hide(&app);
+    }
+    if preview_window::editing() {
+        return Ok(());
+    }
+    hide_on_blur(&app)
+}
+
+pub(crate) fn hide_on_blur(app: &AppHandle) -> Result<(), String> {
+    if crate::screenshot::is_capturing() {
+        return Ok(());
+    }
+    if popup_pinned() {
+        popup::note_target(app);
+        return Ok(());
+    }
+    popup::hide_on_blur(app)
+}
+
+#[tauri::command]
+pub async fn set_clipboard_popup_pin(app: AppHandle, pinned: Option<bool>) -> Result<ClipboardHistorySnapshot, String> {
+    let service = service()?;
+    let mut settings = service.snapshot()?.settings;
+    if let Some(pinned) = pinned {
+        settings.popup_pinned = pinned;
+    }
+    let position = if settings.popup_pinned { popup::outer_position(&app) } else { None };
+    settings.popup_pin_x = position.map(|(x, _)| x).or(settings.popup_pin_x.filter(|_| settings.popup_pinned));
+    settings.popup_pin_y = position.map(|(_, y)| y).or(settings.popup_pin_y.filter(|_| settings.popup_pinned));
+    let snapshot = service.set_settings(settings)?;
+    popup::sync_taskbar(&app, snapshot.settings.popup_pinned);
+    Ok(snapshot)
+}
+
+pub(crate) fn popup_pinned() -> bool {
+    service().and_then(|service| service.snapshot()).map(|snapshot| snapshot.settings.popup_pinned).unwrap_or(false)
+}
+
+pub(crate) fn open_from_tray() {
+    if !switched_on() {
+        return;
+    }
+    if let Ok(service) = service() {
+        service.emit_shortcut();
+    }
+}
+
+#[cfg(windows)]
+pub(crate) use privacy::{is_clipboard_window, unprotect_for_recording};
+pub(crate) use privacy::{refocus_popup, restore_capture_protection, show_popup_in_screenshot, wanted_capture_protection};
+
+#[tauri::command]
+pub fn toggle_clipboard_history_favorite(id: String) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.toggle_favorite(&id)
+}
+
+#[tauri::command]
+pub fn set_clipboard_history_item_note(
+    id: String,
+    note: String,
+) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.set_note(&id, &note)
+}
+
+#[tauri::command]
+pub fn delete_clipboard_history_item(id: String) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.delete_items(&[id])
+}
+
+#[tauri::command]
+pub fn restore_clipboard_history_item(id: String) -> Result<ClipboardHistorySnapshot, String> {
+    service()?.restore_items(&[id])
+}
+
+#[tauri::command]
+pub async fn clear_clipboard_history() -> Result<ClipboardHistorySnapshot, String> {
+    workers::run_blocking(|| service()?.clear()).await
+}
+
+pub fn init(app: &AppHandle) -> Result<(), String> {
+    if CLIPBOARD_HISTORY.get().is_some() {
+        return Ok(());
+    }
+
+    let app_dir = crate::home_dir::fuyu_home(app.path())
+        .map_err(|error| format!("Failed to resolve app data directory: {error}"))?;
+    let history_path = app_dir.join(HISTORY_FILE_NAME);
+    let image_dir = app_dir.join(IMAGE_DIRECTORY_NAME);
+
+    fs::create_dir_all(&image_dir)
+        .map_err(|error| format!("Failed to create clipboard history directory: {error}"))?;
+
+    let writer = persist::HistoryWriter::new(history_path.clone(), persist::PERSIST_DEBOUNCE);
+    let service = ClipboardHistoryService {
+        app: app.clone(),
+        history_path,
+        image_dir,
+        loaded: OnceLock::new(),
+        writer,
+        state: Mutex::new(ClipboardHistoryState::default()),
+    };
+
+    let _ = CLIPBOARD_HISTORY.set(service);
+    background::register(app);
+    if let Some(svc) = CLIPBOARD_HISTORY.get() {
+        let _ = std::thread::Builder::new().name("clipboard-history-load".into()).spawn(move || {
+            let stored_enabled = svc.ensure_loaded();
+            service::fill_file_images(None);
+            background::migrate_switch(stored_enabled);
+            background::mirror(switched_on());
+            svc.emit_changed();
+        });
+    }
+    Ok(())
+}
+
+pub(super) fn flush() {
+    if let Some(svc) = CLIPBOARD_HISTORY.get() {
+        if let Err(error) = svc.writer.flush() {
+            eprintln!("failed to flush clipboard history: {error}");
+        }
+    }
+}
+
+pub(crate) fn shutdown() {
+    if let Some(svc) = CLIPBOARD_HISTORY.get() {
+        svc.writer.shutdown();
+    }
+}
+
+pub(crate) fn switched_on() -> bool {
+    crate::plugin_kernel::builtins::is_enabled(PLUGIN_ID)
+}
+
+pub(super) fn is_loaded() -> bool {
+    CLIPBOARD_HISTORY.get().is_some_and(|svc| svc.loaded.get().is_some())
+}
+
+fn service() -> Result<&'static ClipboardHistoryService, String> {
+    let svc = CLIPBOARD_HISTORY
+        .get()
+        .ok_or_else(|| "Clipboard history service is not initialized.".to_string())?;
+    let _ = svc.ensure_loaded();
+    Ok(svc)
+}
+
+fn current_unix_millis() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as i64)
+        .unwrap_or_default()
+}
+
+#[cfg(windows)]
+pub(crate) fn coexist_refresh() {
+    hotkey::request_hotkey_refresh();
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::clipboard_history::get_clipboard_history,
+            crate::clipboard_history::host::get_clipboard_texts,
+            crate::clipboard_history::set_clipboard_history_settings,
+            crate::clipboard_history::get_clipboard_shortcut_error,
+            crate::clipboard_history::copy_clipboard_history_item,
+            crate::clipboard_history::copy_clipboard_history_item_as,
+            crate::clipboard_history::paste_clipboard_history_item,
+            crate::clipboard_history::hide_clipboard_popup,
+            crate::clipboard_history::set_clipboard_popup_pin,
+            crate::clipboard_history::drag::start_clipboard_drag,
+            crate::clipboard_history::paste_clipboard_sequence,
+            crate::clipboard_history::export_clipboard_history,
+            crate::clipboard_history::import_clipboard_history,
+            crate::clipboard_history::save_clipboard_snippet,
+            crate::clipboard_history::delete_clipboard_snippet,
+            crate::clipboard_history::paste_clipboard_snippet,
+            crate::clipboard_history::toggle_clipboard_history_favorite,
+            crate::clipboard_history::set_clipboard_history_item_note,
+            crate::clipboard_history::delete_clipboard_history_item,
+            crate::clipboard_history::restore_clipboard_history_item,
+            crate::clipboard_history::deletion::delete_clipboard_history_items,
+            crate::clipboard_history::deletion::restore_clipboard_history_items,
+            crate::clipboard_history::edit::edit_clipboard_history_text,
+            crate::clipboard_history::edit::undo_clipboard_history_edit,
+            crate::clipboard_history::edit_image::save_clipboard_history_image,
+            crate::clipboard_history::edit_image::read_clipboard_history_image,
+            crate::clipboard_history::pins::set_clipboard_pin_key,
+            crate::clipboard_history::pins::set_clipboard_pin_order,
+            crate::clipboard_history::expand::set_clipboard_popup_expanded,
+            crate::clipboard_history::clear_clipboard_history,
+            crate::clipboard_history::preview_window::show_clipboard_preview,
+            crate::clipboard_history::preview_window::hide_clipboard_preview,
+            crate::clipboard_history::preview_window::set_clipboard_preview_size,
+            crate::clipboard_history::preview_window::resize_clipboard_preview,
+            crate::clipboard_history::preview_window::clipboard_preview_has_pointer,
+            crate::clipboard_history::preview_window::set_clipboard_preview_editing,
+            crate::clipboard_history::actions::paste_clipboard_text,
+            crate::clipboard_history::actions::add_clipboard_history_text,
+            crate::clipboard_history::actions::pause_clipboard_capture,
+            crate::clipboard_history::actions::resume_clipboard_capture,
+            crate::clipboard_history::actions::ignore_next_clipboard_copy,
+            crate::clipboard_history::actions::convert_chinese_text,
+            crate::clipboard_history::actions::read_clipboard_image_qr,
+            crate::clipboard_history::actions::get_clipboard_link_preview,
+            crate::clipboard_history::links::get_clipboard_links,
+            crate::clipboard_history::links::add_clipboard_link,
+            crate::clipboard_history::links::remove_clipboard_link,
+            crate::clipboard_history::links::move_clipboard_link,
+            crate::clipboard_history::links::set_clipboard_link_settings,
+            crate::clipboard_history::links::export_clipboard_links,
+            crate::clipboard_history::links::import_clipboard_links,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;
+
+#[cfg(test)]
+mod tests {
+    use super::{normalized_ai_prompts, split_note_tags, AiPrompt, MAX_AI_PROMPTS};
+
+    #[test]
+    fn ai_prompts_need_a_title_and_text_and_stay_few() {
+        let prompt = |id: &str, title: &str, text: &str| AiPrompt { id: id.into(), title: title.into(), prompt: text.into() };
+        let kept = normalized_ai_prompts(&[prompt("a", " 邮件 ", " 改成正式邮件 "), prompt("a", "dup", "x"), prompt("b", "", "x"), prompt("c", "t", "  ")]);
+        assert_eq!(kept, [prompt("a", "邮件", "改成正式邮件")]);
+        let many: Vec<AiPrompt> = (0..30).map(|index| prompt(&index.to_string(), "t", "x")).collect();
+        assert_eq!(normalized_ai_prompts(&many).len(), MAX_AI_PROMPTS);
+    }
+
+    #[test]
+    fn notes_give_their_hash_words_as_tags() {
+        let (note, tags) = split_note_tags("#Work  meeting link #ops #work ＃周报");
+        assert_eq!(note, "meeting link");
+        assert_eq!(tags, ["Work", "ops", "周报"]);
+        assert_eq!(split_note_tags("# alone"), ("# alone".to_string(), Vec::<String>::new()));
+    }
+}

@@ -1,0 +1,34 @@
+.music-progress {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.music-progress__track {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background: rgba(var(--island-ink-rgb, 241, 240, 246), 0.14);
+  border-radius: var(--radius-pill);
+}
+
+.music-progress__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--text-2);
+  border-radius: inherit;
+  transform-origin: left center;
+  transition: transform 500ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .music-progress__fill {
+    transition: none;
+  }
+}

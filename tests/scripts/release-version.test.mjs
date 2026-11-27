@@ -1,0 +1,200 @@
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { channelProblems, finishedIssues, parseTask, RELEASED_MARKER, releasedComment, shippedIssues } from "../../scripts/release/after-release.mjs";
+import { commandLine, quoteArg } from "../../scripts/release/command-line.mjs";
+import { baseTag, commitNotes, commitPlatform, downloadLinks, DRAFT_MARKER, draftNotes, userFacingCommits } from "../../scripts/release/notes-draft.mjs";
+import { expiredSinceVersions, pruneSinceText, stampNextSince, stampSinceJson, stampSinceText } from "../../scripts/release/since.mjs";
+import { bumpProblem, readVersion, VERSION_FILES, writeVersion } from "../../scripts/release/versions.mjs";
+
+test("the four version files of this repository agree and can be read", () => {
+  const found = Object.entries(VERSION_FILES).map(([kind, path]) => readVersion(kind, readFileSync(path, "utf8")));
+  assert.ok(found.every((version) => version && version === found[0]), found.join(", "));
+});
+
+test("setting a version changes only the version text", () => {
+  const lock = "[[package]]\r\nname = \"fnv\"\r\nversion = \"1.0.7\"\r\n\r\n[[package]]\r\nname = \"fuyu\"\r\nversion = \"0.3.3\"\r\ndependencies = [\r\n";
+  assert.equal(writeVersion("cargoLock", lock, "0.3.4-beta.1"), lock.replace('version = "0.3.3"', 'version = "0.3.4-beta.1"'));
+  const toml = '[package]\nname = "fuyu"\nversion = "0.3.3"\n\n[dependencies]\nserde = { version = "1" }\n';
+  assert.equal(writeVersion("cargo", toml, "0.3.4"), toml.replace('"0.3.3"', '"0.3.4"'));
+  const json = '{\n  "name": "fly-island",\n  "version": "0.3.3",\n  "dependencies": { "x": "1.0.0" }\n}\n';
+  assert.equal(writeVersion("package", json, "0.3.4"), json.replace("0.3.3", "0.3.4"));
+  assert.throws(() => writeVersion("cargoLock", "[[package]]\nname = \"other\"\nversion = \"1\"\n", "0.3.4"));
+});
+
+test("the next version must be a version and newer than every release", () => {
+  const tags = ["v0.3.2", "v0.3.3-beta.1", "v0.3.3", "sdk-v0.4.0"];
+  assert.equal(bumpProblem("0.3.4", tags), null);
+  assert.equal(bumpProblem("0.3.4-beta.1", tags), null);
+  assert.match(bumpProblem("0.3.3", tags), /not newer/);
+  assert.match(bumpProblem("0.3.3-beta.2", tags), /not newer/);
+  assert.match(bumpProblem("v1", tags), /not a version/);
+});
+
+test("notes count from the last release, a final one from the last final one", () => {
+  const tags = ["v0.3.2", "v0.3.3-beta.1", "v0.3.3-beta.2", "v0.3.3", "v0.3.4-beta.1"];
+  assert.equal(baseTag("0.3.4-beta.2", tags), "v0.3.4-beta.1");
+  assert.equal(baseTag("0.3.4", tags), "v0.3.3");
+  assert.equal(baseTag("0.3.3", ["v0.3.2", "v0.3.3-beta.1"]), "v0.3.2");
+  assert.equal(baseTag("0.1.0", []), null);
+});
+
+test("the draft lists user-facing commits and carries the marker", () => {
+  const commits = [
+    { hash: "a1", subject: "feat(mail): links open" },
+    { hash: "b2", subject: "fix: crash on start" },
+    { hash: "c3", subject: "feat(tooling): task board" },
+    { hash: "d4", subject: "docs(design): notes" },
+    { hash: "e5", subject: "chore(release): 0.3.3" },
+  ];
+  assert.deepEqual(userFacingCommits(commits).map(({ hash }) => hash), ["a1", "b2"]);
+  const beta = draftNotes("0.3.4-beta.2", "v0.3.4-beta.1", commits);
+  assert.ok(beta.startsWith(DRAFT_MARKER) && beta.includes("这是 0.3.4 的第二个测试版") && beta.includes("the second beta of 0.3.4"));
+  assert.ok(beta.includes("- a1 feat(mail): links open") && !beta.includes("task board"));
+  const final = draftNotes("0.3.4", "v0.3.3", commits);
+  assert.ok(final.includes("0.3.4 正式版，包含 v0.3.3 以来的全部改动") && final.includes("Fuyu_0.3.4_x64-setup.exe") && !final.includes("numeric"));
+});
+
+test("both halves of the notes open with links to the Windows and Mac installers", () => {
+  const links = downloadLinks("0.3.4-beta.2");
+  const base = "https://github.com/TixXin/fuyu/releases/download/v0.3.4-beta.2";
+  assert.ok(links.zh.includes(`(${base}/Fuyu_0.3.4-beta.2_x64-setup.exe)`) && links.zh.includes(`(${base}/Fuyu_0.3.4-beta.2_aarch64.dmg)`));
+  assert.ok(links.zh.includes(`(https://ghfast.top/${base}/Fuyu_0.3.4-beta.2_aarch64.dmg)`));
+  assert.ok(links.en.includes(`(${base}/Fuyu_0.3.4-beta.2_x64-setup.exe)`) && !links.en.includes("ghfast"));
+  const notes = draftNotes("0.3.4-beta.2", "v0.3.4-beta.1", []);
+  assert.ok(notes.includes(`## 关于这个版本\n\n${links.zh}\n\n`) && notes.includes(`## About this release\n\n${links.en}\n\n`));
+});
+
+test("after a release both channels must offer what they should", () => {
+  assert.deepEqual(channelProblems("0.3.4", { stable: "0.3.4", beta: "0.3.4" }), []);
+  assert.deepEqual(channelProblems("0.3.4-beta.1", { stable: "0.3.3", beta: "0.3.4-beta.1" }), []);
+  assert.equal(channelProblems("0.3.4", { stable: "0.3.3", beta: "0.3.4" }).length, 1);
+  assert.equal(channelProblems("0.3.4-beta.1", { stable: "0.3.4-beta.1", beta: null }).length, 2);
+});
+
+test("issues whose task has a commit in the release are told, once per release", () => {
+  const task = parseTask("---\nid: D13\ntitle: x\nstatus: 已完成\nissue: 18\n---\n\n## 说明\n\ny\n\n## 提交\n\n- `fix(mail): links in a mail open again when clicked`\n- 88b47ae\n\n## 备注\n\n- `not a commit`\n");
+  assert.deepEqual(task, { id: "D13", status: "已完成", issue: 18, commits: ["fix(mail): links in a mail open again when clicked", "88b47ae"] });
+  const other = { id: "C12", issue: 17, commits: ["feat(island): something else"] };
+  const none = { id: "F1", issue: null, commits: ["fix(mail): links in a mail open again when clicked"] };
+  const bySubject = shippedIssues([task, other, none], [{ hash: "ffff", subject: "fix(mail): links in a mail open again when clicked" }]);
+  assert.deepEqual([...bySubject.keys()], [18]);
+  const byHash = shippedIssues([{ ...task, commits: ["88b47ae"] }], [{ hash: "88b47ae0123", subject: "rebased: another subject" }]);
+  assert.deepEqual([...byHash.keys()], [18]);
+  const comment = releasedComment({ tag: "v0.3.4-beta.1", url: "https://example.com/r", tasks: [{ id: "D13", path: "docs/tasks/0-archive/D/D13.md" }], repo: "TixXin/fuyu" });
+  assert.ok(comment.includes("测试版") && comment.includes("docs/tasks/0-archive/D/D13.md") && comment.trimEnd().endsWith(RELEASED_MARKER("v0.3.4-beta.1")));
+});
+
+test("an issue is finished only when all its tasks are done or dropped and one is done", () => {
+  const t = (id, issue, status) => ({ id, issue, status, commits: [] });
+  const finished = finishedIssues([t("A1", 1, "已完成"), t("A2", 1, "不做"), t("B1", 2, "已完成"), t("B2", 2, "进行中"), t("C1", 3, "不做"), t("D1", null, "已完成")]);
+  assert.deepEqual([...finished], [1]);
+});
+
+test("commands go through the Windows shell as one quoted line", () => {
+  assert.equal(commandLine("gh", ["release", "edit", "v0.3.4", "--latest=false"]), "gh release edit v0.3.4 --latest=false");
+  assert.equal(quoteArg(".[].body"), '".[].body"');
+  assert.equal(quoteArg("C:\\a folder\\notes.md"), '"C:\\a folder\\notes.md"');
+  assert.throws(() => quoteArg('say "hi"'));
+});
+
+test("release notes drafts cover both systems and tag commits that change only one", () => {
+  assert.equal(commitPlatform("feat(macos): screenshots on macOS"), "Mac");
+  assert.equal(commitPlatform("fix(windows): taskbar button"), "Windows");
+  assert.equal(commitPlatform("feat(clipboard): previews"), null);
+  const notes = draftNotes("0.3.9-beta.1", "v0.3.8", [
+    { hash: "a1", subject: "feat(macos): QQ unread counts" },
+    { hash: "b2", subject: "feat(clipboard): previews" },
+  ]);
+  assert.ok(notes.includes("- a1 [Mac] feat(macos): QQ unread counts") && notes.includes("- b2 feat(clipboard): previews"));
+  assert.ok(notes.includes("Fuyu_0.3.9-beta.1_x64-setup.exe") && notes.includes("Fuyu_0.3.9-beta.1_aarch64.dmg"));
+  assert.ok(notes.includes("Mac 把新的 Fuyu 拖进「应用程序」") && notes.includes("仍要打开") && notes.includes("Open Anyway"));
+});
+
+test("Release note and Manual check lines in commit bodies seed the draft", () => {
+  const commits = [
+    { hash: "aaa1111", subject: "feat(island): widgets", body: "Body text.\nRelease note: **组件页**：展开后是一页小组件。\nRelease note (en): **Widget page**: the island opens on widgets.\nManual check: drag a widget on Windows" },
+    { hash: "bbb2222", subject: "fix(ui): spacing", body: "No note here." },
+  ];
+  assert.deepEqual(commitNotes(commits), {
+    zh: ["**组件页**：展开后是一页小组件。"],
+    en: ["**Widget page**: the island opens on widgets."],
+    checks: ["aaa1111 drag a widget on Windows"],
+  });
+  const notes = draftNotes("0.3.4-beta.2", "v0.3.4-beta.1", commits);
+  assert.match(notes, /## 更新内容\n\n- \*\*组件页\*\*：展开后是一页小组件。/);
+  assert.match(notes, /## What's New\n\n- \*\*Widget page\*\*/);
+  assert.match(notes, /Manual checks the commits asked for[^\n]*\n- aaa1111 drag a widget on Windows/);
+  assert.match(draftNotes("0.3.4-beta.2", "v0.3.4-beta.1", [commits[1]]), /## 更新内容\n\n-\n/);
+});
+
+test("release bumping stamps since=\"next\" in source and settings indices and prunes expired since versions", () => {
+  assert.deepEqual(stampSinceText('<SettingsRow since="next" /><SettingsToggleRow since={"next"} /><SettingsRow since="0.3.13" />', "0.3.14"), {
+    text: '<SettingsRow since="0.3.14" /><SettingsToggleRow since="0.3.14" /><SettingsRow since="0.3.13" />',
+    count: 2,
+  });
+  assert.deepEqual(pruneSinceText('<SettingsRow title="Old" since="0.3.10" /><SettingsRow title="Keep" since="0.3.13" />', new Set(["0.3.10"])), {
+    text: '<SettingsRow title="Old" /><SettingsRow title="Keep" since="0.3.13" />',
+    count: 1,
+  });
+  assert.deepEqual(stampSinceJson('{"page":"general","since": "next","other":"next"}', "0.3.14"), {
+    text: '{"page":"general","since": "0.3.14","other":"next"}',
+    count: 1,
+  });
+  assert.deepEqual(expiredSinceVersions(["0.3.10", "0.3.11", "0.3.12", "0.3.13", "0.3.14-beta.1", "0.3.14"], "0.3.14", 3), ["0.3.10", "0.3.11"]);
+
+  const dir = mkdtempSync(path.join(tmpdir(), "fuyu-since-"));
+  try {
+    mkdirSync(path.join(dir, "src/windows/settings/sections"), { recursive: true });
+    writeFileSync(path.join(dir, "src/windows/settings/sections/Demo.tsx"), '<SettingsRow title="A" since="next" /><SettingsRow title="Old" since="0.3.10" />\n');
+    writeFileSync(
+      path.join(dir, "src/windows/settings/searchIndex.json"),
+      JSON.stringify({
+        version: 1,
+        entries: [
+          { page: "general", since: "next" },
+          { page: "themeStyle", since: "next" },
+          { page: "music", since: "0.3.13" },
+          { page: "clipboard", since: "0.3.12" },
+          { page: "shelf", since: "0.3.10" },
+        ],
+      }),
+    );
+    writeFileSync(
+      path.join(dir, "src/windows/settings/whatsNewIndex.json"),
+      JSON.stringify({
+        version: 1,
+        entries: [
+          { page: "general", since: "next" },
+          { page: "themeStyle", since: "next" },
+          { page: "music", since: "0.3.13" },
+          { page: "clipboard", since: "0.3.12" },
+          { page: "shelf", since: "0.3.10" },
+        ],
+      }),
+    );
+    const result = stampNextSince(dir, "0.3.14-beta.2");
+    assert.equal(result.count, 2);
+    assert.deepEqual(result.expired, ["0.3.10"]);
+    assert.equal(result.prunedCount, 2);
+    assert.deepEqual(result.files, ["src/windows/settings/sections/Demo.tsx", "src/windows/settings/searchIndex.json", "src/windows/settings/whatsNewIndex.json"]);
+    const demoText = readFileSync(path.join(dir, "src/windows/settings/sections/Demo.tsx"), "utf8");
+    assert.match(demoText, /since="0\.3\.14-beta\.2"/);
+    assert.doesNotMatch(demoText, /0\.3\.10/);
+    const searchAfter = JSON.parse(readFileSync(path.join(dir, "src/windows/settings/searchIndex.json"), "utf8"));
+    const whatsNewAfter = JSON.parse(readFileSync(path.join(dir, "src/windows/settings/whatsNewIndex.json"), "utf8"));
+    assert.equal(searchAfter.entries[0].since, "0.3.14-beta.2");
+    assert.equal(searchAfter.entries[1].since, "0.3.14-beta.2");
+    assert.equal(searchAfter.entries[4].since, undefined);
+    assert.deepEqual(whatsNewAfter.entries.map((entry) => [entry.page, entry.since]), [
+      ["general", "0.3.14-beta.2"],
+      ["themeStyle", "0.3.14-beta.2"],
+      ["music", "0.3.13"],
+      ["clipboard", "0.3.12"],
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

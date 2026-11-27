@@ -1,0 +1,77 @@
+{
+  "name": "@fuyu/world-clock",
+  "version": "1.1.1",
+  "type": "module",
+  "description": "See the time and offset in several cities at once, so scheduling across time zones takes no maths.",
+  "keywords": [
+    "世界时钟",
+    "时区",
+    "时差",
+    "时间",
+    "城市时间",
+    "world clock",
+    "time zone",
+    "timezone",
+    "time difference",
+    "UTC"
+  ],
+  "author": "TixXin",
+  "license": "MIT",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev",
+    "build": "fuyu-plugin build",
+    "check": "fuyu-plugin check --market",
+    "package": "fuyu-plugin pack",
+    "typecheck": "tsc"
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "世界时钟",
+      "en": "World clock"
+    },
+    "description": {
+      "zh-CN": "同时看几个城市的时间和时差，跨时区约会议不用再算。",
+      "en": "See the time and offset in several cities at once, so scheduling across time zones takes no maths."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：几个城市的时间和时差",
+          "en": "Island page: times and offsets in several cities"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：关注城市的时间",
+          "en": "Collapsed bar: the time in your starred city"
+        }
+      }
+    ],
+    "categories": [
+      "utilities",
+      "information"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "settings.section/v1"
+    ]
+  }
+}

@@ -1,0 +1,239 @@
+<div align="center">
+  <a name="readme-top"></a>
+  <a href="https://fuyu.ing/zh/"><img src="docs/assets/readme/island-zh.svg" alt="挂在页面顶上的一座小岛，左边是一只小水母，写着「浮屿 Fuyu」，它会不时展开，写着「开源 · 屏幕顶上的效率小岛」；右下方用连笔手写着官网地址 https://fuyu.ing，一条小箭头指向小岛" width="540" height="100"></a>
+
+  <h1>浮屿 Fuyu</h1>
+
+  <p><b>一座岛，收下桌面的零碎</b></p>
+
+  <p>Windows 和 macOS 上的桌面灵动岛：待办、剪贴板、消息、翻译、音乐和 AI 状态，都在屏幕顶部的一座小岛上。</p>
+
+  <p>
+    <a href="https://github.com/TixXin/fuyu/releases/latest"><img src="docs/assets/readme/download-windows.svg" alt="下载 Windows 版（x64）" width="156" height="38"></a>
+    &nbsp;
+    <a href="https://github.com/TixXin/fuyu/releases"><img src="docs/assets/readme/download-macos.svg" alt="下载 macOS 版（Apple 芯片）" width="156" height="38"></a>
+    <br>
+    <a href="https://fuyu.ing/zh/#mac-install"><img src="docs/assets/readme/mac-guide-zh.svg" alt="Mac 安装教程：第一次打开要手动放行，照着做约 3 分钟" width="94" height="22"></a>
+  </p>
+
+  <p>
+    <a href="https://github.com/TixXin/fuyu/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/TixXin/fuyu?label=version&style=flat-square&labelColor=1b1f24&color=3d444d"></a>
+    <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%20%2F%2011%20%7C%20macOS%2015%2B-3d444d?style=flat-square&labelColor=1b1f24">
+    <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-3d444d?style=flat-square&labelColor=1b1f24">
+    <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0-3d444d?style=flat-square&labelColor=1b1f24"></a>
+    <a href="https://github.com/TixXin/fuyu/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/TixXin/fuyu?style=flat-square&label=stars&labelColor=1b1f24&color=3d444d"></a>
+  </p>
+
+  <p>
+    <b>简体中文</b>
+    ·
+    <a href="docs/readme/README.zh-TW.md">繁體中文</a>
+    ·
+    <a href="docs/readme/README.en.md">English</a>
+    ·
+    <a href="docs/readme/README.ja.md">日本語</a>
+    ·
+    <a href="docs/readme/README.ko.md">한국어</a>
+    ·
+    <a href="docs/readme/README.es.md">Español</a>
+    ·
+    <a href="docs/readme/README.fr.md">Français</a>
+    ·
+    <a href="docs/readme/README.de.md">Deutsch</a>
+    ·
+    <a href="docs/readme/README.ru.md">Русский</a>
+    ·
+    <a href="docs/readme/README.pt-BR.md">Português</a>
+  </p>
+
+  <p>
+    <a href="https://fuyu.ing/zh/">官网</a>
+    ·
+    <a href="https://fuyu.ing/zh/plugins/">插件市场</a>
+    ·
+    <a href="docs/plugins/README.md">写插件</a>
+    ·
+    <a href="https://github.com/TixXin/fuyu/issues">反馈问题</a>
+  </p>
+
+  <p>
+    <a href="docs/assets/promo-001-one-island.mp4"><img src="docs/assets/readme/tour-zh.gif" alt="浮屿演示：桌面上散着的窗口收进屏幕顶部的岛，依次展开待办、音乐与歌词、新消息、剪贴板、翻译和 AI Agent 审批，最后自己收回去" width="800" height="450"></a>
+    <br>
+    <sub>43 秒看一圈。画面里的岛就是真的前端，不是录屏（<a href="video/README.md">怎么做的</a>）· <a href="docs/assets/promo-001-one-island.mp4">看带声音的完整视频</a> · <a href="docs/assets/promo-004-one-day.mp4">《浮屿的一天》（41 秒，带旁白）</a> · <a href="docs/assets/promo-005-at-work.mp4">《用浮屿开发浮屿》（2 分钟，带旁白）</a></sub>
+  </p>
+</div>
+
+## 这是什么
+
+浮屿（Fuyu）是一座轻量、无边框、始终置顶的悬浮岛。平时收在屏幕顶部，需要时展开，用完自动收回。常用的东西都放在岛上，不用为了看一眼信息来回切窗口。
+
+<p align="center">
+  <img src="docs/assets/readme/collapsed-zh.webp" alt="收起的浮屿：屏幕顶部一条窄窄的黑色小岛，正在显示同步歌词和音频波形" width="800" height="100">
+  <br>
+  <sub>收起时只占屏幕顶部这一小条，图里它正跟着歌显示歌词和音频波形</sub>
+</p>
+
+## 岛上有什么
+
+<p><sub>点功能名展开或收起；点动图到官网亲手点一点这座岛</sub></p>
+
+<details open>
+<summary><b>01 · 待办与笔记</b></summary>
+<p>每天的任务、当前专注的事项、每日笔记和历史归档。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="docs/assets/readme/todo-zh.webp" alt="展开的岛上是今天的待办，已完成的划掉收在下面" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>02 · 音乐</b></summary>
+<p>控制正在播放的媒体，显示音频波形和同步歌词。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="docs/assets/readme/music-zh.webp" alt="岛上的音乐页：封面、同步歌词、进度条和播放控制" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>03 · 消息</b></summary>
+<p>QQ、微信、企业微信、TIM、Telegram、Discord、WhatsApp、飞书、钉钉来了新消息，岛上都会提醒，点一下打开对应应用；还有多个邮箱，邮件可以直接在岛上阅读和回复。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="docs/assets/readme/messages-zh.webp" alt="岛下弹出的新消息：一封邮件、一条微信和一条 QQ" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>04 · 剪贴板与文件中转</b></summary>
+<p>图文剪贴板历史；把文件先拖到岛上暂存，再拖去别的程序。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="docs/assets/readme/clipboard-zh.webp" alt="岛上的剪贴板历史：命令、链接、一段文字和一张图片，各自标着来源" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>05 · 快捷翻译</b></summary>
+<p>一个快捷键打开，支持多家大模型翻译服务。</p>
+<p><a href="https://fuyu.ing/zh/#day"><img src="docs/assets/readme/translate-zh.webp" alt="岛上的翻译页：左边原文，右边译文" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>06 · AI Agent</b></summary>
+<p>支持 Claude Code、Codex、Cursor、WorkBuddy、Antigravity、TRAE、Qwen Code、Kimi Code、Copilot CLI 等 17 家主流 AI 代理：在岛上查看运行状态、会话列表与额度用量，需要确认时直接在岛上批准，点一下切到对应终端或编辑器，支持 SSH 远程主机监控；离开电脑时通过 Telegram、Discord、飞书机器人或 iPhone Bark 推送到手机，还能在聊天里接着指挥 Agent。</p>
+<p><a href="https://fuyu.ing/zh/#agent"><img src="docs/assets/readme/agents-zh.webp" alt="岛上弹出 Claude Code 的审批请求：要运行的命令，以及拒绝和允许两个按钮" width="800" height="450"></a></p>
+</details>
+
+<details>
+<summary><b>07 · 日历</b></summary>
+<p>今天和明天的日程、带农历和节假日的月历，会议快开始时在岛上倒计时，可一键加入。</p>
+</details>
+
+<details>
+<summary><b>08 · 系统提示</b></summary>
+<p>音量与亮度变化、耳机外设与电池电量、大写锁定提示，以及摄像头和麦克风正在被哪个程序使用。</p>
+</details>
+
+<details>
+<summary><b>09 · 截图、录屏与贴图</b></summary>
+<p>区域 / 整窗（支持透明底与柔和阴影）/ 长截图 / 延时截图，自带标注、OCR 识字、翻译与屏幕贴图，并支持 MP4 / GIF 录屏。</p>
+</details>
+
+<details>
+<summary><b>10 · 语音输入、计时器与休息提醒</b></summary>
+<p>按快捷键离线本地语音识别，一键存为待办或追加到每日笔记；内置倒计时、秒表与久坐 / 护眼休息提醒。</p>
+</details>
+
+<details>
+<summary><b>11 · 插件、主题与跨设备同步</b></summary>
+<p>从插件市场安装插件来扩展岛屿（源码构建、逐版审核与冷静期），在主题市场挑选外观，并可通过共享文件夹或 WebDAV 端到端加密同步多台设备的数据。</p>
+</details>
+
+岛屿的外观、大小、收起方式、快捷键和每个功能都可以在设置窗口里调整，支持应用内自动更新。数据默认保存在本机。
+
+## 占用
+
+收起、闲着、不放音乐时（默认设置，不装第三方插件）：
+
+| | 实测 |
+|---|---|
+| CPU | 约占单核的 **10%**（20 核电脑上约占总量的 0.5%） |
+| 内存 | 浮屿本身约 **16 MB** |
+| Agent 页每秒刷新一次会话列表 | 单核的 **0.1%** |
+
+测量方法和数据见 [idle-usage.md](docs/investigations/idle-usage.md)。
+
+## 上手
+
+1. **下载安装**：从 [Releases](https://github.com/TixXin/fuyu/releases/latest) 下载安装包并安装。
+   - **Windows**：下载 `_x64-setup.exe`。安装包没有代码签名，SmartScreen 提示时点「更多信息 → 仍要运行」。
+   - **macOS**：在 [Releases 列表](https://github.com/TixXin/fuyu/releases)里找最新一个带 `_aarch64.dmg` 的版本下载（最新正式版里没有时，在它上面的测试版里），把 Fuyu 拖进「应用程序」。第一次打开要在「系统设置 → 隐私与安全性」里点「仍要打开」，一步步的说明见 [Mac 安装教程](https://fuyu.ing/zh/#mac-install)。
+2. **展开小岛**：鼠标移到屏幕顶部的岛上即可展开，点齿轮或托盘图标（Mac 上是菜单栏图标）打开设置。Mac 上新手引导会带你打开要用到的系统权限。
+3. **功能文档**：邮箱、翻译、AI Agent、同步等功能的配置见各自说明：[邮箱](docs/features/mail.md)、[AI Agent](docs/features/agent-status-hooks.md)、[剪贴板](docs/features/clipboard.md)、[音乐与歌词](docs/features/music-and-lyrics.md)、[截图与录屏](docs/features/screenshot.md)、[跨设备同步](docs/features/sync.md)、[系统提示](docs/features/system-alerts.md)、[语音输入](docs/features/voice-input.md)、[手机推送](docs/features/cc-connect.md)。
+
+> [!NOTE]
+> 支持 Windows 10 / 11 和 macOS 15 以上（Apple 芯片）。Mac 版有几处和 Windows 不同：QQ、微信只显示未读数，读不到消息内容；媒体控制和亮度用到了系统私有接口。每个功能在两个平台上的情况见 [platforms.md](docs/architecture/platforms.md)。
+
+## 插件
+
+岛上缺什么，可以自己加。插件用 TypeScript 或 JavaScript 写：后台逻辑跑在岛屿启动的 Node 进程里，界面用 React 写，放进岛上和设置窗口预留的位置。清单就是 `package.json`，安装包是一个 `.fuyu` 文件。
+
+```sh
+npm create fuyu-plugin@latest
+```
+
+- **装现成的**：在岛屿的「设置 → 插件市场」里安装，也可以先在[官网的插件市场](https://fuyu.ing/zh/plugins/)看看有哪些。
+- **自己写**：用上面的命令生成一个项目，在项目里 `npm run dev` 就把它装进正在运行的岛屿，改了自动重新构建；完整说明见[插件文档](docs/plugins/README.md)和[命令行](docs/plugins/cli.md)。
+- **分享给别人**：把提交号交给[插件市场](https://github.com/TixXin/fuyu-plugins)，市场从源码构建、每个版本审核后上架；或者打成 `.fuyu` 文件自己发给别人。步骤见[发布](docs/plugins/publish.md)。
+
+这套插件平台的底座单独开源了，叫 [tauri-cordis](https://github.com/TixXin/tauri-cordis)（MIT）：宿主进程的看管、带版本的服务、界面插槽、打包和市场的工具都在里面，别的 Tauri 应用可以用它做出同样的插件体系。它的内核是 [Cordis](https://github.com/cordiverse/cordis)。
+
+## 从源码构建
+
+- **Windows**：需要 Windows 10/11、Node.js、pnpm、Rust、Visual Studio C++ Build Tools 和 WebView2 Runtime。
+- **macOS**：需要 macOS 15 以上、Xcode 命令行工具（`xcode-select --install`）、Node.js、pnpm 和 Rust。
+
+```sh
+git clone https://github.com/TixXin/fuyu.git
+cd fuyu
+pnpm install
+pnpm tauri dev      # 开发模式
+pnpm tauri build    # 打包安装程序
+```
+
+技术栈：Tauri 2、React 19 + TypeScript、Rust。发布与应用内更新见 [docs/features/updater.md](docs/features/updater.md)。
+
+## 用户交流群
+
+用着有问题、有想法，或者只是想聊聊，欢迎加入 [Discord 社区](https://discord.gg/azu5aZFuRY)、[QQ 群（610594458）](https://qm.qq.com/q/EDhCUUcPse) 或扫码进微信群 / QQ 群：
+
+<p align="center">
+  <img src="docs/assets/readme/wechat-group.png" alt="浮屿用户交流群的微信二维码" height="220">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/assets/readme/qq-group.png" alt="Fuyu-浮屿交流群的 QQ 群二维码（群号 610594458）" height="220">
+</p>
+
+## 参与贡献
+
+浮屿是大家一起做的，欢迎你来添一块：
+
+- **提问题和想法**：到 [Issues](https://github.com/TixXin/fuyu/issues) 说说哪里不好用、还想要什么。
+- **改代码、文档或翻译**：直接提 PR。怎么提、提之前跑哪些检查，见 [CONTRIBUTING.md](CONTRIBUTING.md)；代码怎么组织，见 [AGENTS.md](AGENTS.md)。
+- **写插件**：不用改岛屿本体，做好了放进[插件市场](https://github.com/TixXin/fuyu-plugins)。
+
+<a href="https://github.com/TixXin/fuyu/graphs/contributors"><img src="https://contrib.rocks/image?repo=TixXin/fuyu" alt="浮屿的贡献者"></a>
+
+## Star 趋势
+
+每一颗 Star 都是浮屿往前走的动力。
+
+<p align="center">
+  <a href="https://star-history.com/#TixXin/fuyu&amp;Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TixXin/fuyu&amp;type=Date&amp;theme=dark">
+      <img alt="浮屿的 Star 数随时间的变化" src="https://api.star-history.com/svg?repos=TixXin/fuyu&amp;type=Date" width="600">
+    </picture>
+  </a>
+</p>
+
+## 开源协议
+
+[AGPL-3.0](LICENSE)。插件作者可以自己选协议。第三方依赖和内置资源遵循各自的许可证：来源和声明见[第三方声明](docs/THIRD_PARTY_NOTICES.md)，内置字体见[字体说明](src/assets/fonts/README.md)。
+
+> [!NOTE]
+> 本项目由 [TixXin](https://github.com/TixXin) 和 [ShengLin1001](https://github.com/ShengLin1001) 共同维护，2026 年 11 月由 fly-island 改名为浮屿。原作者 [flyl1u](https://github.com/flyl1u/fly-island) 偏向于精简的灵动岛界面；为了进一步丰富灵动岛的功能，让更多用户把自己 DIY 的功能放上岛，本项目另起一支，由大家共同维护，并发展出了插件市场模式。欢迎大家提 PR 贡献代码（见[参与贡献](CONTRIBUTING.md)），把自己的组件上传到[插件市场](https://github.com/TixXin/fuyu-plugins)，或者在本地安装自己的插件（见[插件文档](docs/plugins/README.md)）。
+
+<p align="center">
+  <a href="#readme-top"><img src="docs/assets/readme/island-tuck.svg" alt="回到顶部" width="480" height="64"></a>
+  <br>
+  <sub>用完，它自己收回去 · <a href="#readme-top">回到顶部</a></sub>
+</p>

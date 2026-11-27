@@ -1,0 +1,167 @@
+export type CalendarText = {
+  title: string;
+  today: string;
+  tomorrow: string;
+  allDay: string;
+  untitled: string;
+  nothing: string;
+  addTodo: string;
+  addTodoOn: (day: string) => string;
+  todo: string;
+  join: string;
+  joinNow: string;
+  joinLabel: (title: string) => string;
+  dismissReminder: string;
+  refresh: string;
+  openSettings: string;
+  updatedAt: (time: string) => string;
+  problems: (count: number) => string;
+  meeting: string;
+  inMinutes: (minutes: number) => string;
+  endsInMinutes: (minutes: number) => string;
+  endsInShort: (minutes: number) => string;
+  started: string;
+  rangeTwoDays: string;
+  rangeSevenDays: string;
+  toggleRangeLabel: (sevenDays: boolean) => string;
+  moreAllDay: (count: number) => string;
+  foldAllDay: string;
+  emptyTitle: string;
+  emptyHint: string;
+  addHolidays: string;
+  addWork: string;
+  adding: string;
+  weekdays: string[];
+  weekHeader: string;
+  monthTitle: (year: number, month: number) => string;
+  dayTitle: (date: Date) => string;
+  previousMonth: string;
+  nextMonth: string;
+  backToToday: string;
+  off: string;
+  work: string;
+  offLabel: string;
+  workLabel: string;
+  daysUntil: (name: string, days: number) => string;
+  holidayIn: (name: string | null, days: number, length: number) => string;
+  eveWorkTitle: string;
+  eveOffTitle: (name: string | null) => string;
+  eveOffDetail: (length: number) => string;
+  dayLabel: (title: string, events: number) => string;
+  notRead: string;
+  openPage: string;
+  openDay: (title: string) => string;
+};
+
+const ZH_WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const EN_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export const zhCN: CalendarText = {
+  title: "日历",
+  today: "今天",
+  tomorrow: "明天",
+  allDay: "全天",
+  untitled: "（无标题）",
+  nothing: "没有日程",
+  addTodo: "添加待办",
+  addTodoOn: (day) => `给 ${day} 添加待办`,
+  todo: "待办",
+  join: "加入",
+  joinNow: "立即加入",
+  joinLabel: (title) => `加入「${title}」的会议`,
+  dismissReminder: "关闭会议提醒",
+  refresh: "重新读取日历",
+  openSettings: "日历设置",
+  updatedAt: (time) => `${time} 更新`,
+  problems: (count) => `${count} 个日历没读到，到设置里看看`,
+  meeting: "会议",
+  inMinutes: (minutes) => `${minutes} 分钟后`,
+  endsInMinutes: (minutes) => `还剩 ${minutes} 分钟`,
+  endsInShort: (minutes) => `剩 ${minutes}m`,
+  started: "已开始",
+  rangeTwoDays: "近两日",
+  rangeSevenDays: "7 天",
+  toggleRangeLabel: (sevenDays) => (sevenDays ? "切换到近两日视图" : "切换到未来 7 天视图"),
+  moreAllDay: (count) => `展开其余 ${count} 项全天日程`,
+  foldAllDay: "收起全天日程",
+  emptyTitle: "还没有日历",
+  emptyHint: "订阅中国节假日不用账号，点一下就有；飞书、钉钉、企业微信等工作日历在设置里添加。也可以直接写以时间开头的待办，例如「15:00 周会」。",
+  addHolidays: "订阅中国节假日",
+  addWork: "添加工作日历",
+  adding: "正在订阅…",
+  weekdays: ["一", "二", "三", "四", "五", "六", "日"],
+  weekHeader: "周",
+  monthTitle: (year, month) => `${year}年${month + 1}月`,
+  dayTitle: (date) => `${date.getMonth() + 1}月${date.getDate()}日 周${ZH_WEEKDAYS[date.getDay()]}`,
+  previousMonth: "上个月",
+  nextMonth: "下个月",
+  backToToday: "今天",
+  off: "休",
+  work: "班",
+  offLabel: "休息日",
+  workLabel: "调休上班",
+  daysUntil: (name, days) => (days === 1 ? `明天${name}` : `${days} 天后${name}`),
+  holidayIn: (name, days, length) => `${days === 1 ? "明天" : `${days} 天后`}放${name ?? "假"} · 共 ${length} 天`,
+  eveWorkTitle: "明天调休，要上班",
+  eveOffTitle: (name) => (name ? `明天起${name}放假` : "明天起放假"),
+  eveOffDetail: (length) => `共 ${length} 天`,
+  dayLabel: (title, events) => (events > 0 ? `${title}，${events} 个日程` : title),
+  notRead: "只读取上个月到下个月的日程，这一天的看不到",
+  openPage: "打开日历",
+  openDay: (title) => `${title}，再点一次打开日历`,
+};
+
+export const en: CalendarText = {
+  title: "Calendar",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  allDay: "All day",
+  untitled: "(No title)",
+  nothing: "Nothing scheduled",
+  addTodo: "Add a todo",
+  addTodoOn: (day) => `Add a todo for ${day}`,
+  todo: "Todo",
+  join: "Join",
+  joinNow: "Join now",
+  joinLabel: (title) => `Join the meeting "${title}"`,
+  dismissReminder: "Dismiss meeting reminder",
+  refresh: "Read the calendars again",
+  openSettings: "Calendar settings",
+  updatedAt: (time) => `Updated ${time}`,
+  problems: (count) => (count === 1 ? "1 calendar could not be read; see Settings" : `${count} calendars could not be read; see Settings`),
+  meeting: "Meeting",
+  inMinutes: (minutes) => (minutes === 1 ? "in 1 min" : `in ${minutes} min`),
+  endsInMinutes: (minutes) => (minutes === 1 ? "1 min left" : `${minutes} min left`),
+  endsInShort: (minutes) => `${minutes}m left`,
+  started: "started",
+  rangeTwoDays: "2 days",
+  rangeSevenDays: "7 days",
+  toggleRangeLabel: (sevenDays) => (sevenDays ? "Switch to 2-day agenda" : "Switch to 7-day agenda"),
+  moreAllDay: (count) => (count === 1 ? "Show 1 more all-day event" : `Show ${count} more all-day events`),
+  foldAllDay: "Fold all-day events",
+  emptyTitle: "No calendar yet",
+  emptyHint: "China's holidays need no account, one click; add a work calendar such as Feishu or DingTalk in Settings. Or write a todo that starts with a time, such as \"15:00 Weekly sync\".",
+  addHolidays: "Subscribe to China's holidays",
+  addWork: "Add a work calendar",
+  adding: "Subscribing…",
+  weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+  weekHeader: "Wk",
+  monthTitle: (year, month) => `${EN_MONTHS[month]} ${year}`,
+  dayTitle: (date) => `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getDay()]}, ${EN_MONTHS[date.getMonth()].slice(0, 3)} ${date.getDate()}`,
+  previousMonth: "Previous month",
+  nextMonth: "Next month",
+  backToToday: "Today",
+  off: "Off",
+  work: "Work",
+  offLabel: "Day off",
+  workLabel: "Make-up workday",
+  daysUntil: (name, days) => (days === 1 ? `${name} tomorrow` : `${name} in ${days} days`),
+  holidayIn: (name, days, length) => `${name ?? "Days off"} ${days === 1 ? "tomorrow" : `in ${days} days`} · ${length} days off`,
+  eveWorkTitle: "Make-up workday tomorrow",
+  eveOffTitle: (name) => (name ? `${name} break starts tomorrow` : "Days off start tomorrow"),
+  eveOffDetail: (length) => `${length} days off`,
+  dayLabel: (title, events) => (events === 0 ? title : `${title}, ${events === 1 ? "1 event" : `${events} events`}`),
+  notRead: "Only last month to next month are read; this day's events are not shown",
+  openPage: "Open calendar",
+  openDay: (title) => `${title}, click again to open the calendar`,
+};

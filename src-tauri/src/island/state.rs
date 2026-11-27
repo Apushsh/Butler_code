@@ -1,0 +1,397 @@
+use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, OnceLock, PoisonError};
+use tauri::PhysicalPosition;
+
+use super::geometry::{
+    COLLAPSED_ISLAND_HEIGHT, COLLAPSED_ISLAND_WIDTH, COLLAPSED_RADIUS, DEFAULT_COLLAPSED_SCALE,
+    DEFAULT_EXPANDED_ISLAND_HEIGHT, DEFAULT_EXPANDED_SCALE, DEFAULT_MARGIN_Y,
+    EXPANDED_ISLAND_WIDTH, EXPANDED_RADIUS, MIN_PREVIEW_ISLAND_WIDTH, PREVIEW_ISLAND_HEIGHT, PREVIEW_RADIUS,
+    SIDE_COLUMN_MIN_HEIGHT, SIDE_COLUMN_WIDTH, SIDE_HANDLE_HEIGHT, SIDE_HANDLE_RADIUS, SIDE_HANDLE_WIDTH,
+};
+
+pub(super) static WINDOW_STATE: OnceLock<Mutex<IslandWindowState>> = OnceLock::new();
+
+#[derive(Clone, Copy)]
+pub(crate) enum IslandMode {
+    Collapsed,
+    Preview,
+    Expanded,
+}
+
+impl IslandMode {
+    pub(super) fn from_value(value: &str) -> Result<Self, String> {
+        match value {
+            "collapsed" => Ok(Self::Collapsed),
+            "preview" => Ok(Self::Preview),
+            "expanded" => Ok(Self::Expanded),
+            _ => Err(format!("Unsupported island mode: {value}")),
+        }
+    }
+
+    pub(super) fn base_size(self, collapsed_width: f64, expanded_width: f64, expanded_height: f64) -> (f64, f64) {
+        match self {
+            Self::Collapsed => (collapsed_width, COLLAPSED_ISLAND_HEIGHT),
+            Self::Preview => (collapsed_width.max(MIN_PREVIEW_ISLAND_WIDTH), PREVIEW_ISLAND_HEIGHT),
+            Self::Expanded => (expanded_width, expanded_height),
+        }
+    }
+
+    pub(super) fn corner_radius(self) -> f64 {
+        match self {
+            Self::Collapsed => COLLAPSED_RADIUS,
+            Self::Preview => PREVIEW_RADIUS,
+            Self::Expanded => EXPANDED_RADIUS,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum MonitorFollow {
+    Primary,
+    Cursor,
+    Foreground,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum TuckStyle {
+    #[default]
+    Edge,
+    Line,
+    Hidden,
+}
+
+pub(crate) const TUCK_LIP_HEIGHT_RANGE: (f64, f64) = (2.0, 14.0);
+pub(crate) const TUCK_LIP_WIDTH_RANGE: (f64, f64) = (80.0, 340.0);
+
+pub(super) fn tuck_lip(value: f64, (min, max): (f64, f64)) -> Option<f64> {
+    (value.is_finite() && value > 0.0).then(|| value.clamp(min, max))
+}
+
+impl TuckStyle {
+    pub(super) fn visible_height(self, lip: Option<f64>) -> Option<f64> {
+        match self {
+            Self::Edge => Some(lip.unwrap_or(super::geometry::TUCKED_VISIBLE_EDGE_HEIGHT)),
+            Self::Line => Some(lip.unwrap_or(super::geometry::TUCKED_VISIBLE_LINE_HEIGHT)),
+            Self::Hidden => None,
+        }
+    }
+
+    pub(super) fn from_value(value: &str) -> Option<Self> {
+        match value {
+            "edge" => Some(Self::Edge),
+            "line" => Some(Self::Line),
+            "hidden" => Some(Self::Hidden),
+            _ => None,
+        }
+    }
+}
+
+impl MonitorFollow {
+    pub(super) fn from_value(value: &str) -> Option<Self> {
+        match value {
+            "primary" => Some(Self::Primary),
+            "cursor" => Some(Self::Cursor),
+            "foreground" => Some(Self::Foreground),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CornerShape {
+    Round,
+    Squircle,
+}
+
+impl CornerShape {
+    pub(super) fn from_value(value: &str) -> Option<Self> {
+        match value {
+            "round" => Some(Self::Round),
+            "squircle" => Some(Self::Squircle),
+            _ => None,
+        }
+    }
+
+    pub(super) fn contains(self, dx: f64, dy: f64, radius: f64) -> bool {
+        match self {
+            Self::Round => dx * dx + dy * dy <= radius * radius,
+            Self::Squircle => dx.powi(4) + dy.powi(4) <= radius.powi(4),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct IslandWindowState {
+    pub(super) mode: IslandMode,
+    pub(super) is_tucked: bool,
+    pub(super) is_dimmed: bool,
+    pub(super) game_passthrough: bool,
+    pub(super) accepts_file_drop: bool,
+    pub(super) tuck_style: TuckStyle,
+    pub(super) tuck_lip_height: Option<f64>,
+    pub(super) tuck_lip_width: Option<f64>,
+    pub(super) collapsed_scale: f64,
+    pub(super) expanded_scale: f64,
+    pub(super) margin_y: f64,
+    pub(super) under_menu_bar: bool,
+    pub(super) collapsed_width: f64,
+    pub(super) collapsed_height: f64,
+    pub(super) preview_width: f64,
+    pub(super) preview_height: f64,
+    pub(super) expanded_width: f64,
+    pub(super) widest_width: f64,
+    pub(super) expanded_height: f64,
+    pub(super) custom_position: Option<IslandPosition>,
+    pub(super) out_at_top: bool,
+    pub(super) is_dragging: bool,
+    pub(super) attached_edge: Option<Edge>,
+    pub(super) glass_enabled: bool,
+    pub(super) glass_native: bool,
+    pub(super) glass_hidden: bool,
+    pub(super) glass_intensity: f64,
+    pub(super) glass_tint_rgb: (u8, u8, u8),
+    pub(super) top_fillet_radius: f64,
+    pub(super) corner_radius: f64,
+    pub(super) corner_shape: CornerShape,
+    pub(super) monitor_follow: MonitorFollow,
+    pub(super) followed_monitor: Option<(i32, i32)>,
+    pub(super) fit_notch: bool,
+    pub(super) auto_form: bool,
+    pub(super) shown_auto_form: Option<super::notch::AutoForm>,
+    pub(super) notch: Option<super::notch::Notch>,
+    pub(super) notch_drop: bool,
+    pub(super) notch_ring_extra: f64,
+    pub(super) side_column_height: f64,
+    pub(super) resize_reach: (f64, f64),
+}
+
+impl IslandWindowState {
+    fn corner_radius_factor(self) -> f64 {
+        self.corner_radius / EXPANDED_RADIUS
+    }
+
+    pub(super) fn bottom_corner_radius(self) -> f64 {
+        if self.is_side_handle() {
+            return SIDE_HANDLE_RADIUS;
+        }
+        if self.is_side_column() {
+            return (self.mode.corner_radius() * self.corner_radius_factor()).min(SIDE_COLUMN_WIDTH / 2.0);
+        }
+        if let (IslandMode::Collapsed, Some(notch)) = (self.mode, self.notch) {
+            return notch.bottom_radius(self.is_tucked);
+        }
+        self.mode.corner_radius() * self.corner_radius_factor()
+    }
+
+    pub(super) fn side(self) -> Option<Edge> {
+        self.attached_edge.filter(|edge| matches!(edge, Edge::Left | Edge::Right))
+    }
+
+    fn is_side_column(self) -> bool {
+        self.side().is_some() && matches!(self.mode, IslandMode::Collapsed)
+    }
+
+    pub(super) fn is_side_handle(self) -> bool {
+        self.is_side_column() && self.is_tucked
+    }
+
+    pub(super) fn base_size(self) -> (f64, f64) {
+        if self.is_side_handle() {
+            return (SIDE_HANDLE_WIDTH, SIDE_HANDLE_HEIGHT);
+        }
+        if self.is_side_column() {
+            return (SIDE_COLUMN_WIDTH, self.side_column_height);
+        }
+        if let (IslandMode::Collapsed, Some(notch)) = (self.mode, self.notch) {
+            return super::notch::collapsed_size(self.collapsed_width, self.collapsed_scale, notch, self.is_tucked, self.notch_drop, self.notch_ring_extra);
+        }
+        if matches!(self.mode, IslandMode::Preview) {
+            return (self.preview_width, self.preview_height);
+        }
+        if matches!(self.mode, IslandMode::Collapsed) && !self.is_tucked {
+            return (self.collapsed_width, self.collapsed_height);
+        }
+        if let (IslandMode::Collapsed, Some(width)) = (self.mode, self.tuck_lip_width) {
+            return (self.collapsed_width.min(width), COLLAPSED_ISLAND_HEIGHT);
+        }
+        self.mode.base_size(self.collapsed_width, self.expanded_width, self.expanded_height)
+    }
+
+    pub(super) fn top_corner_radius(self) -> f64 {
+        if self.attached_edge == Some(Edge::Top) {
+            0.0
+        } else {
+            self.bottom_corner_radius()
+        }
+    }
+
+    pub(super) fn active_scale(self) -> f64 {
+        match self.mode {
+            IslandMode::Collapsed | IslandMode::Preview => self.collapsed_scale,
+            IslandMode::Expanded => self.expanded_scale,
+        }
+    }
+
+    pub(super) fn dimmed_passthrough(self) -> bool {
+        self.is_dimmed
+            && matches!(self.mode, IslandMode::Collapsed)
+            && !self.is_tucked
+            && !self.is_dragging
+    }
+
+    pub(super) fn game_strip_passthrough(self) -> bool {
+        self.game_passthrough
+            && self.is_tucked
+            && matches!(self.mode, IslandMode::Collapsed)
+            && !self.is_dragging
+    }
+
+    pub(super) fn pointer_passthrough(self) -> bool {
+        self.dimmed_passthrough() || self.game_strip_passthrough()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum Edge {
+    Top,
+    Left,
+    Right,
+    Bottom,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub struct IslandPosition {
+    pub(super) x: i32,
+    pub(super) y: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) edge: Option<Edge>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(super) along: Option<f64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(super) taskbar: bool,
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IslandGlassFrame {
+    pub left: f64,
+    pub top: f64,
+    pub width: f64,
+    pub height: f64,
+    pub top_radius: f64,
+    pub bottom_radius: f64,
+    pub fillet_radius: f64,
+    #[serde(default)]
+    pub active_transition: bool,
+}
+
+impl IslandPosition {
+    pub(super) fn at(x: i32, y: i32) -> Self {
+        Self { x, y, edge: None, along: None, taskbar: false }
+    }
+}
+
+impl Default for IslandWindowState {
+    fn default() -> Self {
+        Self {
+            mode: IslandMode::Collapsed,
+            is_tucked: false,
+            is_dimmed: false,
+            game_passthrough: false,
+            accepts_file_drop: false,
+            tuck_style: TuckStyle::Edge,
+            tuck_lip_height: None,
+            tuck_lip_width: None,
+            collapsed_scale: DEFAULT_COLLAPSED_SCALE,
+            expanded_scale: DEFAULT_EXPANDED_SCALE,
+            margin_y: DEFAULT_MARGIN_Y,
+            under_menu_bar: false,
+            collapsed_width: COLLAPSED_ISLAND_WIDTH,
+            collapsed_height: COLLAPSED_ISLAND_HEIGHT,
+            preview_width: MIN_PREVIEW_ISLAND_WIDTH,
+            preview_height: PREVIEW_ISLAND_HEIGHT,
+            expanded_width: EXPANDED_ISLAND_WIDTH,
+            widest_width: 0.0,
+            expanded_height: DEFAULT_EXPANDED_ISLAND_HEIGHT,
+            custom_position: None,
+            out_at_top: false,
+            is_dragging: false,
+            attached_edge: Some(Edge::Top),
+            glass_enabled: false,
+            glass_native: false,
+            glass_hidden: false,
+            glass_intensity: 72.0,
+            glass_tint_rgb: (47, 47, 55),
+            top_fillet_radius: 8.0,
+            corner_radius: EXPANDED_RADIUS,
+            corner_shape: CornerShape::Squircle,
+            monitor_follow: MonitorFollow::Primary,
+            followed_monitor: None,
+            fit_notch: false,
+            auto_form: false,
+            shown_auto_form: None,
+            notch: None,
+            notch_drop: false,
+            notch_ring_extra: 0.0,
+            side_column_height: SIDE_COLUMN_MIN_HEIGHT,
+            resize_reach: (0.0, 0.0),
+        }
+    }
+}
+
+pub(super) fn window_state() -> &'static Mutex<IslandWindowState> {
+    WINDOW_STATE.get_or_init(|| Mutex::new(IslandWindowState::default()))
+}
+
+pub(super) fn mutate_window_state(
+    update: impl FnOnce(&mut IslandWindowState) -> IslandWindowState,
+) -> IslandWindowState {
+    let mut state = window_state()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    update(&mut state)
+}
+
+pub(super) fn read_window_state() -> IslandWindowState {
+    *window_state()
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+}
+
+pub(crate) fn record_dragged_position(position: PhysicalPosition<i32>) {
+    if cfg!(target_os = "macos") {
+        return;
+    }
+    mutate_window_state(|state| {
+        if state.is_dragging && !state.is_tucked {
+            state.custom_position = Some(IslandPosition::at(position.x, position.y));
+        }
+        *state
+    });
+}
+
+pub(super) fn parse_hex_rgb(hex: &str) -> Option<(u8, u8, u8)> {
+    let trimmed = hex.trim().strip_prefix('#').unwrap_or(hex.trim());
+    if trimmed.len() != 6 || !trimmed.is_ascii() {
+        return None;
+    }
+    let r = u8::from_str_radix(&trimmed[0..2], 16).ok()?;
+    let g = u8::from_str_radix(&trimmed[2..4], 16).ok()?;
+    let b = u8::from_str_radix(&trimmed[4..6], 16).ok()?;
+    Some((r, g, b))
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub(super) fn is_light_rgb((r, g, b): (u8, u8, u8)) -> bool {
+    let linear = |channel: u8| {
+        let c = f64::from(channel) / 255.0;
+        if c <= 0.03928 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b) > 0.18
+}

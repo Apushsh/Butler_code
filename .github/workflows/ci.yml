@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'try/**']
+    paths-ignore:
+      - docs/assets/community/community.json
+      - docs/assets/community/wechat-group.png
+      - docs/assets/readme/wechat-group.png
+  pull_request:
+    paths-ignore:
+      - docs/assets/community/community.json
+      - docs/assets/community/wechat-group.png
+      - docs/assets/readme/wechat-group.png
+  merge_group:
+
+# Pull requests and try/ branches (pnpm mq:try) only need their newest push checked. Every commit
+# on main gets its own run that is never cancelled, so a failure is pinned to the commit that caused it.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.sha || 'latest' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# The jobs run side by side; `check` gathers them, because the main ruleset requires a check named `check`.
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs: ${{ steps.scope.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: Docs-only pull request?
+        id: scope
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          docs=false
+          if [ "$EVENT" = pull_request ]; then
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate -q '.[] | .filename, (.previous_filename // empty)' > "$RUNNER_TEMP/changed.txt"
+            docs=$(node --input-type=module -e 'import { readFileSync } from "node:fs"; import { docsOnly } from "./scripts/land-check.mjs"; console.log(docsOnly(readFileSync(process.argv[1], "utf8").split("\n").filter(Boolean)))' "$RUNNER_TEMP/changed.txt")
+          fi
+          echo "docs=$docs"
+          echo "docs=$docs" >> "$GITHUB_OUTPUT"
+
+  docs:
+    needs: scope
+    if: needs.scope.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: Task files
+        run: node scripts/tasks/tasks.mjs check
+
+  frontend:
+    needs: scope
+    if: needs.scope.outputs.docs != 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check, lint, file size, unit tests
+        run: pnpm check
+
+      - name: Build frontend
+        run: pnpm build
+
+  regression:
+    needs: scope
+    if: needs.scope.outputs.docs != 'true'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    name: regression (${{ matrix.shard }}/3)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 自带 Vite，用 runner 上预装的 Chrome 跑 tests/regression/ 下的回归页；按 tests/regression/timings.json 的耗时分成 3 份并行。
+      - name: Browser regression pages
+        run: pnpm test:regression --shard ${{ matrix.shard }}/3
+
+  rust:
+    needs: scope
+    if: needs.scope.outputs.docs != 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same version as rust-toolchain.toml; change both together.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # tauri.conf.json points frontendDist at ../dist; this job does not build the frontend.
+      - name: Placeholder frontend
+        shell: bash
+        run: mkdir -p dist
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      # 结构重构后 clippy 为 0 告警（AGENTS.md），新告警直接让检查失败。
+      - name: Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+  # macOS 适配（G1）：Mac 上暂不支持的模块用 *_unsupported.rs / unsupported.rs，这里保证它们编得过、测试能跑。
+  # A release PR opened on a Mac carries the mac-verified label: pnpm release:open turns on auto-merge only after
+  # pnpm verify (with the Rust tests) passed on that Mac, so this job would repeat it and wait for a scarce macOS runner.
+  rust-macos:
+    needs: scope
+    if: needs.scope.outputs.docs != 'true' && !contains(github.event.pull_request.labels.*.name, 'mac-verified')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Placeholder frontend
+        shell: bash
+        run: mkdir -p dist
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+  check:
+    if: always()
+    needs: [scope, docs, frontend, regression, rust, rust-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All jobs passed
+        env:
+          SCOPE: ${{ needs.scope.result }}
+          DOCS_ONLY: ${{ needs.scope.outputs.docs }}
+          DOCS: ${{ needs.docs.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          REGRESSION: ${{ needs.regression.result }}
+          RUST: ${{ needs.rust.result }}
+          RUST_MACOS: ${{ needs.rust-macos.result }}
+          MAC_VERIFIED: ${{ contains(github.event.pull_request.labels.*.name, 'mac-verified') }}
+        run: |
+          echo "scope=$SCOPE docs-only=$DOCS_ONLY docs=$DOCS frontend=$FRONTEND regression=$REGRESSION rust=$RUST rust-macos=$RUST_MACOS"
+          [ "$SCOPE" = success ] || exit 1
+          if [ "$DOCS_ONLY" = true ]; then
+            [ "$DOCS" = success ]
+          else
+            [ "$FRONTEND" = success ] && [ "$REGRESSION" = success ] && [ "$RUST" = success ] && { [ "$RUST_MACOS" = success ] || { [ "$RUST_MACOS" = skipped ] && [ "$MAC_VERIFIED" = true ]; }; }
+          fi

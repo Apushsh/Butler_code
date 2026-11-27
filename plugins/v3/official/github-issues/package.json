@@ -1,0 +1,105 @@
+{
+  "name": "@fuyu/github-issues",
+  "version": "1.2.1",
+  "type": "module",
+  "description": "See the open issues of the GitHub repositories you follow, grouped by repository, right on the island.",
+  "keywords": [
+    "GitHub",
+    "issue",
+    "issues",
+    "工单",
+    "问题",
+    "仓库",
+    "开源",
+    "repository",
+    "repo",
+    "bug tracker"
+  ],
+  "license": "MIT",
+  "author": "TixXin",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev --official",
+    "build": "fuyu-plugin build --official",
+    "check": "fuyu-plugin check --official --market",
+    "package": "fuyu-plugin pack --official",
+    "typecheck": "tsc",
+    "lint": "eslint ."
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "GitHub Issues",
+      "en": "GitHub Issues"
+    },
+    "description": {
+      "zh-CN": "在岛上看你关注的 GitHub 仓库还有哪些没关的 issue，按仓库分好组。",
+      "en": "See the open issues of the GitHub repositories you follow, grouped by repository, right on the island."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/page.png",
+        "caption": {
+          "zh-CN": "岛上页面：按仓库分组的未关闭 issue",
+          "en": "Island page: open issues grouped by repository"
+        }
+      },
+      {
+        "path": "screenshots/bar.png",
+        "caption": {
+          "zh-CN": "收起条：未关闭 issue 的总数",
+          "en": "Collapsed bar: the total number of open issues"
+        }
+      },
+      {
+        "path": "screenshots/settings.png",
+        "caption": {
+          "zh-CN": "设置：添加要关注的仓库",
+          "en": "Settings: add the repositories you follow"
+        }
+      }
+    ],
+    "categories": [
+      "developer"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "island": "dist/island.js",
+      "settings": "dist/settings.js"
+    },
+    "inject": {
+      "required": [
+        "commands",
+        "messages/v1"
+      ],
+      "optional": [
+        "settings"
+      ]
+    },
+    "slots": [
+      "island.page/v1",
+      "island.collapsed/v1",
+      "settings.section/v1"
+    ],
+    "commands": [
+      {
+        "id": "refresh",
+        "title": {
+          "zh-CN": "立即刷新",
+          "en": "Refresh now"
+        }
+      }
+    ],
+    "network": [
+      "api.github.com"
+    ]
+  }
+}

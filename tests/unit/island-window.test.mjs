@@ -1,0 +1,330 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import "./islandPageSlot.mjs";
+import {
+  MAX_COLLAPSED_ISLAND_WIDTH,
+  MIN_COLLAPSED_ISLAND_WIDTH,
+  alignCollapsedIslandWidth,
+  getCollapsedIslandWidth,
+  getTodoScrollStartRows,
+} from "../../src/windows/island/layout.ts";
+import { ISLAND_POSITION_STORAGE_KEY, loadIslandPosition } from "../../src/windows/island/storage.ts";
+
+function withStorage(entries, run) {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const values = new Map(entries);
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { localStorage: { getItem: (key) => values.get(key) ?? null } } });
+  try {
+    run();
+  } finally {
+    if (descriptor) Object.defineProperty(globalThis, "window", descriptor);
+    else delete globalThis.window;
+  }
+}
+
+test("the collapsed island grows with its text between the min and max widths", () => {
+  assert.equal(getCollapsedIslandWidth(""), MIN_COLLAPSED_ISLAND_WIDTH);
+  assert.equal(getCollapsedIslandWidth("x".repeat(200)), MAX_COLLAPSED_ISLAND_WIDTH);
+  const mid = getCollapsedIslandWidth("abcdefg");
+  assert.ok(mid > MIN_COLLAPSED_ISLAND_WIDTH && mid < MAX_COLLAPSED_ISLAND_WIDTH, String(mid));
+  assert.equal(Number.isInteger(mid), true);
+});
+
+test("plugin slots widen the collapsed island by the width they need, up to the max", () => {
+  assert.equal(getCollapsedIslandWidth("", 42), MIN_COLLAPSED_ISLAND_WIDTH + 42);
+  assert.equal(getCollapsedIslandWidth("", -10), MIN_COLLAPSED_ISLAND_WIDTH);
+  assert.equal(getCollapsedIslandWidth("abcdefg", 1000), MAX_COLLAPSED_ISLAND_WIDTH);
+});
+
+test("the collapsed width setting moves the whole range, and alignment stays inside it", () => {
+  assert.equal(getCollapsedIslandWidth("", 0, 60), MIN_COLLAPSED_ISLAND_WIDTH + 60);
+  assert.equal(getCollapsedIslandWidth("x".repeat(200), 0, -40), MAX_COLLAPSED_ISLAND_WIDTH - 40);
+  assert.equal(getCollapsedIslandWidth("abcdefg", 1000, 100), MAX_COLLAPSED_ISLAND_WIDTH + 100);
+  for (const extra of [-60, 37, 180]) {
+    for (let width = MIN_COLLAPSED_ISLAND_WIDTH + extra; width <= MAX_COLLAPSED_ISLAND_WIDTH + extra; width++) {
+      const aligned = alignCollapsedIslandWidth(width, 820, 1.25, extra);
+      assert.ok(aligned >= MIN_COLLAPSED_ISLAND_WIDTH + extra && aligned <= MAX_COLLAPSED_ISLAND_WIDTH + extra, `${width} ${extra}`);
+    }
+  }
+});
+
+test("the todo list scrolls after as many rows as fit under the max panel height", () => {
+  assert.equal(getTodoScrollStartRows(490), 7);
+  assert.equal(getTodoScrollStartRows(339), 2);
+  assert.equal(getTodoScrollStartRows(340), 3);
+});
+
+test("the collapsed width is nudged so the centred island starts on a whole device pixel", () => {
+  const leftEdge = (width, ratio) => ((820 - width) / 2) * ratio;
+  assert.equal(alignCollapsedIslandWidth(301, 820, 1), 300);
+  assert.equal(alignCollapsedIslandWidth(300, 820, 1), 300);
+  for (const ratio of [1, 1.25, 1.5, 1.75, 2]) {
+    for (let width = MIN_COLLAPSED_ISLAND_WIDTH; width <= MAX_COLLAPSED_ISLAND_WIDTH; width++) {
+      const aligned = alignCollapsedIslandWidth(width, 820, ratio);
+      assert.ok(Math.abs(aligned - width) <= 4, `${width} at ${ratio} -> ${aligned}`);
+      assert.ok(aligned >= MIN_COLLAPSED_ISLAND_WIDTH && aligned <= MAX_COLLAPSED_ISLAND_WIDTH);
+      assert.equal(Number.isInteger(leftEdge(aligned, ratio)), true, `${width} at ${ratio} -> ${aligned}`);
+    }
+  }
+  assert.equal(alignCollapsedIslandWidth(301, 820, 1.13), 301);
+});
+
+test("a stored island position is rounded and invalid data is ignored", () => {
+  withStorage([[ISLAND_POSITION_STORAGE_KEY, JSON.stringify({ x: 10.6, y: -3.2 })]], () => {
+    assert.deepEqual(loadIslandPosition(), { x: 11, y: -3 });
+  });
+  for (const value of [JSON.stringify({ x: "1", y: 2 }), JSON.stringify({ x: 1 }), JSON.stringify({ x: Infinity, y: 0 }), "{bad"]) {
+    withStorage([[ISLAND_POSITION_STORAGE_KEY, value]], () => assert.equal(loadIslandPosition(), null, value));
+  }
+  withStorage([], () => assert.equal(loadIslandPosition(), null));
+});
+
+test("pages and message sources that are switched off fall back to ones still on", async () => {
+  const { isPageEnabled, resolveIslandPage } = await import("../../src/windows/island/features.ts");
+  const { resolveMessageSource } = await import("../../src/features/messages/island/messageSource.ts");
+  const all = { todo: true, music: true, clipboard: true, shelf: true, qq: true, wechat: true, qqMail: true };
+  assert.equal(resolveIslandPage("music", all), "music");
+  assert.equal(resolveIslandPage("todo", { ...all, todo: false }), "music");
+  assert.equal(resolveIslandPage("todo", { ...all, todo: false, music: false, clipboard: false }), "shelf");
+  assert.equal(resolveIslandPage("todo", { ...all, todo: false, music: false, clipboard: false, shelf: false }), "qq");
+  assert.equal(isPageEnabled("qq", { ...all, qq: false, wechat: false }), true);
+  const none = { todo: false, music: false, clipboard: false, shelf: false, qq: false, wechat: false, qqMail: false };
+  assert.equal(isPageEnabled("qq", none), false);
+  assert.equal(resolveIslandPage("todo", none), null);
+  assert.equal(resolveMessageSource("qq", { ...all, qq: false }), "wechat");
+  assert.equal(resolveMessageSource("wechat", { ...all, qq: false, wechat: false }), "qqMail");
+  assert.equal(resolveMessageSource("qqMail", none), "qqMail");
+});
+
+test("Alt+number follows the header from left to right and skips modules that are off", async () => {
+  const { pageForAltDigit, pageShortcutLabel, cycleShortcutPage } = await import("../../src/windows/island/features.ts");
+  const { pageDigitFromEvent, pageCycleDirection, normalizePageDigitModifiers, normalizePageCycleShortcut } = await import("../../src/lib/settings/pageShortcuts.ts");
+  const all = { agents: true, todo: true, music: true, clipboard: true, shelf: true, qq: true, wechat: false, qqMail: false };
+  assert.equal(pageForAltDigit(all, 1), "agents");
+  assert.equal(pageForAltDigit(all, 2), "todo");
+  assert.equal(pageForAltDigit(all, 5), "shelf");
+  assert.equal(pageForAltDigit(all, 6), "qq");
+  assert.equal(pageForAltDigit(all, 7), null);
+  assert.equal(pageForAltDigit({ ...all, music: false, agents: false }, 1), "todo");
+  assert.equal(pageForAltDigit({ ...all, music: false, agents: false }, 2), "clipboard");
+  assert.equal(pageForAltDigit({ ...all, qq: false, wechat: true, agents: false, todo: false, music: false, clipboard: false, shelf: false }, 1), "qq");
+  assert.equal(pageShortcutLabel({ ...all, agents: false }, "todo", "Ctrl"), "Ctrl+1");
+  assert.equal(pageShortcutLabel({ ...all, todo: false }, "todo", "Alt"), null);
+  assert.equal(cycleShortcutPage(all, "todo", 1), "music");
+  assert.equal(cycleShortcutPage(all, "agents", -1), "qq");
+  assert.equal(cycleShortcutPage({ ...all, music: false, clipboard: false, shelf: false, qq: false, wechat: false, qqMail: false }, "agents", 1), "todo");
+  assert.equal(cycleShortcutPage({ ...all, todo: false, music: false, clipboard: false, shelf: false, qq: false, wechat: false, qqMail: false }, "agents", 1), null);
+  const down = { altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, key: "4" };
+  assert.equal(pageDigitFromEvent({ ...down, code: "Digit4" }, "Alt"), 4);
+  assert.equal(pageDigitFromEvent({ ...down, code: "Digit4", ctrlKey: true, altKey: false }, "Ctrl"), 4);
+  assert.equal(pageDigitFromEvent({ ...down, code: "Numpad4" }, "Alt"), null);
+  assert.equal(pageDigitFromEvent({ ...down, code: "Digit1", repeat: true }, "Alt"), null);
+  assert.equal(pageDigitFromEvent({ ...down, code: "Digit1", ctrlKey: true }, "Alt"), null);
+  assert.equal(normalizePageDigitModifiers("shift+ctrl"), "Ctrl+Shift");
+  assert.equal(normalizePageDigitModifiers("Win+Alt"), "Alt");
+  assert.equal(normalizePageCycleShortcut("Alt+Tab", "Ctrl+Tab"), "Ctrl+Tab");
+  assert.equal(normalizePageCycleShortcut("ctrl+shift+tab", "Ctrl+Tab"), "Ctrl+Shift+Tab");
+  assert.equal(pageCycleDirection({ ...down, key: "Tab", code: "Tab", altKey: false, ctrlKey: true }, "Ctrl+Tab", "Ctrl+Shift+Tab"), 1);
+  assert.equal(pageCycleDirection({ ...down, key: "Tab", code: "Tab", altKey: false, ctrlKey: true, shiftKey: true }, "Ctrl+Tab", "Ctrl+Shift+Tab"), -1);
+  assert.equal(pageCycleDirection({ ...down, key: "Tab", code: "Tab" }, "Ctrl+Tab", "Ctrl+Shift+Tab"), null);
+});
+
+test("page shortcuts go through every page in the header's order, from the header dots to the bell", async () => {
+  const { pageShortcutOrder, cycleShortcutPage, headerDotPages } = await import("../../src/windows/island/features.ts");
+  const { pageSlot } = await import("../../src/windows/island/slots/pageSlot.ts");
+  const every = { agents: true, todo: true, calendar: true, music: true, clipboard: true, shelf: true, screenshots: true, timer: true, qq: true, wechat: false, qqMail: false, translation: true };
+  const dots = (features) => headerDotPages(pageSlot.items(), features).map((item) => item.id);
+  assert.deepEqual(pageShortcutOrder(every), ["agents", ...dots(every), "qq", "translation"]);
+  assert.deepEqual(dots(every), ["todo", "music", "calendar", "clipboard", "shelf", "screenshots", "timer"]);
+  assert.deepEqual(dots({ ...every, music: false, timer: false }), ["todo", "calendar", "clipboard", "shelf", "screenshots"]);
+  assert.equal(cycleShortcutPage(every, "music", 1), "calendar");
+  assert.equal(cycleShortcutPage(every, "screenshots", 1), "timer");
+  assert.equal(cycleShortcutPage(every, "timer", 1), "qq");
+  assert.equal(cycleShortcutPage(every, "agents", -1), "translation");
+  const mac = { ...every, music: false, clipboard: false, timer: false, qq: false, translation: false };
+  assert.deepEqual(pageShortcutOrder(mac), ["agents", "todo", "calendar", "shelf", "screenshots"]);
+});
+
+test("the translation page comes last in the page shortcuts, and only when it is an island page", async () => {
+  const { pageForAltDigit, pageShortcutOrder } = await import("../../src/windows/island/features.ts");
+  const all = { agents: true, todo: true, music: true, clipboard: true, shelf: true, qq: true, wechat: true, qqMail: true };
+  assert.equal(pageShortcutOrder(all).includes("translation"), false);
+  assert.equal(pageForAltDigit({ ...all, translation: true }, 7), "translation");
+  assert.equal(pageForAltDigit({ ...all, translation: true }, 1), "agents");
+});
+
+test("pages the system lacks are switched off and the island skips them", async () => {
+  const { withoutUnsupported, resolveIslandPage } = await import("../../src/windows/island/features.ts");
+  const all = { todo: true, calendar: true, music: true, clipboard: true, shelf: true, screenshots: true, qq: true, wechat: true, qqMail: true, agents: true, translation: true };
+  const mac = withoutUnsupported(all, new Set(["music", "clipboard", "screenshot", "qq", "wechat", "translation"]));
+  assert.equal(mac.music, false);
+  assert.equal(mac.clipboard, false);
+  assert.equal(mac.screenshots, false);
+  assert.equal(mac.translation, false);
+  assert.equal(mac.qqMail, true);
+  assert.equal(resolveIslandPage("music", mac), "todo");
+  assert.equal(withoutUnsupported(all, new Set()), all);
+});
+
+test("with the clipboard on, screenshot history lives in the clipboard page instead of its own", async () => {
+  const { foldScreenshotsIntoClipboard, pageShortcutOrder, resolveIslandPage } = await import("../../src/windows/island/features.ts");
+  const all = { todo: true, calendar: true, music: true, clipboard: true, shelf: true, screenshots: true, qq: false, wechat: false, qqMail: false, agents: true, translation: false };
+  const folded = foldScreenshotsIntoClipboard(all);
+  assert.equal(folded.screenshots, false);
+  assert.equal(folded.clipboardScreenshots, true);
+  assert.equal(pageShortcutOrder(folded).includes("screenshots"), false);
+  assert.equal(resolveIslandPage("screenshots", folded), "clipboard");
+  const noClipboard = foldScreenshotsIntoClipboard({ ...all, clipboard: false });
+  assert.equal(noClipboard.screenshots, true);
+  assert.equal(noClipboard.clipboardScreenshots, false);
+  assert.equal(foldScreenshotsIntoClipboard({ ...all, screenshots: false }).clipboardScreenshots, false);
+});
+
+test("screenshot history groups shots by calendar day, newest first", async () => {
+  const { groupByDay, clockTime } = await import("../../src/features/screenshot/historyDays.ts");
+  const now = new Date(2026, 10, 14, 15, 0).getTime();
+  const at = (day, hour, minute = 0) => ({ takenAt: new Date(2026, 10, day, hour, minute).getTime() });
+  const days = groupByDay([at(14, 9), at(14, 8), at(13, 23), at(13, 0, 5), at(2, 12)], now);
+  assert.deepEqual(days.map((day) => [day.kind, day.day, day.items.length]), [["today", 14, 2], ["yesterday", 13, 2], ["date", 2, 1]]);
+  assert.equal(clockTime(at(13, 0, 5).takenAt), "00:05");
+  assert.deepEqual(groupByDay([], now), []);
+});
+
+test("a first-run hint widens the island past the usual cap, up to 460px", async () => {
+  const { getNoticeIslandWidth, MAX_COLLAPSED_ISLAND_WIDTH } = await import("../../src/windows/island/layout.ts");
+  const long = getNoticeIslandWidth("Agent 会话显示在这里，点岛看全部", 200);
+  assert.ok(long > MAX_COLLAPSED_ISLAND_WIDTH && long <= 460);
+  assert.equal(getNoticeIslandWidth("短", 0), 280);
+  assert.equal(getNoticeIslandWidth("x".repeat(200), 0, 12), 472);
+});
+
+test("single-flight frame queue coalesces bursts, trails in-flight work, and flushes on dispose", async () => {
+  const { createSingleFlightFrameQueue } = await import("../../src/windows/island/windowSync.ts");
+  const frames = [];
+  let nextId = 1;
+  const sent = [];
+  const resolvers = [];
+  const queue = createSingleFlightFrameQueue(
+    (item) => {
+      sent.push(item);
+      return new Promise((resolve) => {
+        resolvers.push(resolve);
+      });
+    },
+    {
+      requestFrame: (cb) => {
+        const id = nextId++;
+        frames.push({ id, cb });
+        return id;
+      },
+      cancelFrame: (id) => {
+        const index = frames.findIndex((entry) => entry.id === id);
+        if (index >= 0) frames.splice(index, 1);
+      },
+    },
+  );
+
+  const p1 = queue.schedule("a");
+  const p2 = queue.schedule("b");
+  assert.equal(frames.length, 1);
+  assert.deepEqual(sent, []);
+
+  frames.shift().cb();
+  assert.deepEqual(sent, ["b"]);
+  assert.equal(frames.length, 0);
+
+  queue.schedule("c");
+  queue.schedule("d");
+  assert.equal(frames.length, 0);
+
+  resolvers.shift()();
+  await Promise.all([p1, p2]);
+  assert.equal(frames.length, 1);
+
+  queue.dispose();
+  assert.equal(frames.length, 0);
+  assert.deepEqual(sent, ["b", "d"]);
+  resolvers.shift()();
+});
+
+test("a hidden window flushes the frame queue on a timeout and goes back to animation frames once shown", async () => {
+  const { createSingleFlightFrameQueue } = await import("../../src/windows/island/windowSync.ts");
+  let hidden = true;
+  const frames = [];
+  const sent = [];
+  const queue = createSingleFlightFrameQueue(
+    (item) => {
+      sent.push(item);
+      return Promise.resolve();
+    },
+    {
+      requestFrame: (callback) => {
+        frames.push(callback);
+        return frames.length;
+      },
+      cancelFrame: () => undefined,
+      isHidden: () => hidden,
+    },
+  );
+
+  await queue.schedule("while hidden");
+  assert.deepEqual(sent, ["while hidden"]);
+  assert.equal(frames.length, 0, "a hidden window never waits for an animation frame");
+
+  hidden = false;
+  const shown = queue.schedule("once shown");
+  assert.equal(frames.length, 1, "a visible window waits for the animation frame again");
+  frames.shift()();
+  await shown;
+  assert.deepEqual(sent, ["while hidden", "once shown"]);
+  queue.dispose();
+});
+
+test("external resize tracker enters resizing mode only on rapid geometry StorageEvents and settles cleanly", async () => {
+  const {
+    EXTERNAL_RESIZE_BURST_MS,
+    EXTERNAL_RESIZE_SETTLE_MS,
+    createExternalResizeTracker,
+  } = await import("../../src/windows/island/windowSync.ts");
+  const states = [];
+  const timers = [];
+  let nextTimerId = 1;
+  const tracker = createExternalResizeTracker(
+    { panelWidth: 560, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 80 },
+    {
+      setResizing: (active) => states.push(active),
+      setTimer: (cb, ms) => {
+        const id = nextTimerId++;
+        timers.push({ id, cb, ms });
+        return id;
+      },
+      clearTimer: (id) => {
+        const index = timers.findIndex((entry) => entry.id === id);
+        if (index >= 0) timers.splice(index, 1);
+      },
+    },
+  );
+
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 560, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 90 }), 1000);
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 560, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 95 }), 1030);
+  assert.deepEqual(states, []);
+
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 580, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 95 }), 2000);
+  assert.deepEqual(states, []);
+
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 600, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 95 }), 2000 + EXTERNAL_RESIZE_BURST_MS + 20);
+  assert.deepEqual(states, []);
+
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 620, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 95 }), 2000 + EXTERNAL_RESIZE_BURST_MS + 60);
+  assert.deepEqual(states, [true]);
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].ms, EXTERNAL_RESIZE_SETTLE_MS);
+
+  tracker.onStorageValue(JSON.stringify({ panelWidth: 640, maxPanelHeight: 360, islandCornerRadius: 32, opacity: 95 }), 2000 + EXTERNAL_RESIZE_BURST_MS + 90);
+  assert.deepEqual(states, [true]);
+  assert.equal(timers.length, 1);
+
+  timers.shift().cb();
+  assert.deepEqual(states, [true, false]);
+  assert.equal(tracker.isActive(), false);
+});

@@ -1,0 +1,632 @@
+pub(crate) mod banner_hit;
+pub(crate) mod bottom_edge;
+#[cfg_attr(target_os = "macos", path = "focus_macos.rs")]
+#[cfg_attr(not(any(windows, target_os = "macos")), path = "focus_unsupported.rs")]
+pub(crate) mod focus;
+#[cfg(any(windows, target_os = "macos", test))]
+mod focus_slots;
+#[cfg_attr(not(any(windows, target_os = "macos")), path = "follow_unsupported.rs")]
+mod follow;
+#[cfg(any(windows, target_os = "macos"))]
+#[cfg_attr(target_os = "macos", path = "follow_point_macos.rs")]
+mod follow_point;
+#[cfg_attr(target_os = "macos", path = "drag_follow_macos.rs")]
+mod drag_follow;
+mod drag_grid;
+pub(crate) mod drag_grid_window;
+mod drag_hint;
+mod drag_passthrough;
+mod edge;
+#[cfg_attr(target_os = "macos", path = "expand_hotkey_macos.rs")]
+mod expand_hotkey;
+pub(crate) mod expand_shortcut;
+mod geometry;
+mod hover_linger;
+pub(crate) mod layer;
+#[cfg_attr(target_os = "macos", path = "layer_hotkey_macos.rs")]
+mod layer_hotkey;
+pub(crate) mod notch;
+pub(crate) mod side;
+#[cfg_attr(target_os = "macos", path = "glass_macos.rs")]
+#[cfg_attr(not(any(windows, target_os = "macos")), path = "glass_unsupported.rs")]
+pub(crate) mod glass;
+#[cfg(windows)]
+pub(crate) mod glass_capture;
+#[cfg_attr(not(any(windows, target_os = "macos")), path = "resize_unsupported.rs")]
+pub(crate) mod resize;
+#[cfg_attr(not(windows), path = "outside_click_unsupported.rs")]
+pub(crate) mod outside_click;
+#[cfg_attr(target_os = "macos", path = "passthrough_macos.rs")]
+pub(crate) mod passthrough;
+pub(crate) mod screen;
+#[cfg(target_os = "macos")]
+mod screen_watch;
+mod stage_height;
+mod state;
+#[cfg_attr(not(windows), path = "taskbar_unsupported.rs")]
+pub(crate) mod taskbar;
+#[cfg(windows)]
+mod taskbar_drag;
+pub(crate) mod top_edge;
+#[cfg(windows)]
+pub(crate) mod topmost_guard;
+mod watch;
+
+#[cfg(test)]
+mod tests;
+
+use serde::Deserialize;
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        PoisonError,
+    },
+    thread,
+    time::Duration,
+};
+use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+
+use geometry::{
+    grown_collapsed_height, max_expanded_height, max_expanded_width, monitor_for_island_position, nominal_position,
+    out_at_top_after, should_apply_stage_geometry, stage_geometry_synced, stage_room, COLLAPSED_ISLAND_HEIGHT,
+    MAX_ADJUSTED_COLLAPSED_WIDTH, MAX_CORNER_RADIUS, MIN_ADJUSTED_COLLAPSED_WIDTH,
+    MIN_COLLAPSED_ISLAND_WIDTH, MIN_CORNER_RADIUS, MIN_EXPANDED_ISLAND_HEIGHT, MIN_PREVIEW_ISLAND_WIDTH,
+    POSITION_ANIMATION_GENERATION, PREVIEW_ISLAND_HEIGHT,
+};
+use glass::apply_glass_material;
+#[cfg(windows)]
+use crate::win32;
+use state::{
+    mutate_window_state, parse_hex_rgb, read_window_state, tuck_lip, window_state, CornerShape,
+    IslandGlassFrame, IslandMode, MonitorFollow, TuckStyle, TUCK_LIP_HEIGHT_RANGE, TUCK_LIP_WIDTH_RANGE,
+};
+
+pub(crate) use geometry::apply_stage_geometry;
+#[cfg(debug_assertions)]
+pub(crate) use notch::set_dev_notch;
+pub(crate) use passthrough::start_cursor_passthrough_loop;
+pub(crate) use watch::start_window_watch;
+#[cfg(target_os = "macos")]
+pub(crate) use passthrough::hide_transient_hints;
+
+#[cfg(windows)]
+pub(crate) fn hide_transient_hints(_app: &AppHandle) -> bool {
+    false
+}
+pub(crate) use state::{record_dragged_position, IslandPosition, IslandWindowState};
+
+pub(crate) const WINDOW_LABEL: &str = "main";
+const ISLAND_REVEAL_REQUESTED_EVENT: &str = "island-reveal-requested";
+pub(crate) const ISLAND_DIM_WAKE_EVENT: &str = "island-dim-wake";
+const ISLAND_POSITION_CHANGED_EVENT: &str = "island-position-changed";
+
+static USER_HIDDEN_ISLAND: AtomicBool = AtomicBool::new(false);
+
+pub(super) fn user_hidden() -> bool {
+    USER_HIDDEN_ISLAND.load(Ordering::SeqCst)
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IslandLayout {
+    collapsed_scale: f64,
+    expanded_scale: f64,
+    margin_y: f64,
+    #[serde(default)]
+    under_menu_bar: bool,
+    #[serde(default)]
+    fit_notch: bool,
+    #[serde(default)]
+    auto_form: bool,
+    #[serde(default)]
+    animate: bool,
+    #[serde(default)]
+    drag_grid: Option<bool>,
+    #[serde(default)]
+    tuck_style: Option<String>,
+    #[serde(default)]
+    tuck_lip_height: Option<f64>,
+    #[serde(default)]
+    tuck_lip_width: Option<f64>,
+}
+
+fn set_tuck_lip(state: &mut state::IslandWindowState, height: Option<f64>, width: Option<f64>) {
+    if let Some(height) = height {
+        state.tuck_lip_height = tuck_lip(height, TUCK_LIP_HEIGHT_RANGE);
+    }
+    if let Some(width) = width {
+        state.tuck_lip_width = tuck_lip(width, TUCK_LIP_WIDTH_RANGE);
+    }
+}
+
+#[tauri::command]
+pub fn set_island_layout(app: AppHandle, layout: IslandLayout) -> Result<(), String> {
+    let window = main_window(&app)?;
+    if let Some(drag_grid) = layout.drag_grid {
+        drag_grid_window::set_lines(drag_grid);
+    }
+    let state = mutate_window_state(|state| {
+        state.collapsed_scale = layout.collapsed_scale.clamp(0.75, 1.4);
+        state.expanded_scale = layout.expanded_scale.clamp(0.75, 1.4);
+        state.margin_y = layout.margin_y.clamp(0.0, 160.0);
+        state.under_menu_bar = layout.under_menu_bar;
+        state.fit_notch = layout.fit_notch;
+        state.auto_form = layout.auto_form;
+        if let Some(tuck_style) = layout.tuck_style.as_deref().and_then(TuckStyle::from_value) {
+            state.tuck_style = tuck_style;
+        }
+        set_tuck_lip(state, layout.tuck_lip_height, layout.tuck_lip_width);
+        *state
+    });
+    apply_stage_geometry(&window, state, layout.animate)
+}
+
+#[tauri::command]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "each argument is a named field of the set_island_interaction IPC contract"
+)]
+pub fn set_island_interaction(
+    app: AppHandle,
+    mode: String,
+    collapsed_scale: f64,
+    expanded_scale: f64,
+    margin_y: Option<f64>,
+    expanded_height: Option<f64>,
+    collapsed_width: Option<f64>,
+    expanded_width: Option<f64>,
+    widest_width: Option<f64>,
+    custom_position: Option<IslandPosition>,
+    is_tucked: Option<bool>,
+    is_dimmed: Option<bool>,
+    animate_position: Option<bool>,
+    glass_enabled: Option<bool>,
+    glass_intensity: Option<f64>,
+    glass_tint: Option<String>,
+    glass_backdrop: Option<String>,
+    top_fillet_radius: Option<f64>,
+    glass_frame: Option<IslandGlassFrame>,
+    corner_radius: Option<f64>,
+    corner_shape: Option<String>,
+    monitor_follow: Option<String>,
+    tuck_style: Option<String>,
+    tuck_lip_height: Option<f64>,
+    tuck_lip_width: Option<f64>,
+    game_passthrough: Option<bool>,
+    collapsed_height: Option<f64>,
+    preview_width: Option<f64>,
+    preview_height: Option<f64>,
+    notch_ring_extra: Option<f64>,
+    glass_hidden: Option<bool>,
+) -> Result<String, String> {
+    let window = main_window(&app)?;
+    let mode = IslandMode::from_value(&mode)?;
+    let previous_state = read_window_state();
+    let restored_custom_position = previous_state.custom_position.or_else(|| {
+        custom_position.filter(|position| {
+            monitor_for_island_position(&window, *position)
+                .ok()
+                .flatten()
+                .is_some()
+        })
+    });
+    let (room_width, room_height) = stage_room(&window);
+    let state = mutate_window_state(|state| {
+        let (was_tucked, was_expanded) = (state.is_tucked, matches!(state.mode, IslandMode::Expanded));
+        state.mode = mode;
+        state.is_tucked = is_tucked.unwrap_or(false);
+        state.is_dimmed = is_dimmed.unwrap_or(false)
+            && matches!(state.mode, IslandMode::Collapsed)
+            && !state.is_tucked
+            && !state.is_dragging;
+        state.game_passthrough = game_passthrough.unwrap_or(false);
+        state.out_at_top = out_at_top_after(state.out_at_top, was_tucked, was_expanded, state.is_tucked, mode);
+        state.collapsed_scale = collapsed_scale.clamp(0.75, 1.4);
+        state.expanded_scale = expanded_scale.clamp(0.75, 1.4);
+        if let Some(margin_y) = margin_y {
+            state.margin_y = margin_y.clamp(0.0, 160.0);
+        }
+        if let Some(expanded_height) = expanded_height {
+            state.expanded_height = expanded_height.clamp(
+                MIN_EXPANDED_ISLAND_HEIGHT,
+                max_expanded_height(state.expanded_scale, room_height),
+            );
+        }
+        let widest_room = max_expanded_width(state.expanded_scale, room_width);
+        if let Some(expanded_width) = expanded_width {
+            state.expanded_width = expanded_width.clamp(MIN_COLLAPSED_ISLAND_WIDTH, widest_room);
+        }
+        state.widest_width = widest_width.filter(|width| width.is_finite()).map_or(0.0, |width| width.clamp(0.0, widest_room));
+        if let Some(collapsed_width) = collapsed_width {
+            state.collapsed_width =
+                collapsed_width.clamp(MIN_ADJUSTED_COLLAPSED_WIDTH, MAX_ADJUSTED_COLLAPSED_WIDTH);
+        }
+        state.collapsed_height = grown_collapsed_height(collapsed_height.unwrap_or(COLLAPSED_ISLAND_HEIGHT));
+        if let Some(width) = preview_width.filter(|w| w.is_finite()) {
+            state.preview_width = width.clamp(MIN_PREVIEW_ISLAND_WIDTH, widest_room);
+        } else {
+            state.preview_width = state.collapsed_width.max(MIN_PREVIEW_ISLAND_WIDTH).min(state.expanded_width.max(MIN_PREVIEW_ISLAND_WIDTH));
+        }
+        if let Some(height) = preview_height.filter(|h| h.is_finite()) {
+            state.preview_height = height.clamp(COLLAPSED_ISLAND_HEIGHT, 240.0);
+        } else {
+            state.preview_height = PREVIEW_ISLAND_HEIGHT;
+        }
+        state.notch_ring_extra = notch::notch_ring_extra(notch_ring_extra);
+        if state.custom_position.is_none() {
+            state.custom_position = restored_custom_position;
+        }
+        state.glass_enabled = glass_enabled.unwrap_or(false);
+        state.glass_hidden = glass_hidden.unwrap_or(false);
+        if let Some(backdrop) = glass_backdrop.as_deref() {
+            state.glass_native = backdrop == "native";
+        }
+        if let Some(intensity) = glass_intensity {
+            state.glass_intensity = intensity.clamp(0.0, 100.0);
+        }
+        if let Some(rgb) = glass_tint.as_deref().and_then(parse_hex_rgb) {
+            state.glass_tint_rgb = rgb;
+        }
+        if let Some(fillet) = top_fillet_radius {
+            state.top_fillet_radius = fillet.clamp(0.0, 12.0);
+        }
+        if let Some(corner_radius) = corner_radius {
+            state.corner_radius = corner_radius.clamp(MIN_CORNER_RADIUS, MAX_CORNER_RADIUS);
+        }
+        if let Some(corner_shape) = corner_shape.as_deref().and_then(CornerShape::from_value) {
+            state.corner_shape = corner_shape;
+        }
+        if let Some(monitor_follow) = monitor_follow.as_deref().and_then(MonitorFollow::from_value) {
+            state.monitor_follow = monitor_follow;
+        }
+        if let Some(tuck_style) = tuck_style.as_deref().and_then(TuckStyle::from_value) {
+            state.tuck_style = tuck_style;
+        }
+        set_tuck_lip(state, tuck_lip_height, tuck_lip_width);
+        *state
+    });
+    if previous_state.monitor_follow != state.monitor_follow {
+        watch::wake();
+    }
+    if should_apply_stage_geometry(&previous_state, &state, stage_geometry_synced()) {
+        apply_stage_geometry(
+            &window,
+            state,
+            animate_position.unwrap_or(true)
+                && (previous_state.is_tucked != state.is_tucked
+                    || previous_state.out_at_top != state.out_at_top
+                    || (state.is_tucked
+                        && (previous_state.tuck_style != state.tuck_style
+                            || previous_state.tuck_lip_height != state.tuck_lip_height))),
+        )?;
+    }
+    if !state.is_dragging {
+        focus::island_mode_synced(&window, matches!(state.mode, IslandMode::Expanded));
+    }
+    if state.game_passthrough && !previous_state.game_passthrough {
+        focus::hand_focus_to_game(&window);
+    }
+    apply_glass_material(&window, state, glass_frame)
+}
+
+#[tauri::command]
+pub fn start_island_drag(app: AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    let current_state = read_window_state();
+
+    if current_state.is_tucked {
+        return Ok(());
+    }
+
+    drag_island(window, current_state)
+}
+
+#[cfg(windows)]
+fn left_button_down() -> bool {
+    win32::input::is_left_button_down()
+}
+
+#[cfg(target_os = "macos")]
+fn left_button_down() -> bool {
+    crate::macos::input::is_left_button_down()
+}
+
+fn drag_island(window: WebviewWindow, current_state: IslandWindowState) -> Result<(), String> {
+    if current_state.is_tucked || current_state.is_dragging {
+        return Ok(());
+    }
+
+    let position = screen::window_position(&window)?;
+    POSITION_ANIMATION_GENERATION.fetch_add(1, Ordering::SeqCst);
+    mutate_window_state(|state| {
+        state.custom_position = Some(IslandPosition::at(position.x, position.y));
+        state.out_at_top = false;
+        state.is_dragging = true;
+        state.is_dimmed = false;
+        *state
+    });
+    if current_state.attached_edge == Some(state::Edge::Top) {
+        top_edge::set_attached(&window, false);
+    }
+    if taskbar::wanted(current_state) {
+        taskbar::lift(&window);
+    }
+
+    focus::set_click_activation(&window, true);
+    let mut follow = match drag_follow::DragFollow::start(&window) {
+        Ok(follow) => follow,
+        Err(error) => {
+            mutate_window_state(|state| {
+                state.is_dragging = false;
+                state.custom_position = current_state.custom_position;
+                *state
+            });
+            focus::set_click_activation(&window, matches!(current_state.mode, IslandMode::Expanded));
+            return Err(error);
+        }
+    };
+
+    thread::spawn(move || {
+        let mut hints = drag_hint::DragHints::new();
+        let mut grid = drag_grid::DragGrid::start(&window, read_window_state());
+        let mut on_taskbar = taskbar::TaskbarDrop::start(&window, read_window_state());
+        while left_button_down() {
+            let over_taskbar = on_taskbar.active();
+            follow.poll(&window, |next| if over_taskbar { next } else { grid.align(next) });
+            hints.poll(&window);
+            if on_taskbar.poll(&window) {
+                grid.forget();
+            }
+            if !on_taskbar.active() {
+                grid.poll(&window);
+            }
+            thread::sleep(Duration::from_millis(8));
+        }
+        hints.finish(&window);
+        grid.finish();
+        thread::sleep(Duration::from_millis(8));
+
+        let dropped = on_taskbar.finish(&window);
+        let final_position = dropped.or_else(|| {
+            screen::window_position(&window).ok().map(|position| {
+                side::snap_after_drag(&window, IslandPosition::at(position.x, position.y), read_window_state())
+            })
+        });
+        let did_finish_drag = {
+            let mut state = window_state().lock().unwrap_or_else(PoisonError::into_inner);
+            if !state.is_dragging {
+                false
+            } else {
+                state.is_dragging = false;
+                if let Some(position) = final_position {
+                    state.custom_position = Some(position);
+                }
+                true
+            }
+        };
+
+        focus::set_click_activation(&window, matches!(read_window_state().mode, IslandMode::Expanded));
+        if did_finish_drag {
+            if let Some(position) = final_position {
+                let _ = window.emit(ISLAND_POSITION_CHANGED_EVENT, nominal_position(&window, position));
+            }
+            let settled = read_window_state();
+            if dropped.is_some() || notch::stale_after_drop(settled) {
+                if let Err(error) = apply_stage_geometry(&window, settled, dropped.is_some()) {
+                    eprintln!("Failed to settle the island after a drag: {error}");
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn reset_island_position(app: AppHandle) -> Result<(), String> {
+    let window = main_window(&app)?;
+    let state = mutate_window_state(|state| {
+        state.custom_position = None;
+        state.is_dragging = false;
+        *state
+    });
+
+    apply_stage_geometry(&window, state, false)
+}
+
+#[tauri::command]
+pub fn minimize_island(app: AppHandle) -> Result<(), String> {
+    hide_island(&app);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn show_ready_island(app: AppHandle) -> Result<(), String> {
+    show_island_without_focus(&app).inspect_err(|error| eprintln!("could not show the island at startup: {error}"))
+}
+
+pub(crate) fn show_island_without_focus(app: &AppHandle) -> Result<(), String> {
+    USER_HIDDEN_ISLAND.store(false, Ordering::SeqCst);
+    layer::bring_front(app);
+    let window = main_window(app)?;
+    let previous = read_window_state();
+    let state = mutate_window_state(|state| {
+        state.is_dimmed = false;
+        *state
+    });
+    apply_stage_geometry(&window, state, false)?;
+    focus::show_island_at_startup(&window)?;
+    if previous.is_tucked || previous.is_dimmed {
+        let _ = window.emit(ISLAND_REVEAL_REQUESTED_EVENT, ());
+    }
+    Ok(())
+}
+
+pub(crate) fn refit(window: &WebviewWindow) -> Result<(), String> {
+    apply_stage_geometry(window, read_window_state(), true)
+}
+
+pub(crate) fn main_window(app: &AppHandle) -> Result<WebviewWindow, String> {
+    app.get_webview_window(WINDOW_LABEL)
+        .ok_or_else(|| "Main island window was not found.".to_string())
+}
+
+pub(super) fn prepare_for_shortcut(app: &AppHandle) {
+    USER_HIDDEN_ISLAND.store(false, Ordering::SeqCst);
+    layer::bring_front(app);
+    mutate_window_state(|state| {
+        state.is_dimmed = false;
+        *state
+    });
+    if let Ok(window) = main_window(app) {
+        #[cfg(not(target_os = "macos"))]
+        let _ = window.show();
+        focus::focus_island_for_shortcut(&window);
+    }
+    crate::tray::refresh_now(app);
+}
+
+pub(crate) fn show_island(app: &AppHandle) -> Result<(), String> {
+    USER_HIDDEN_ISLAND.store(false, Ordering::SeqCst);
+    layer::bring_front(app);
+    let window = main_window(app)?;
+    let previous = read_window_state();
+    let state = mutate_window_state(|state| {
+        state.is_dimmed = false;
+        *state
+    });
+    apply_stage_geometry(&window, state, false)?;
+    focus::show_island(&window)?;
+    if previous.is_tucked || previous.is_dimmed {
+        let _ = window.emit(ISLAND_REVEAL_REQUESTED_EVENT, ());
+    }
+    Ok(())
+}
+
+pub(crate) fn hide_island(app: &AppHandle) {
+    USER_HIDDEN_ISLAND.store(true, Ordering::SeqCst);
+    POSITION_ANIMATION_GENERATION.fetch_add(1, Ordering::SeqCst);
+    mutate_window_state(|state| {
+        state.is_dimmed = false;
+        *state
+    });
+    let Ok(window) = main_window(app) else {
+        crate::tray::refresh_now(app);
+        return;
+    };
+    #[cfg(target_os = "macos")]
+    {
+        let handle = app.clone();
+        let target = window.clone();
+        if app
+            .run_on_main_thread(move || {
+                let _ = target.hide();
+                crate::tray::refresh_now(&handle);
+            })
+            .is_err()
+        {
+            let _ = window.hide();
+            crate::tray::refresh_now(app);
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window.hide();
+        crate::tray::refresh_now(app);
+    }
+}
+
+#[tauri::command]
+pub fn get_island_top_attachment() -> bool {
+    top_edge::is_attached()
+}
+
+#[tauri::command]
+pub fn get_island_edge() -> Option<state::Edge> {
+    edge::attached()
+}
+
+#[tauri::command]
+pub fn get_island_taskbar() -> taskbar::IslandTaskbar {
+    taskbar::reported()
+}
+
+pub(crate) fn apply_initial_file_drop<R: tauri::Runtime>(webview: &tauri::Webview<R>) {
+    #[cfg(windows)]
+    if webview.label() == WINDOW_LABEL {
+        apply_webview_external_drop(webview, read_window_state().accepts_file_drop);
+    }
+    #[cfg(not(windows))]
+    let _ = webview;
+}
+
+#[cfg(windows)]
+fn apply_webview_external_drop<R: tauri::Runtime>(webview: &tauri::Webview<R>, accepted: bool) {
+    let label = webview.label().to_string();
+    let result = webview.with_webview(move |platform| {
+        if let Err(error) = win32::webview_drop::set_allow_external_drop(&platform.controller(), accepted) {
+            eprintln!("webview external drop for {label}: {error}");
+        }
+    });
+    if let Err(error) = result {
+        eprintln!("webview external drop: {error}");
+    }
+}
+
+#[tauri::command]
+pub fn set_island_file_drop_accepted(webview: tauri::Webview, accepted: bool) {
+    if webview.label() == WINDOW_LABEL {
+        mutate_window_state(|state| {
+            state.accepts_file_drop = accepted;
+            *state
+        });
+    }
+    #[cfg(windows)]
+    apply_webview_external_drop(&webview, accepted);
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::island::set_island_layout,
+            crate::island::set_island_interaction,
+            crate::island::glass::sync_island_glass_frame,
+            crate::island::glass::start_glass_capture,
+            crate::island::glass::set_glass_capture_options,
+            crate::island::glass::stop_glass_capture,
+            crate::island::start_island_drag,
+            crate::island::reset_island_position,
+            crate::island::get_island_top_attachment,
+            crate::island::get_island_edge,
+            crate::island::get_island_taskbar,
+            crate::island::taskbar::start_island_taskbar_drag,
+            crate::island::taskbar::end_island_taskbar_drag,
+            crate::island::bottom_edge::set_island_edge,
+            crate::island::side::set_island_side_column,
+            crate::island::banner_hit::set_island_side_bubble_rect,
+            crate::island::notch::get_island_notch,
+            crate::island::notch::get_island_auto_form,
+            crate::island::notch::set_island_notch_drop,
+            crate::island::show_ready_island,
+            crate::island::minimize_island,
+            crate::island::focus::take_island_hover_focus,
+            crate::island::focus::take_island_click_focus,
+            crate::island::focus::release_island_hover_focus,
+            crate::island::focus::island_is_foreground,
+            crate::island::passthrough::set_island_cursor_tracking,
+            crate::island::set_island_file_drop_accepted,
+            crate::island::resize::start_island_resize,
+            crate::island::banner_hit::set_island_banner_rect,
+            crate::island::banner_hit::set_island_overflow_rect,
+            crate::island::outside_click::set_island_outside_click_watch,
+            crate::island::drag_grid_window::get_drag_grid_state,
+            crate::island::layer::set_island_layer_shortcut,
+            crate::island::layer::get_island_layer_shortcut_problem,
+            crate::island::layer::get_island_layer,
+            crate::island::layer::toggle_island_layer,
+            crate::island::expand_shortcut::set_island_expand_shortcut,
+            crate::island::expand_shortcut::get_island_expand_shortcut_problem,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

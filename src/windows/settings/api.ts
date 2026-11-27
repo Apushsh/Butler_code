@@ -1,0 +1,160 @@
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { ISLAND_GLASS_STATUS_EVENT, ISLAND_GLASS_STATUS_REQUEST_EVENT, type IslandGlassStatus } from "../island/glassStatus";
+import { requestSettingsFocus, type SettingsFocusSection } from "./storage";
+
+export function settingsWindowOpening(section?: SettingsFocusSection, bundle?: string): Promise<void> {
+  if (section) {
+    requestSettingsFocus(section, undefined, undefined, bundle);
+  }
+
+  return invoke<void>("open_settings_window").catch((error) => {
+    console.error("Failed to open settings window", error);
+  });
+}
+
+export function openSettingsWindow(section?: SettingsFocusSection) {
+  void settingsWindowOpening(section);
+}
+
+export function openPluginSettingsWindow(plugin: string): Promise<void> {
+  requestSettingsFocus("pluginsV3", plugin);
+  return invoke<void>("open_settings_window");
+}
+
+export function showSettingsWindow() {
+  return invoke("show_settings_window");
+}
+
+const SETTINGS_WINDOW_REOPENED_EVENT = "settings-window-reopened";
+
+export function listenSettingsWindowReopened(onReopened: () => void) {
+  return listen(SETTINGS_WINDOW_REOPENED_EVENT, onReopened);
+}
+
+export type DevPriority = "releaseFirst" | "devFirst";
+
+export type DevPriorityState = { priority: DevPriority; yielding: boolean; releaseRunning: boolean; releaseYields?: boolean };
+
+const DEV_PRIORITY_CHANGED_EVENT = "dev-priority-changed";
+
+export function readDevPriority() {
+  return invoke<DevPriorityState | null>("get_dev_priority");
+}
+
+export function saveDevPriority(priority: DevPriority) {
+  return invoke<DevPriorityState | null>("set_dev_priority", { priority });
+}
+
+export function listenDevPriorityChanged(onState: (state: DevPriorityState) => void) {
+  return listen<DevPriorityState>(DEV_PRIORITY_CHANGED_EVENT, ({ payload }) => onState(payload));
+}
+
+export function readLaunchAtStartup() {
+  return invoke<boolean>("get_launch_at_startup");
+}
+
+export function saveLaunchAtStartup(enabled: boolean) {
+  return invoke("set_launch_at_startup", { enabled });
+}
+
+export function quitIsland() {
+  return invoke<void>("quit_island");
+}
+
+export function readTrayIconVisible() {
+  return invoke<boolean>("get_tray_icon_visible");
+}
+
+export function saveTrayIconVisible(visible: boolean) {
+  return invoke<void>("set_tray_icon_visible", { visible });
+}
+
+export type CrashLogsHome = {
+  home: string;
+  crashLog?: string | null;
+};
+
+export function readCrashLogsHome() {
+  return invoke<CrashLogsHome>("get_data_home");
+}
+
+export function revealCrashLogPath(path: string) {
+  return revealItemInDir(path);
+}
+
+export type WebviewGpuMode = "auto" | "warp";
+
+export type WebviewGpuState = {
+  supported: boolean;
+  configuredMode: WebviewGpuMode;
+  activeMode: WebviewGpuMode;
+  autoEnabled: boolean;
+  autoReason: string | null;
+  restartRequired: boolean;
+  gpuUnstable: boolean;
+};
+
+export function readWebviewGpuState() {
+  return invoke<WebviewGpuState>("get_webview_gpu_state");
+}
+
+export function setWebviewGpuMode(mode: WebviewGpuMode) {
+  return invoke<WebviewGpuState>("set_webview_gpu_mode", { mode });
+}
+
+export function clearWebviewGpuCacheAndRestart() {
+  return invoke<void>("clear_webview_gpu_cache_and_restart");
+}
+
+export function listenIslandGlassStatus(onStatus: (status: IslandGlassStatus) => void) {
+  return listen<IslandGlassStatus>(ISLAND_GLASS_STATUS_EVENT, ({ payload }) => onStatus(payload));
+}
+
+export function requestIslandGlassStatus() {
+  return emit(ISLAND_GLASS_STATUS_REQUEST_EVENT);
+}
+
+export type NetworkProxyMode = "system" | "manual" | "direct";
+export type NetworkProxyScheme = "http" | "socks5";
+
+export type NetworkProxyView = {
+  mode: NetworkProxyMode;
+  scheme: NetworkProxyScheme;
+  host: string;
+  port: number | null;
+  username: string;
+  hasPassword: boolean;
+  bypass: string;
+  systemProxy: string | null;
+};
+
+export type SaveNetworkProxyInput = {
+  mode: NetworkProxyMode;
+  scheme: NetworkProxyScheme;
+  host: string;
+  port: number | null;
+  username: string;
+  password: string | null;
+  bypass: string;
+};
+
+export type NetworkProxyTestResult = {
+  ok: boolean;
+  latencyMs: number;
+  target: string;
+  via: string | null;
+};
+
+export function readNetworkProxy() {
+  return invoke<NetworkProxyView>("get_network_proxy");
+}
+
+export function saveNetworkProxy(input: SaveNetworkProxyInput) {
+  return invoke<NetworkProxyView>("save_network_proxy", { input });
+}
+
+export function testNetworkProxy(input: SaveNetworkProxyInput) {
+  return invoke<NetworkProxyTestResult>("test_network_proxy", { input });
+}

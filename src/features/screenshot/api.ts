@@ -1,0 +1,381 @@
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen, type EventCallback } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { open } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import type { OcrWord } from "./redact";
+import type { PixelRect } from "./selection";
+import { shortcutConfig, type RecordSettings, type ScreenshotSettings, type ShortcutAction } from "./settings";
+import type { Target } from "./targets";
+import type { ScreenshotSource } from "./agentMessage";
+import type { HistoryLines } from "./historySearch";
+
+export const SCREENSHOT_SESSION_EVENT = "screenshot-session";
+export const SCREENSHOT_ENDED_EVENT = "screenshot-ended";
+export const SCREENSHOT_TARGETS_EVENT = "screenshot-targets";
+export const SCREENSHOT_SELECTING_EVENT = "screenshot-selecting";
+export const PIN_ASSIGNED_EVENT = "screenshot-pin-assigned";
+export const SCREENSHOT_TAKEN_EVENT = "screenshot-taken";
+export const SCREENSHOT_TEXT_EVENT = "screenshot-text";
+export const SCREENSHOT_TRANSLATE_EVENT = "screenshot-translate";
+
+export type ScreenshotMode = "region" | "copy" | "text" | "translate" | "long" | "record" | "fullscreen";
+
+export type ScreenshotSession = {
+  id: number;
+  mode: ScreenshotMode;
+  width: number;
+  height: number;
+  underPointer: boolean;
+};
+
+export const SCREENSHOT_SHORTCUT_STATUS_EVENT = "screenshot-shortcut-status";
+
+export type ShortcutStatus = { action: ShortcutAction; problem: "invalid" | "duplicate" | "taken" };
+
+export function configureScreenshot(enabled: boolean, settings: ScreenshotSettings) {
+  return invoke<void>("screenshot_configure", { enabled, shortcuts: shortcutConfig(settings), printScreen: settings.printScreen, historyDays: settings.historyDays, historyText: settings.historyText, delaySeconds: settings.delaySeconds });
+}
+
+export function getScreenshotShortcutStatus() {
+  return invoke<ShortcutStatus[]>("screenshot_shortcut_status");
+}
+
+export function listenScreenshotShortcutStatus(handler: EventCallback<ShortcutStatus[]>) {
+  return listen<ShortcutStatus[]>(SCREENSHOT_SHORTCUT_STATUS_EVENT, handler);
+}
+
+export function startScreenshot(mode: ScreenshotMode) {
+  return invoke<void>("screenshot_start", { mode });
+}
+
+export { getScreenshotFrame, getScreenshotSession } from "./frame/api";
+
+export function getScreenshotTargets() {
+  return invoke<Target[]>("screenshot_targets");
+}
+
+export function listenScreenshotTargets(handler: EventCallback<number>) {
+  return listen<number>(SCREENSHOT_TARGETS_EVENT, handler);
+}
+
+export function screenshotOverlayReady(session: number) {
+  return invoke<void>("screenshot_overlay_ready", { session });
+}
+
+export type ScreenshotAction = "copy" | "save" | "pin" | "text" | "translate" | "long" | "record";
+
+export type QuickAction = Extract<ScreenshotAction, "copy" | "text" | "translate" | "long" | "record">;
+
+export function quickAction(mode: ScreenshotMode | undefined): QuickAction | null {
+  return mode === "copy" || mode === "text" || mode === "translate" || mode === "long" || mode === "record" ? mode : null;
+}
+
+export type SaveTarget = { folder?: string; folderName?: string; record?: RecordSettings; windowShadow?: number };
+
+function rawBytes(image: ImageData) {
+  return new Uint8Array(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+}
+
+export type ScreenshotPatch = { at: PixelRect; image: ImageData };
+
+export function finishScreenshot(selection: PixelRect, patch: ScreenshotPatch | null, action: ScreenshotAction, save?: SaveTarget) {
+  const whole = (value: number) => String(Math.max(0, Math.round(value)));
+  const headers: Record<string, string> = {
+    "x-action": action,
+    "x-left": whole(selection.x),
+    "x-top": whole(selection.y),
+    "x-width": whole(selection.width),
+    "x-height": whole(selection.height),
+  };
+  if (patch) {
+    headers["x-patch-left"] = whole(patch.at.x - selection.x);
+    headers["x-patch-top"] = whole(patch.at.y - selection.y);
+    headers["x-patch-width"] = String(patch.image.width);
+    headers["x-patch-height"] = String(patch.image.height);
+  }
+  if (save?.folder) headers["x-folder"] = encodeURIComponent(save.folder);
+  if (save?.folderName) headers["x-folder-name"] = encodeURIComponent(save.folderName);
+  if (save?.windowShadow !== undefined) {
+    headers["x-window-shadow"] = "true";
+    headers["x-window-id"] = String(save.windowShadow);
+  }
+  if (save?.record) {
+    headers["x-format"] = save.record.format;
+    headers["x-fps"] = String(save.record.fps);
+    headers["x-quality"] = save.record.quality;
+    headers["x-system-audio"] = String(save.record.systemAudio);
+    headers["x-microphone"] = String(save.record.microphone);
+    headers["x-own-windows"] = String(save.record.ownWindows);
+  }
+  return invoke<string | null>("screenshot_finish", patch ? rawBytes(patch.image) : new Uint8Array(0), { headers });
+}
+
+export function cancelScreenshot() {
+  return invoke<void>("screenshot_cancel");
+}
+
+export const SCREENSHOT_LONG_EVENT = "screenshot-long";
+export const SCREENSHOT_LONG_PROGRESS_EVENT = "screenshot-long-progress";
+
+export type LongState = "ready" | "scrolling" | "paused" | "end" | "fast" | "full";
+export type LongProgress = { state: LongState; height: number; frames: number; preview: string | null };
+export type LongEnding = "copy" | "save" | "cancel";
+
+export function listenLongStarted(handler: EventCallback<string>) {
+  return listen<string>(SCREENSHOT_LONG_EVENT, handler);
+}
+
+export function listenLongProgress(handler: EventCallback<LongProgress>) {
+  return listen<LongProgress>(SCREENSHOT_LONG_PROGRESS_EVENT, handler);
+}
+
+export function reportLongBar(rect: PixelRect) {
+  return invoke<void>("screenshot_long_bar", { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+}
+
+export function pauseLongShot(paused?: boolean) {
+  return invoke<boolean | null>("screenshot_long_pause", { paused: paused ?? null });
+}
+
+export function endLongShot(action: LongEnding, save?: SaveTarget) {
+  return invoke<void>("screenshot_long_end", { action, folder: save?.folder ?? null, folderName: save?.folderName ?? null });
+}
+
+export function findScreenshotWords(rect: PixelRect) {
+  return invoke<OcrWord[][]>("screenshot_find_words", { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+}
+
+export type ScreenshotQrCode = { text: string; x: number; y: number; width: number; height: number };
+
+export function readScreenshotQr(rect: PixelRect) {
+  return invoke<ScreenshotQrCode[]>("screenshot_read_qr", { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+}
+
+export function openScreenshotLink(url: string) {
+  return openUrl(url);
+}
+
+export function listenScreenshotSession(handler: EventCallback<ScreenshotSession>) {
+  return listen<ScreenshotSession>(SCREENSHOT_SESSION_EVENT, handler);
+}
+
+export function listenScreenshotEnded(handler: EventCallback<unknown>) {
+  return listen(SCREENSHOT_ENDED_EVENT, handler);
+}
+
+export function overlayLabel() {
+  return getCurrentWebviewWindow().label;
+}
+
+export function announceSelecting(label: string) {
+  return emit(SCREENSHOT_SELECTING_EVENT, label);
+}
+
+export function listenSelecting(handler: EventCallback<string>) {
+  return listen<string>(SCREENSHOT_SELECTING_EVENT, handler);
+}
+
+export type PinInfo = { width: number; height: number; opacity?: number };
+
+export type PinTurn = "left" | "right" | "flipX" | "flipY";
+
+export function getPinInfo() {
+  return invoke<PinInfo | null>("screenshot_pin_info");
+}
+
+export function listenPinAssigned(handler: EventCallback<PinInfo>) {
+  return listen<PinInfo>(PIN_ASSIGNED_EVENT, handler);
+}
+
+export function getPinImage() {
+  return invoke<ArrayBuffer>("screenshot_pin_image");
+}
+
+export function pinReady() {
+  return invoke<void>("screenshot_pin_ready");
+}
+
+export function zoomPin(scale: number, anchor: { x: number; y: number }) {
+  return invoke<void>("screenshot_pin_zoom", { scale, anchorX: anchor.x, anchorY: anchor.y });
+}
+
+export function setPinClickThrough(through: boolean) {
+  return invoke<void>("screenshot_pin_click_through", { through });
+}
+
+export function copyPin() {
+  return invoke<void>("screenshot_pin_copy");
+}
+
+export function savePin(target: SaveTarget) {
+  return invoke<string>("screenshot_pin_save", { folder: target.folder ?? null, folderName: target.folderName });
+}
+
+export function closePin() {
+  return invoke<void>("screenshot_pin_close");
+}
+
+export function togglePins() {
+  return invoke<void>("screenshot_pins_toggle");
+}
+
+export function closeAllPins() {
+  return invoke<void>("screenshot_pins_close_all");
+}
+
+export function turnPin(turn: PinTurn) {
+  return invoke<void>("screenshot_pin_turn", { turn });
+}
+
+export function collapsePin(collapsed: boolean) {
+  return invoke<void>("screenshot_pin_collapse", { collapsed });
+}
+
+export function reservePinSpace(width: number, height: number) {
+  return invoke<void>("screenshot_pin_reserve", { width, height });
+}
+
+export function replacePin(image: ImageData) {
+  return invoke<void>("screenshot_pin_replace", rawBytes(image), { headers: { "x-width": String(image.width), "x-height": String(image.height) } });
+}
+
+export function setPinOpacity(opacity: number) {
+  return invoke<void>("screenshot_pin_opacity", { opacity });
+}
+
+export function readPinText() {
+  return invoke<string>("screenshot_pin_text");
+}
+
+export function rememberPins(enabled: boolean) {
+  return invoke<void>("screenshot_pins_remember", { enabled });
+}
+
+export function listenScreenshotText(handler: EventCallback<string>) {
+  return listen<string>(SCREENSHOT_TEXT_EVENT, handler);
+}
+
+export function listenScreenshotTranslate(handler: EventCallback<string>) {
+  return listen<string>(SCREENSHOT_TRANSLATE_EVENT, handler);
+}
+
+export type ScreenshotTaken = {
+  path: string;
+  thumbnail: string | null;
+  saved: boolean;
+  source?: ScreenshotSource | null;
+};
+
+export function listenScreenshotTaken(handler: EventCallback<ScreenshotTaken>) {
+  return listen<ScreenshotTaken>(SCREENSHOT_TAKEN_EVENT, handler);
+}
+
+export const SCREENSHOT_HISTORY_EVENT = "screenshot-history-changed";
+
+export type HistoryItem = { path: string; takenAt: number; thumbnail: string | null; width: number; height: number; words: HistoryLines | null };
+
+export function getScreenshotHistory() {
+  return invoke<HistoryItem[]>("screenshot_history");
+}
+
+export function copyHistoryScreenshot(path: string) {
+  return invoke<void>("screenshot_history_copy", { path });
+}
+
+export function pinHistoryScreenshot(path: string) {
+  return invoke<void>("screenshot_history_pin", { path });
+}
+
+export function deleteHistoryScreenshot(path: string) {
+  return invoke<void>("screenshot_history_delete", { path });
+}
+
+export function listenScreenshotHistory(handler: () => void) {
+  return Promise.all([listen(SCREENSHOT_HISTORY_EVENT, handler), listen(SCREENSHOT_TAKEN_EVENT, handler)])
+    .then((stops) => () => stops.forEach((stop) => stop()));
+}
+
+export function dragScreenshot(path: string) {
+  return invoke<void>("screenshot_drag", { path });
+}
+
+export function keepScreenshot(path: string) {
+  return invoke<string>("screenshot_keep", { path });
+}
+
+export function pasteScreenshotToFront(path: string, text?: string) {
+  return invoke<void>("screenshot_paste_to_front", { path, ...(text ? { text } : {}) });
+}
+
+export const RECORDING_STATE_EVENT = "recording-state";
+export const RECORDING_FINISHED_EVENT = "recording-finished";
+
+export type RecordingRequest = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  folderName: string;
+  fps?: number;
+  systemAudio?: boolean;
+  microphone?: boolean;
+  ownWindows?: boolean;
+};
+
+export type RecordingSummary = {
+  path: string;
+  width: number;
+  height: number;
+  seconds: number;
+  frames: number;
+  repeats: number;
+  dropped: number;
+  hardware: boolean;
+  systemAudio: boolean;
+  microphone: boolean;
+};
+
+export type RecordingState = {
+  phase: "idle" | "countdown" | "recording";
+  countdown: number;
+  paused: boolean;
+  elapsedMs: number;
+  sinceMs: number;
+};
+
+export type RecordingFinished = { summary: RecordingSummary | null; error: unknown };
+
+export function startRecording(request: RecordingRequest) {
+  return invoke<string>("screen_recording_start", { request });
+}
+
+export function pauseRecording(paused: boolean) {
+  return invoke<void>("screen_recording_pause", { paused });
+}
+
+export function stopRecording() {
+  return invoke<RecordingSummary | null>("screen_recording_stop");
+}
+
+export function getRecordingStatus() {
+  return invoke<RecordingState>("screen_recording_status");
+}
+
+export function listenRecordingState(handler: EventCallback<RecordingState>) {
+  return listen<RecordingState>(RECORDING_STATE_EVENT, handler);
+}
+
+export function listenRecordingFinished(handler: EventCallback<RecordingFinished>) {
+  return listen<RecordingFinished>(RECORDING_FINISHED_EVENT, handler);
+}
+
+export function revealRecording(path: string) {
+  return revealItemInDir(path);
+}
+
+export async function pickSaveFolder(title: string) {
+  const picked = await open({ directory: true, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}

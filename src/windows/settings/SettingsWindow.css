@@ -1,0 +1,72 @@
+.settings-stage {
+  --settings-card: #1b1d22;
+  --settings-card-line: rgba(var(--overlay-rgb, 255, 255, 255), 0.07);
+  height: 100%;
+  color: var(--color-page-text);
+  background: #131417;
+  transition:
+    background-color var(--motion-medium) var(--motion-ease),
+    color var(--motion-medium) var(--motion-ease);
+}
+
+.settings-stage--light {
+  --settings-card: #ffffff;
+  --settings-card-line: rgba(0, 0, 0, 0.08);
+  background: #eceef2;
+}
+
+.settings-stage--light :is(.settings-group__card, .settings-section:not(.settings-section--list), .plugin-card, .plugin-market__item, .theme-market__item, .settings-overview__feature) {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.settings-stage select {
+  font: inherit;
+}
+
+.settings-stage .settings-page__header {
+  max-width: 908px;
+  padding: 4px 146px 0 24px;
+}
+
+.settings-stage .editor-panel {
+  grid-template-columns: minmax(0, 860px);
+  min-height: 0;
+  padding: 4px 28px 24px 24px;
+  border-radius: 0;
+  background: transparent;
+  gap: var(--space-xl);
+}
+
+.settings-stage :is(
+    .toggle-control,
+    .number-control,
+    .plugins-folder > span,
+    .plugin-updates__trusted > span
+  ) {
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.settings-stage .preset-name-input {
+  font-weight: 400;
+}
+
+.settings-stage .select-control__trigger {
+  font-weight: 500;
+}
+
+.settings-stage .toggle-control__switch {
+  background: var(--color-white-a16);
+  border-color: transparent;
+}
+
+.settings-stage .toggle-control input:checked + .toggle-control__switch {
+  background: var(--color-accent);
+  border-color: transparent;
+}
+
+.settings-stage :is(.shortcut-record-button, .number-control__field input) {
+  font-weight: 600;
+}

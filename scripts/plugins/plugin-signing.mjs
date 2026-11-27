@@ -1,0 +1,94 @@
+import { spawnSync } from "node:child_process";
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { signingDir } from "../signing-dir.mjs";
+
+export const KEY_FILE = path.join(signingDir(), "plugin-index-signing.key");
+export const KEY_ENV = "FUYU_PLUGIN_SIGNING_KEY";
+export const TRUSTED_KEYS_PATH = "plugins/signing-keys.json";
+const SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+
+export const signedBytes = (text) => Buffer.from(text.replaceAll("\r\n", "\n"), "utf8");
+
+export function rawPublicKey(publicKey) {
+  return publicKey.export({ format: "der", type: "spki" }).subarray(SPKI_PREFIX.length);
+}
+
+export const keyIdOf = (raw) => createHash("sha256").update(raw).digest("hex").slice(0, 16);
+
+export function signIndex(text, privateKey) {
+  const raw = rawPublicKey(createPublicKey(privateKey));
+  return { keyId: keyIdOf(raw), signature: sign(null, signedBytes(text), privateKey).toString("base64") };
+}
+
+export function verifyIndex(text, signature, trustedKeys) {
+  if (Array.isArray(signature)) return signature.some((one) => verifyIndex(text, one, trustedKeys));
+  const trusted = trustedKeys.find((key) => key.keyId === signature?.keyId);
+  if (!trusted || typeof signature.signature !== "string") return false;
+  const publicKey = createPublicKey({
+    key: Buffer.concat([SPKI_PREFIX, Buffer.from(trusted.publicKey, "base64")]),
+    format: "der",
+    type: "spki",
+  });
+  return verify(null, signedBytes(text), publicKey, Buffer.from(signature.signature, "base64"));
+}
+
+export function dpapi(mode, input) {
+  const command = `
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Security
+$data = [Convert]::FromBase64String($env:FUYU_DPAPI_INPUT)
+$out = [Security.Cryptography.ProtectedData]::${mode}($data, $null, 'CurrentUser')
+[Console]::Out.Write([Convert]::ToBase64String($out))`;
+  const env = { ...process.env, FUYU_DPAPI_INPUT: input.toString("base64") };
+  delete env.PSModulePath;
+  const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", command], {
+    encoding: "utf8",
+    windowsHide: true,
+    env,
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(`DPAPI ${mode} failed. Run as the Windows user who created the key, or set ${KEY_ENV}.`);
+  }
+  return Buffer.from(result.stdout.trim(), "base64");
+}
+
+export function loadPrivateKey(env = process.env) {
+  if (env[KEY_ENV]?.trim()) return createPrivateKey(env[KEY_ENV]);
+  if (!existsSync(KEY_FILE)) {
+    throw new Error(`No plugin signing key: run "pnpm plugins:keygen" once, or set ${KEY_ENV}.`);
+  }
+  const pem = dpapi("Unprotect", Buffer.from(readFileSync(KEY_FILE, "utf8").trim(), "base64"));
+  return createPrivateKey(pem.toString("utf8"));
+}
+
+function keygen(root) {
+  if (existsSync(KEY_FILE)) {
+    throw new Error(`${KEY_FILE} already exists. Delete it first only if you mean to replace the key.`);
+  }
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const pem = privateKey.export({ format: "pem", type: "pkcs8" });
+  mkdirSync(path.dirname(KEY_FILE), { recursive: true });
+  writeFileSync(KEY_FILE, dpapi("Protect", Buffer.from(pem, "utf8")).toString("base64"));
+
+  const raw = rawPublicKey(publicKey);
+  const trustedPath = path.join(root, TRUSTED_KEYS_PATH);
+  const trusted = existsSync(trustedPath) ? JSON.parse(readFileSync(trustedPath, "utf8")) : { keys: [] };
+  trusted.keys.push({ keyId: keyIdOf(raw), publicKey: raw.toString("base64") });
+  writeFileSync(trustedPath, `${JSON.stringify(trusted, null, 2)}\n`);
+  console.log(`Saved the private key to ${KEY_FILE} (encrypted for this Windows user).`);
+  console.log(`Added key ${keyIdOf(raw)} to ${TRUSTED_KEYS_PATH}; rebuild the app so it trusts the key.`);
+  console.log("Back up the key file: losing it means publishing a new key with a new app release.");
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  if (process.argv[2] === "keygen") {
+    keygen(root);
+  } else {
+    console.error("Usage: node scripts/plugins/plugin-signing.mjs keygen");
+    process.exit(1);
+  }
+}

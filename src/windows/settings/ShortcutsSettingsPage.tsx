@@ -1,0 +1,87 @@
+import { PageShortcutSection } from "./sections/PageShortcutSection";
+import { IslandLayerShortcutSection } from "./sections/IslandLayerShortcutSection";
+import type { IslandSettings } from "../../lib/settings/types";
+import { PluginShortcutSection } from "./PluginShortcutSection";
+import { useTranslation } from "../../i18n";
+import { isMacOS } from "../../lib/platform";
+import type { SettingsCategory } from "./categories";
+import { FeaturePageLink } from "../../components/settings/FeaturePageLink";
+import { ShortcutFinder } from "./ShortcutFinder";
+import { ShortcutReferenceGroup } from "../../components/settings/ShortcutReferenceGroup";
+import { useShortcutOwners } from "../../lib/shortcut/useShortcutOwners";
+import "./ShortcutsSettingsPage.css";
+import { SlotView } from "../../features/plugin-kernel/SlotView";
+import { shortcutReferences, shortcutSections, type ShortcutsSectionProps } from "../../features/plugin-kernel/settingsSlots";
+
+function PageKeysSection({ settings, onSettingsChange, takenBy }: ShortcutsSectionProps) {
+  return <PageShortcutSection settings={settings} onSettingsChange={onSettingsChange} takenBy={takenBy} />;
+}
+
+function IslandLayerSection({ settings, onSettingsChange, takenBy }: ShortcutsSectionProps) {
+  return <IslandLayerShortcutSection settings={settings} onSettingsChange={onSettingsChange} takenBy={takenBy} />;
+}
+
+function IslandReference() {
+  const t = useTranslation();
+  const text = t.settings.shortcuts;
+  return (
+    <ShortcutReferenceGroup
+      title={text.islandTitle}
+      rows={[[text.collapse, "Esc"], [text.moveIsland, text.longPressDrag]]}
+    />
+  );
+}
+
+function ClipboardReference() {
+  const text = useTranslation().settings.shortcuts;
+  return (
+    <ShortcutReferenceGroup
+      title={text.clipboardWindowTitle}
+      rows={[
+        [text.clipboardPreview, "Space"],
+        [text.clipboardSnippetsTab, "Tab"],
+        [text.clipboardPlainPaste, "Shift+Enter"],
+        [text.clipboardAiRewrite, isMacOS ? "Cmd+I" : "Ctrl+I"],
+        [text.clipboardQuickPick, "Alt+1–9"],
+      ]}
+    />
+  );
+}
+
+function PluginShortcutsSection({ onOpenPage, takenBy, refreshPlugins }: ShortcutsSectionProps) {
+  return <PluginShortcutSection takenBy={takenBy} onChanged={refreshPlugins} action={<FeaturePageLink page="pluginsV3" onOpenPage={onOpenPage} />} />;
+}
+
+shortcutSections.add({ id: "shortcuts.islandLayer", category: "shortcuts", order: 5, component: IslandLayerSection });
+shortcutSections.add({ id: "shortcuts.pluginHost", category: "shortcuts", order: 48, component: PluginShortcutsSection });
+shortcutSections.add({ id: "shortcutsIsland.pages", category: "shortcutsIsland", order: 10, component: PageKeysSection });
+shortcutReferences.add({ id: "shortcutsReference.island", category: "shortcutsReference", order: 10, component: IslandReference });
+shortcutReferences.add({ id: "shortcutsReference.clipboard", category: "shortcutsReference", order: 15, component: ClipboardReference });
+
+export function ShortcutsSettingsPage({
+  tab,
+  settings,
+  onSettingsChange,
+  onOpenPage,
+}: {
+  tab: "shortcuts" | "shortcutsIsland" | "shortcutsReference";
+  settings: IslandSettings;
+  onSettingsChange: (settings: IslandSettings) => void;
+  onOpenPage: (page: SettingsCategory) => void;
+}) {
+  const { owners, finderOnly, takenBy, refreshPlugins } = useShortcutOwners(settings);
+  const props = { settings, onSettingsChange, onOpenPage, takenBy, refreshPlugins };
+
+  return (
+    <>
+      {tab !== "shortcutsReference" && <ShortcutFinder owners={[...owners, ...finderOnly]} onOpenPage={onOpenPage} />}
+      {tab === "shortcutsReference" ? (
+        <div className="shortcut-sheet">
+          <SlotView slot={shortcutReferences} group="shortcutsReference" props={props} />
+        </div>
+      ) : (
+        <SlotView slot={shortcutSections} group={tab} props={props} />
+      )}
+    </>
+  );
+}

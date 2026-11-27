@@ -1,0 +1,122 @@
+import type { ClipboardActionsText } from "../../i18n/sections/clipboardActions";
+import type { ClipboardCaptureStatus, ClipboardCopyAs, ClipboardHistoryItem } from "./api";
+import { colorFormats, contentKind } from "./contentKind.ts";
+import { getClipboardActionsForItem, resolveClipboardActionLabel, type ClipboardActionContext, type ClipboardActionSpec } from "./host/actions.mjs";
+import { PRIMARY_KEY } from "../../lib/shortcut/shortcut.ts";
+
+export type PopupAction = {
+  id: string;
+  group: "paste" | "entry" | "record";
+  label: string;
+  keys?: string;
+  note?: string;
+  keywords?: readonly string[];
+  icon: ActionIcon;
+  run?: () => void;
+  next?: "transforms" | "note" | "ai" | "pinKey";
+};
+
+export type ActionIcon = "paste" | "plain" | "enter" | "edit" | "wand" | "file" | "image" | "qr" | "star" | "tag" | "snippet" | "trash" | "pause" | "play" | "skip" | "ai" | "key" | "eraser";
+
+export type PopupActionHandlers = {
+  paste: (id: string, options?: { plain?: boolean; enter?: boolean; copyAs?: ClipboardCopyAs }) => void;
+  pasteText: (text: string, enter?: boolean) => void;
+  pasteQr: (id: string) => void;
+  edit: () => void;
+  toggleFavorite: (id: string) => void;
+  saveSnippet: (item: ClipboardHistoryItem) => void;
+  remove: (item: ClipboardHistoryItem) => void;
+  pause: (minutes: number | null) => void;
+  resume: () => void;
+  ignoreNext: () => void;
+};
+
+export function popupActions(item: ClipboardHistoryItem | undefined, capture: ClipboardCaptureStatus | undefined, handlers: PopupActionHandlers, text: ClipboardActionsText): PopupAction[] {
+  const actions: PopupAction[] = [];
+  const add = (action: PopupAction) => actions.push(action);
+  if (item) {
+    const isText = item.kind === "text";
+    add({ id: "paste", group: "paste", label: text.paste, keys: "↵", icon: "paste", run: () => handlers.paste(item.id) });
+    if (isText) add({ id: "plain", group: "paste", label: text.pastePlain, keys: "⇧ ↵", icon: "plain", run: () => handlers.paste(item.id, { plain: true }) });
+    add({ id: "enter", group: "paste", label: text.pasteEnter, keys: `${PRIMARY_KEY} ↵`, note: text.pasteEnterHint, icon: "enter", run: () => handlers.paste(item.id, { enter: true }) });
+    if (isText) {
+      add({ id: "edit", group: "paste", label: text.edit, keys: `${PRIMARY_KEY} E`, icon: "edit", run: handlers.edit });
+      add({ id: "transform", group: "paste", label: text.transform, keys: `${PRIMARY_KEY} T`, icon: "wand", next: "transforms" });
+      if (!item.masked) add({ id: "ai", group: "paste", label: text.ai, keys: `${PRIMARY_KEY} I`, icon: "ai", next: "ai" });
+      const kind = contentKind(item);
+      if (kind?.kind === "color") {
+        const formats = colorFormats(kind.color);
+        for (const [name, value] of [["HEX", formats.hex], ["RGB", formats.rgb], ["HSL", formats.hsl]] as const) {
+          add({ id: `color-${name}`, group: "paste", label: text.pasteAs(name), note: value, icon: "paste", run: () => handlers.pasteText(value) });
+        }
+      }
+      add({ id: "textFile", group: "paste", label: text.pasteTextFile, icon: "file", run: () => handlers.paste(item.id, { copyAs: "textFile" }) });
+    }
+    if (item.kind === "image") {
+      add({ id: "file", group: "paste", label: text.pasteFile, icon: "file", run: () => handlers.paste(item.id, { copyAs: "file" }) });
+      add({ id: "path", group: "paste", label: text.pastePath, icon: "image", run: () => handlers.paste(item.id, { copyAs: "path" }) });
+      if (item.ocrText) add({ id: "ocr", group: "paste", label: text.pasteOcr, icon: "plain", run: () => handlers.paste(item.id, { copyAs: "text" }) });
+      add({ id: "qr", group: "paste", label: text.pasteQr, icon: "qr", run: () => handlers.pasteQr(item.id) });
+    }
+    if (item.kind === "files") add({ id: "path", group: "paste", label: text.pastePath, icon: "plain", run: () => handlers.paste(item.id, { copyAs: "path" }) });
+    add({ id: "favorite", group: "entry", label: item.favorite ? text.unfavorite : text.favorite, keys: `${PRIMARY_KEY} S`, icon: "star", run: () => handlers.toggleFavorite(item.id) });
+    add({ id: "note", group: "entry", label: text.note, keys: `${PRIMARY_KEY} M`, icon: "tag", next: "note" });
+    if (isText && !item.masked) add({ id: "snippet", group: "entry", label: text.saveSnippet, icon: "snippet", run: () => handlers.saveSnippet(item) });
+    add({ id: "delete", group: "entry", label: text.delete, keys: "Del", icon: "trash", run: () => handlers.remove(item) });
+  }
+  if (capture?.paused) {
+    add({ id: "resume", group: "record", label: text.resume, icon: "play", run: handlers.resume });
+  } else {
+    add({ id: "pause15", group: "record", label: text.pause15, icon: "pause", run: () => handlers.pause(15) });
+    add({ id: "pause60", group: "record", label: text.pause60, icon: "pause", run: () => handlers.pause(60) });
+    add({ id: "pause", group: "record", label: text.pauseUntilResumed, icon: "pause", run: () => handlers.pause(null) });
+    if (!capture?.ignoreNext) add({ id: "ignoreNext", group: "record", label: text.ignoreNext, icon: "skip", run: handlers.ignoreNext });
+  }
+  return actions;
+}
+
+export function filterActions(actions: readonly PopupAction[], query: string): PopupAction[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return actions.filter((action) => {
+    const haystack = `${action.label} ${action.note ?? ""} ${action.keys ?? ""} ${(action.keywords ?? []).join(" ")}`.toLowerCase();
+    return words.every((word) => haystack.includes(word));
+  });
+}
+
+export function withPluginClipboardActions(
+  actions: readonly PopupAction[],
+  item: ClipboardHistoryItem | undefined,
+  locale: "zh" | "en" = "zh",
+  context?: Omit<ClipboardActionContext, "item" | "locale">,
+  specs: readonly ClipboardActionSpec[] = getClipboardActionsForItem(item),
+): PopupAction[] {
+  if (!item || specs.length === 0) return [...actions];
+  const result = [...actions];
+  for (const spec of specs) {
+    const group = spec.group ?? "entry";
+    const action: PopupAction = {
+      id: `plugin:${spec.id}`,
+      group,
+      label: resolveClipboardActionLabel(spec.label, locale),
+      note: spec.note ? resolveClipboardActionLabel(spec.note, locale) : undefined,
+      keywords: spec.keywords,
+      icon: spec.icon ?? "wand",
+      run: () => void Promise.resolve(spec.run({ item, locale, ...context })).catch((error: unknown) => console.error(`Clipboard action ${spec.id} failed`, error)),
+    };
+    let lastInGroup = -1;
+    for (let i = 0; i < result.length; i += 1) {
+      if (result[i].group === group) lastInGroup = i;
+    }
+    if (lastInGroup >= 0) result.splice(lastInGroup + 1, 0, action);
+    else result.push(action);
+  }
+  return result;
+}
+
+export function mergedText(items: readonly ClipboardHistoryItem[], separator: "newline" | "space" | "comma"): string {
+  const join = separator === "newline" ? "\n" : separator === "space" ? " " : ", ";
+  return items
+    .map((item) => item.text ?? (item.files ? item.files.join(join) : item.ocrText ?? ""))
+    .filter((part) => part.trim() !== "")
+    .join(join);
+}

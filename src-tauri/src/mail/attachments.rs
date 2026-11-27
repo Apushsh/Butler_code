@@ -1,0 +1,185 @@
+use crate::user_error::UserError;
+use imap::{
+    types::{Fetch, Fetches},
+    Session,
+};
+use imap_proto::types::{BodyContentCommon, BodyStructure, MessageSection, SectionPath};
+use serde::Serialize;
+use std::{
+    borrow::Cow,
+    fs::OpenOptions,
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+
+use super::content::{is_attachment, parse_message_id};
+
+const MAX_LISTED: usize = 50;
+pub(super) const MAX_SAVE_BYTES: u32 = 25 * 1024 * 1024;
+const MAX_NAME_CHARS: usize = 150;
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttachmentInfo {
+    pub part: String,
+    pub name: String,
+    pub size: u32,
+    pub mime: String,
+}
+
+fn param<'a>(params: Option<&'a Vec<(Cow<'_, str>, Cow<'_, str>)>>, key: &str) -> Option<&'a str> {
+    params?.iter().find(|(name, _)| name.eq_ignore_ascii_case(key)).map(|(_, value)| value.as_ref())
+}
+
+fn decode_extended(value: &str) -> String {
+    let encoded = value.splitn(3, '\'').nth(2).unwrap_or(value);
+    let mut bytes = Vec::with_capacity(encoded.len());
+    let mut chars = encoded.bytes();
+    while let Some(byte) = chars.next() {
+        if byte == b'%' {
+            let hex: Vec<u8> = chars.by_ref().take(2).collect();
+            if let Some(decoded) = std::str::from_utf8(&hex).ok().and_then(|hex| u8::from_str_radix(hex, 16).ok()) {
+                bytes.push(decoded);
+                continue;
+            }
+            bytes.push(byte);
+            bytes.extend(hex);
+        } else {
+            bytes.push(byte);
+        }
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
+}
+
+fn file_name(common: &BodyContentCommon<'_>) -> String {
+    let disposition = common.disposition.as_ref().and_then(|disposition| disposition.params.as_ref());
+    let raw = param(disposition, "filename*")
+        .map(decode_extended)
+        .or_else(|| param(disposition, "filename").map(str::to_string))
+        .or_else(|| param(common.ty.params.as_ref(), "name*").map(decode_extended))
+        .or_else(|| param(common.ty.params.as_ref(), "name").map(str::to_string))
+        .unwrap_or_default();
+    let decoded = mailparse::parse_header(format!("X: {raw}").as_bytes())
+        .map(|(header, _)| header.get_value())
+        .unwrap_or(raw);
+    decoded.trim().to_string()
+}
+
+pub(super) fn collect(body: &BodyStructure<'_>, path: Vec<u32>, out: &mut Vec<AttachmentInfo>) {
+    if out.len() >= MAX_LISTED || path.len() > 16 {
+        return;
+    }
+    let part = |path: &[u32]| if path.is_empty() { "1".to_string() } else { path.iter().map(u32::to_string).collect::<Vec<_>>().join(".") };
+    match body {
+        BodyStructure::Multipart { bodies, .. } => {
+            for (index, nested) in bodies.iter().take(128).enumerate() {
+                let mut nested_path = path.clone();
+                nested_path.push(index as u32 + 1);
+                collect(nested, nested_path, out);
+            }
+        }
+        BodyStructure::Basic { common, other, .. }
+        | BodyStructure::Text { common, other, .. }
+        | BodyStructure::Message { common, other, .. }
+            if is_attachment(common) =>
+        {
+            let name = file_name(common);
+            out.push(AttachmentInfo {
+                part: part(&path),
+                name: if name.is_empty() { "attachment".into() } else { name },
+                size: other.octets,
+                mime: format!("{}/{}", common.ty.ty, common.ty.subtype).to_ascii_lowercase(),
+            });
+        }
+        _ => {}
+    }
+}
+
+pub(super) fn safe_file_name(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|character| if character.is_control() || "<>:\"/\\|?*".contains(character) { '_' } else { character })
+        .collect();
+    let cleaned = cleaned.trim().trim_end_matches(['.', ' ']).trim_start_matches('.').to_string();
+    let (stem, extension) = match cleaned.rsplit_once('.') {
+        Some((stem, extension)) if !stem.is_empty() && extension.chars().count() <= 16 => (stem.to_string(), format!(".{extension}")),
+        _ => (cleaned.clone(), String::new()),
+    };
+    let reserved = ["CON", "PRN", "AUX", "NUL"].iter().any(|device| stem.eq_ignore_ascii_case(device))
+        || (stem.len() == 4
+            && (stem[..3].eq_ignore_ascii_case("COM") || stem[..3].eq_ignore_ascii_case("LPT"))
+            && stem.as_bytes()[3].is_ascii_digit());
+    let stem = if stem.is_empty() { "attachment".to_string() } else if reserved { format!("_{stem}") } else { stem };
+    let room = MAX_NAME_CHARS.saturating_sub(extension.chars().count()).max(1);
+    format!("{}{extension}", stem.chars().take(room).collect::<String>())
+}
+
+pub(super) fn write_unused(dir: &Path, name: &str, bytes: &[u8]) -> Result<PathBuf, UserError> {
+    let (stem, extension) = match name.rsplit_once('.') {
+        Some((stem, extension)) if !stem.is_empty() => (stem, format!(".{extension}")),
+        _ => (name, String::new()),
+    };
+    for attempt in 1..=999 {
+        let candidate = if attempt == 1 { name.to_string() } else { format!("{stem} ({attempt}){extension}") };
+        let path = dir.join(candidate);
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(mut file) => {
+                file.write_all(bytes).map_err(|error| UserError::new("file.write", format!("Could not write {}.", path.display())).arg("path", path.display().to_string()).detail(error))?;
+                return Ok(path);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(UserError::new("file.write", format!("Could not write {}.", path.display())).arg("path", path.display().to_string()).detail(error)),
+        }
+    }
+    Err(UserError::new("mail.tooManyNames", "Too many files with this name in Downloads; clear some and try again."))
+}
+
+fn responses(messages: &Fetches, uid: u32) -> impl Iterator<Item = &Fetch<'_>> {
+    messages.iter().filter(move |message| message.uid.is_none_or(|found| found == uid))
+}
+
+pub(super) fn fetch_attachment<T: Read + Write>(
+    session: &mut Session<T>,
+    message_id: &str,
+    part: &str,
+) -> Result<(AttachmentInfo, Vec<u8>), UserError> {
+    let (validity, uid) = parse_message_id(message_id)?;
+    let mailbox = session.examine("INBOX").map_err(|_| UserError::new("mail.inbox", "Could not open the inbox; try again later."))?;
+    if mailbox.uid_validity != Some(validity) {
+        return Err(UserError::new("mail.inboxChangedOpen", "The inbox changed; refresh the list and open the mail again."));
+    }
+    let structures = session
+        .uid_fetch(uid.to_string(), "(UID BODYSTRUCTURE)")
+        .map_err(|_| UserError::new("mail.structure", "Could not read the mail's structure; try again later."))?;
+    let structure = responses(&structures, uid)
+        .find_map(|item| item.bodystructure())
+        .ok_or_else(|| UserError::new("mail.unavailable", "The mail was removed or is not available; refresh the inbox."))?;
+    let mut listed = Vec::new();
+    collect(structure, Vec::new(), &mut listed);
+    let info = listed.into_iter().find(|item| item.part == part).ok_or_else(|| UserError::new("mail.noAttachment", "This attachment was not found; open the mail again."))?;
+    if info.size > MAX_SAVE_BYTES {
+        return Err(UserError::new("mail.attachmentLarge", format!("The attachment is over {} MB; download it in the web mail.", MAX_SAVE_BYTES / (1024 * 1024))).arg("mb", MAX_SAVE_BYTES / (1024 * 1024)));
+    }
+    let multipart = matches!(structure, BodyStructure::Multipart { .. });
+    let header_query = if multipart { format!("BODY.PEEK[{part}.MIME]") } else { "BODY.PEEK[HEADER]".into() };
+    let query = format!("(UID {header_query} BODY.PEEK[{part}])");
+    let messages = session.uid_fetch(uid.to_string(), query).map_err(|_| UserError::new("mail.attachmentDownload", "Could not download the attachment; check the network and try again."))?;
+    let path: Vec<u32> = part.split('.').filter_map(|segment| segment.parse().ok()).collect();
+    let mime_path = SectionPath::Part(path.clone(), Some(MessageSection::Mime));
+    let body_path = SectionPath::Part(path, None);
+    let mut header = None;
+    let mut body = None;
+    for item in responses(&messages, uid) {
+        header = header.or_else(|| if multipart { item.section(&mime_path) } else { item.header() });
+        body = body.or_else(|| item.section(&body_path));
+    }
+    let (header, body) = (header.ok_or_else(|| UserError::new("mail.attachmentGone", "The attachment was removed; refresh the inbox."))?, body.ok_or_else(|| UserError::new("mail.attachmentGone", "The attachment was removed; refresh the inbox."))?);
+    let mut raw = header.to_vec();
+    if !raw.ends_with(b"\r\n\r\n") && !raw.ends_with(b"\n\n") {
+        raw.extend_from_slice(b"\r\n\r\n");
+    }
+    raw.extend_from_slice(body);
+    let parsed = mailparse::parse_mail(&raw).map_err(|_| UserError::new("mail.attachmentParse", "Could not read the attachment; download it in the web mail."))?;
+    let bytes = parsed.get_body_raw().map_err(|_| UserError::new("mail.attachmentDecode", "Could not decode the attachment; download it in the web mail."))?;
+    Ok((info, bytes))
+}

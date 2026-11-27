@@ -1,0 +1,52 @@
+<body>
+  <div id="page">
+    <section class="settings-group">
+      <div class="settings-group__card">
+        <div class="agent-remote__intro">
+          <span aria-hidden="true" class="agent-remote__icon">
+            <svg aria-hidden="true" class="lucide lucide-server" fill="none" height="18" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"></svg>
+          </span>
+          <div class="agent-remote__copy">
+            <p>
+              在 Agent 页列出其他电脑上的 Claude Code、Codex、DSH 和 Antigravity CLI 会话：打开的主机，岛屿和它保持一条 ssh 连接，每 3 秒读一次它最近的会话记录，服务器上不用安装任何东西。
+            </p>
+            <p class="settings-footnote">
+              只能用密钥登录，不会弹出密码框，先确认终端里 ssh 能直接登上去。
+              <button aria-expanded="false" class="settings-footnote__toggle" type="button">
+                了解更多
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="settings-group">
+      <div class="settings-group__header">
+        <h2 class="settings-group__title">
+          主机
+        </h2>
+      </div>
+      <div class="settings-group__card">
+        <div class="settings-row" data-search="off">
+          <div class="settings-row__main">
+            <div class="settings-row__text">
+              <span class="settings-row__title">
+                还没有主机
+              </span>
+              <span class="settings-row__description">
+                在下面添加一台，或者在 ~/.ssh/config 里写好 Host 再回到这一页。
+              </span>
+            </div>
+          </div>
+        </div>
+        <button class="agent-remote__add" type="button">
+          <svg aria-hidden="true" class="lucide lucide-circle-plus" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"></svg>
+          添加主机
+        </button>
+      </div>
+      <div class="settings-group__footer">
+        ~/.ssh/config 里的 Host 和在这里添加的主机都列在上面，最多同时打开 8 台。
+      </div>
+    </section>
+  </div>
+</body>

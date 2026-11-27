@@ -1,0 +1,160 @@
+import { useEffect, useState } from "react";
+import { SettingsChoice } from "../../../components/settings/SettingsChoice";
+import { SettingsFootnote } from "../../../components/settings/SettingsFootnote";
+import { SettingsGroup } from "../../../components/settings/SettingsGroup";
+import { SettingsInput } from "../../../components/settings/SettingsInput";
+import { SettingsLinkButton } from "../../../components/settings/SettingsLinkButton";
+import { SettingsRow } from "../../../components/settings/SettingsRow";
+import { SettingsSecretRow } from "../../../components/settings/SettingsSecretRow";
+import { SettingsSelect } from "../../../components/settings/SettingsSelect";
+import { SettingsToggleRow } from "../../../components/settings/SettingsToggleRow";
+import { useErrorText, useTranslation } from "../../../i18n";
+import { ccConnectReason } from "../../../lib/cc-connect/service";
+import { deleteBarkKey, hasBarkKey, saveBarkKey, sendBarkPush } from "./api";
+import { CcConnectPushTargets } from "./CcConnectPushTargets";
+import { PUSH_GROUP, sendCcConnect } from "./sendPush";
+import { AGENT_PUSH_AWAY_MINUTES, AGENT_PUSH_CHANNELS, LOCAL_HOST, type AgentPushChannel } from "./storage";
+import { isMacOS } from "../../../lib/platform";
+import { useAgentPushSettings } from "./useAgentPushSettings";
+import { useCcConnectTargets } from "./useCcConnectTargets";
+
+export function AgentPushSettings({ onShowPage }: { onShowPage?: (page: "agentAlerts") => void }) {
+  const t = useTranslation();
+  const text = t.settings.agent.push;
+  const table = t.settings.agentNotice.table;
+  const errorText = useErrorText();
+  const [settings, setSettings] = useAgentPushSettings();
+  const [keySaved, setKeySaved] = useState<boolean | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const bark = settings.channel === "bark";
+  const targets = useCcConnectTargets(settings.enabled && !bark);
+
+  useEffect(() => {
+    void hasBarkKey().then(setKeySaved).catch(() => setKeySaved(false));
+  }, []);
+
+  const run = async (action: () => Promise<unknown>, done: string) => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      await action();
+      setStatus(done);
+    } catch (error) {
+      setStatus(errorText(ccConnectReason(error)));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const saveKey = () =>
+    run(async () => {
+      await saveBarkKey(keyInput);
+      setKeyInput("");
+      setKeySaved(true);
+    }, text.keySaved);
+  const clearKey = () =>
+    run(async () => {
+      await deleteBarkKey();
+      setKeySaved(false);
+    }, text.keyCleared);
+  const testChats = Object.entries(settings.ccConnect)
+    .filter(([host, entry]) => !settings.mutedHosts.includes(host) && !entry.viaLocal)
+    .flatMap(([host, entry]) => entry.chats.map((chat) => ({ ...chat, host })));
+  const test = () =>
+    run(
+      () =>
+        bark
+          ? sendBarkPush(settings.server, text.testTitle, text.testBody, PUSH_GROUP)
+          : Promise.all(
+              testChats.map(({ host, project, key }) =>
+                sendCcConnect(host, project, key, host === LOCAL_HOST ? text.ccConnect.testBody : `${text.ccConnect.testBody} · ${host}`),
+              ),
+            ),
+      text.testSent,
+    );
+  const canTest = bark ? keySaved === true : targets.on && testChats.length > 0;
+
+  const awayOptions = AGENT_PUSH_AWAY_MINUTES.map((minutes) => ({ value: String(minutes), label: text.awayValue(minutes) }));
+  const channelOptions = AGENT_PUSH_CHANNELS.map((channel) => ({ value: channel, label: text.channels[channel] }));
+
+  return (
+    <SettingsGroup title={text.title} footer={<SettingsFootnote text={bark ? text.hint : text.ccConnectHint} />}>
+      <SettingsToggleRow title={text.enabled} description={text.enabledHint} checked={settings.enabled} onChange={(enabled) => setSettings({ ...settings, enabled })} />
+      {settings.enabled && (
+        <>
+          <SettingsRow
+            indent
+            title={text.channel}
+            control={
+              <SettingsChoice<AgentPushChannel>
+                value={settings.channel}
+                options={channelOptions}
+                ariaLabel={text.channel}
+                onChange={(channel) => setSettings({ ...settings, channel })}
+              />
+            }
+          />
+          {!bark && !targets.on ? <SettingsRow indent title={text.ccConnect.off} description={text.ccConnect.offHint} /> : null}
+          {!bark || targets.hosts.length > 0 ? (
+            <CcConnectPushTargets settings={settings} onChange={setSettings} targets={targets} picking={!bark && targets.on} />
+          ) : null}
+          {bark && (
+            <>
+              <SettingsRow indent title={text.server} description={text.serverHint}>
+                <SettingsInput
+                  monospace
+                  value={settings.server}
+                  placeholder="https://api.day.app"
+                  aria-label={text.server}
+                  onChange={(event) => setSettings({ ...settings, server: event.target.value })}
+                />
+              </SettingsRow>
+              <SettingsSecretRow
+                indent
+                title={text.key}
+                description={keySaved ? (isMacOS ? text.keyIsSavedMac : text.keyIsSaved) : text.keyHint}
+                value={keyInput}
+                placeholder={keySaved ? `${text.keyPlaceholder} · ${text.saveKey}` : text.keyPlaceholder}
+                ariaLabel={text.key}
+                hasSecret={Boolean(keySaved)}
+                saving={busy}
+                saveLabel={text.saveKey}
+                deleteLabel={text.clearKey}
+                onChange={setKeyInput}
+                onSave={() => void saveKey()}
+                onDelete={() => void clearKey()}
+              />
+            </>
+          )}
+          {onShowPage ? (
+            <SettingsRow
+              indent
+              title={table.pushMoved}
+              control={<SettingsLinkButton onClick={() => onShowPage("agentAlerts")}>{table.openTable}</SettingsLinkButton>}
+            />
+          ) : null}
+          <SettingsRow
+            indent
+            title={text.away}
+            description={text.awayHint}
+            control={
+              <SettingsSelect
+                value={String(settings.awayMinutes)}
+                options={awayOptions}
+                ariaLabel={text.away}
+                onChange={(value) => setSettings({ ...settings, awayMinutes: Number(value) })}
+              />
+            }
+          />
+          <SettingsRow
+            indent
+            title={text.test}
+            description={status ?? undefined}
+            control={<SettingsLinkButton disabled={busy || !canTest} onClick={() => void test()}>{text.testAction}</SettingsLinkButton>}
+          />
+        </>
+      )}
+    </SettingsGroup>
+  );
+}

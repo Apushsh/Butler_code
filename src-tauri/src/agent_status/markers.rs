@@ -1,0 +1,136 @@
+use std::{fs, path::Path};
+
+use super::codex;
+use super::harness;
+use super::session_records;
+
+use super::snapshot::{
+    current_unix_millis, system_time_to_unix_millis, AgentStatusSnapshot, AgentTaskStatus,
+};
+
+pub(super) const CODEX_RUNNING_MARKER_FILE_NAME: &str = "agent-codex-running.flag";
+pub(super) const CODEX_RUNNING_HOLD_FILE_NAME: &str = "agent-codex-running-hold.flag";
+pub(super) const CLAUDE_CODE_RUNNING_MARKER_FILE_NAME: &str = "agent-claudeCode-running.flag";
+pub(super) const CLAUDE_CODE_RUNNING_HOLD_FILE_NAME: &str = "agent-claudeCode-running-hold.flag";
+pub(super) const CLAUDE_CODE_NOTIFICATION_FILE_NAME: &str = "agent-claudeCode-notification.json";
+const LEGACY_HOOK_INPUT_FILE_NAMES: [&str; 2] = [
+    "agent-codex-hook-input.json",
+    "agent-claudeCode-hook-input.json",
+];
+pub(super) const CODEX_NOTIFICATION_FILE_NAME: &str = "agent-codex-notification.json";
+pub(super) const CODEX_SAVED_INPUT_FILE_NAMES: &[&str] =
+    &["agent-codex-hook-input.json", CODEX_NOTIFICATION_FILE_NAME];
+pub(super) const CLAUDE_CODE_SAVED_INPUT_FILE_NAMES: &[&str] = &[
+    "agent-claudeCode-hook-input.json",
+    CLAUDE_CODE_NOTIFICATION_FILE_NAME,
+];
+
+pub(super) const AGENT_RUNNING_STALE_AFTER_MS: i64 = 10 * 60 * 1000;
+
+pub(super) fn apply_agent_running_markers(app_dir: &Path, snapshot: &mut AgentStatusSnapshot) {
+    let now = current_unix_millis();
+
+    for (id, light) in harness::with_status_light() {
+        let Some(status) = snapshot.agents.get_mut(id) else {
+            continue;
+        };
+        if let Some(mut marker_status) = active_agent_running_marker_status(
+            app_dir,
+            status,
+            light.running_marker,
+            light.running_hold,
+            now,
+        ) {
+            if marker_status.phase == "stale" && id == codex::PROVIDER && has_live_session(app_dir, id) {
+                marker_status.phase = "running".to_string();
+            }
+            status.phase = marker_status.phase;
+            status.updated_at = marker_status.updated_at;
+        }
+    }
+    super::third_party::apply_running_markers(app_dir, snapshot, now);
+}
+
+fn has_live_session(app_dir: &Path, provider: &str) -> bool {
+    fs::read_dir(app_dir.join(session_records::DIR_NAME))
+        .map(|entries| {
+            entries.flatten().any(|entry| {
+                fs::read_to_string(entry.path())
+                    .ok()
+                    .and_then(|text| session_records::parse(&text))
+                    .is_some_and(|record| {
+                        record.provider.as_deref() == Some(provider) && !record.has_ended() && record.live_pid().is_some()
+                    })
+            })
+        })
+        .unwrap_or(false)
+}
+
+pub(super) fn active_agent_running_marker_status(
+    app_dir: &Path,
+    status: &AgentTaskStatus,
+    running_file_name: &str,
+    hold_file_name: &str,
+    now: i64,
+) -> Option<AgentTaskStatus> {
+    let running_path = app_dir.join(running_file_name);
+    if running_path.is_file() {
+        let marker_updated_at = file_modified_unix_millis(&running_path).unwrap_or(now);
+        if status.phase != "running"
+            && status.updated_at > 0
+            && status.updated_at >= marker_updated_at
+        {
+            return None;
+        }
+
+        let phase = if now.saturating_sub(marker_updated_at) >= AGENT_RUNNING_STALE_AFTER_MS {
+            "stale"
+        } else {
+            "running"
+        };
+
+        return Some(AgentTaskStatus {
+            phase: phase.to_string(),
+            task_id: status.task_id.clone(),
+            updated_at: marker_updated_at,
+        });
+    }
+
+    let hold_path = app_dir.join(hold_file_name);
+    let visible_until = fs::read_to_string(hold_path)
+        .ok()
+        .and_then(|content| content.trim().parse::<i64>().ok())?;
+    if visible_until > now {
+        Some(AgentTaskStatus {
+            phase: "running".to_string(),
+            task_id: status.task_id.clone(),
+            updated_at: now,
+        })
+    } else {
+        None
+    }
+}
+
+pub(super) fn remove_agent_marker_files(
+    app_dir: &Path,
+    running_file_name: &str,
+    hold_file_name: &str,
+    saved_input_file_names: &[&str],
+) {
+    fs::remove_file(app_dir.join(running_file_name)).ok();
+    fs::remove_file(app_dir.join(hold_file_name)).ok();
+    for file_name in saved_input_file_names {
+        fs::remove_file(app_dir.join(file_name)).ok();
+    }
+}
+
+pub(super) fn remove_legacy_hook_inputs(app_dir: &Path) {
+    for file_name in LEGACY_HOOK_INPUT_FILE_NAMES {
+        fs::remove_file(app_dir.join(file_name)).ok();
+    }
+}
+
+pub(super) fn file_modified_unix_millis(path: &Path) -> Option<i64> {
+    let modified = fs::metadata(path).ok()?.modified().ok()?;
+    system_time_to_unix_millis(modified)
+}

@@ -1,0 +1,73 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { hoverFocusAction } from "../../src/windows/island/hoverFocus.ts";
+import { CLICK_EXPAND_WINDOW_MS, expandedByClick } from "../../src/windows/island/clickFocus.ts";
+import { gameModeEffects } from "../../src/windows/island/gameMode.ts";
+import { holdsOpen, MAX_HOVER_HOLD_MS } from "../../src/features/plugin-kernel/hoverHold.ts";
+
+const state = (overrides) => ({ expanded: true, hovering: true, editing: false, blocked: false, ...overrides });
+
+test("the expanded panel under the cursor takes the focus", () => {
+  assert.equal(hoverFocusAction(state()), "take");
+});
+
+test("the collapsed island under the cursor takes the focus so the down arrow can open it", () => {
+  assert.equal(hoverFocusAction(state({ expanded: false })), "take");
+  assert.equal(hoverFocusAction(state({ expanded: false, hovering: false })), "release");
+  assert.equal(hoverFocusAction(state({ expanded: false, hovering: false, editing: true })), "release");
+});
+
+test("with the setting off or in game mode the collapsed island hands the focus back", () => {
+  assert.equal(hoverFocusAction(state({ expanded: false, blocked: true })), "release");
+});
+
+test("leaving the expanded panel hands the focus back", () => {
+  assert.equal(hoverFocusAction(state({ hovering: false })), "release");
+});
+
+test("a draft keeps the focus while the panel stays open", () => {
+  assert.equal(hoverFocusAction(state({ hovering: false, editing: true })), "none");
+});
+
+test("an active text selection keeps the focus while the panel stays open", () => {
+  assert.equal(hoverFocusAction(state({ hovering: false, selecting: true })), "none");
+  assert.equal(hoverFocusAction(state({ expanded: false, hovering: false, selecting: true })), "release");
+});
+
+test("game mode stops the island taking the focus but still lets it go", () => {
+  assert.equal(hoverFocusAction(state({ blocked: true })), "none");
+  assert.equal(hoverFocusAction(state({ blocked: true, hovering: false })), "release");
+});
+
+test("only an expansion right after a press on the island counts as a click", () => {
+  assert.equal(expandedByClick(null, 5_000), false);
+  assert.equal(expandedByClick(4_900, 5_000), true);
+  assert.equal(expandedByClick(5_000 - CLICK_EXPAND_WINDOW_MS, 5_000), true);
+  assert.equal(expandedByClick(5_000 - CLICK_EXPAND_WINDOW_MS - 1, 5_000), false);
+  assert.equal(expandedByClick(5_100, 5_000), false);
+});
+
+const here = { active: true, onIslandMonitor: true };
+const elsewhere = { active: true, onIslandMonitor: false };
+const both = { gameDoNotDisturb: true, gameAutoTuck: true };
+
+test("game mode only acts while a full-screen app is in front", () => {
+  assert.deepEqual(gameModeEffects({ active: false, onIslandMonitor: false }, both), { quiet: false, tuck: false, passthrough: false });
+  assert.deepEqual(gameModeEffects(here, { gameDoNotDisturb: true, gameAutoTuck: false }), { quiet: true, tuck: false, passthrough: true });
+  assert.deepEqual(gameModeEffects(here, { gameDoNotDisturb: false, gameAutoTuck: true }), { quiet: false, tuck: true, passthrough: true });
+  assert.deepEqual(gameModeEffects(here, { gameDoNotDisturb: false, gameAutoTuck: false }), { quiet: false, tuck: false, passthrough: false });
+});
+
+test("a game on another monitor keeps the island quiet but not tucked", () => {
+  assert.deepEqual(gameModeEffects(elsewhere, both), { quiet: true, tuck: false, passthrough: true });
+});
+
+test("an auto-opened popup stays only while the cursor is on the island", () => {
+  assert.equal(holdsOpen(true, 1_000, 2_000), true);
+  assert.equal(holdsOpen(false, 1_000, 2_000), false);
+});
+
+test("hovering holds an auto-opened popup for a limited time", () => {
+  assert.equal(holdsOpen(true, 0, MAX_HOVER_HOLD_MS - 1), true);
+  assert.equal(holdsOpen(true, 0, MAX_HOVER_HOLD_MS), false);
+});

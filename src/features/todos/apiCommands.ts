@@ -1,0 +1,195 @@
+import { readProject } from "../../lib/todo-projects/prefix.ts";
+import { MAX_FOCUS_CREDIT_MINUTES, addTodoFocusMinutes } from "./normalize.ts";
+import { isDateString } from "./schedule.ts";
+import { daysBetween, listDay, noteOfDay } from "./todoHistory.ts";
+import type { ScheduledTodo, TodoArchive, TodoItem } from "./types";
+
+export type TodoApiResult =
+  | { ok: true; data: unknown }
+  | { ok: false; status: 400 | 404; error: string };
+
+export type TodoApiState = {
+  date: string;
+  todos: TodoItem[];
+  scheduledTodos: ScheduledTodo[];
+  activeTodoId: string | null;
+  dailyNote: string;
+  archives: TodoArchive[];
+};
+
+export type TodoApiChange = {
+  todos?: TodoItem[];
+  dailyNote?: string;
+  schedule?: { title: string; date: string; project?: string; deadline?: string };
+};
+
+export type TodoApiOutcome = { result: TodoApiResult; change?: TodoApiChange };
+
+export const TODO_API_METHODS = [
+  "todos.list",
+  "todos.days",
+  "todos.add",
+  "todos.update",
+  "todos.remove",
+  "note.get",
+  "note.set",
+] as const;
+export type TodoApiMethod = (typeof TODO_API_METHODS)[number];
+
+const MAX_TITLE_LENGTH = 500;
+const MAX_NOTE_LENGTH = 1000;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const ok = (data: unknown): TodoApiResult => ({ ok: true, data });
+const fail = (status: 400 | 404, error: string): TodoApiOutcome => ({
+  result: { ok: false, status, error },
+});
+
+function asRecord(params: unknown): Record<string, unknown> {
+  return params && typeof params === "object" && !Array.isArray(params)
+    ? (params as Record<string, unknown>)
+    : {};
+}
+
+function readTitle(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const title = value.trim();
+  return title && title.length <= MAX_TITLE_LENGTH ? title : null;
+}
+
+export function runTodoApiCall(
+  method: TodoApiMethod,
+  params: unknown,
+  state: TodoApiState,
+  create: { id: string; now: number },
+): TodoApiOutcome {
+  const input = asRecord(params);
+
+  switch (method) {
+    case "todos.days":
+      return { result: daysBetween(input.from, input.to, state) };
+
+    case "todos.list": {
+      const day = listDay(input.date, state);
+      if (day) return { result: day };
+      return {
+        result: ok({
+          date: state.date,
+          todos: state.todos,
+          scheduled: state.scheduledTodos,
+          activeTodoId: state.activeTodoId,
+        }),
+      };
+    }
+
+    case "todos.add": {
+      const title = readTitle(input.title);
+      if (!title) {
+        return fail(400, `"title" must be a non-empty string of at most ${MAX_TITLE_LENGTH} characters.`);
+      }
+      if (input.project !== undefined && input.project !== null && typeof input.project !== "string") {
+        return fail(400, `"project" must be a string.`);
+      }
+      const project = readProject(input.project);
+      if (input.note !== undefined && input.note !== null && (typeof input.note !== "string" || [...input.note].length > MAX_NOTE_LENGTH)) {
+        return fail(400, `"note" must be a string of at most ${MAX_NOTE_LENGTH} characters.`);
+      }
+      const note = typeof input.note === "string" && input.note.trim() ? input.note : null;
+      if (input.deadline !== undefined && input.deadline !== null && input.deadline !== "" && !isDateString(input.deadline)) {
+        return fail(400, `"deadline" must look like YYYY-MM-DD.`);
+      }
+      const deadline = isDateString(input.deadline) ? input.deadline : null;
+      const date = input.date;
+      if (date !== undefined && (typeof date !== "string" || !DATE_PATTERN.test(date))) {
+        return fail(400, `"date" must look like YYYY-MM-DD.`);
+      }
+      if (typeof date === "string" && date < state.date) {
+        return fail(400, `"date" cannot be before the list's day (${state.date}).`);
+      }
+      if (typeof date === "string" && date > state.date) {
+        return {
+          result: ok({ title, date, ...(deadline ? { deadline } : {}), scheduled: true }),
+          change: { schedule: { title, date, ...(project ? { project } : {}), ...(deadline ? { deadline } : {}) } },
+        };
+      }
+      const todo: TodoItem = {
+        id: create.id,
+        title,
+        completed: false,
+        createdAt: create.now,
+        ...(project ? { project } : {}),
+        ...(note ? { note } : {}),
+        ...(deadline ? { deadline } : {}),
+      };
+      return { result: ok(todo), change: { todos: [todo, ...state.todos] } };
+    }
+
+    case "todos.update": {
+      const target = state.todos.find((todo) => todo.id === input.id);
+      if (!target) {
+        return fail(404, "Todo not found.");
+      }
+      let next = { ...target };
+      if (input.title !== undefined) {
+        const title = readTitle(input.title);
+        if (!title) {
+          return fail(400, `"title" must be a non-empty string of at most ${MAX_TITLE_LENGTH} characters.`);
+        }
+        next.title = title;
+      }
+      if ("deadline" in input) {
+        if (input.deadline === null || input.deadline === "") {
+          delete next.deadline;
+        } else if (isDateString(input.deadline)) {
+          next.deadline = input.deadline;
+        } else {
+          return fail(400, `"deadline" must look like YYYY-MM-DD.`);
+        }
+      }
+      if (input.completed !== undefined) {
+        if (typeof input.completed !== "boolean") {
+          return fail(400, `"completed" must be true or false.`);
+        }
+        next.completed = input.completed;
+      }
+      if (input.addFocusMinutes !== undefined) {
+        const minutes = input.addFocusMinutes;
+        if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 1 || minutes > MAX_FOCUS_CREDIT_MINUTES) {
+          return fail(400, `"addFocusMinutes" must be a whole number from 1 to ${MAX_FOCUS_CREDIT_MINUTES}.`);
+        }
+        next = addTodoFocusMinutes(next, minutes, create.now);
+      }
+      return {
+        result: ok(next),
+        change: { todos: state.todos.map((todo) => (todo.id === next.id ? next : todo)) },
+      };
+    }
+
+    case "todos.remove": {
+      if (!state.todos.some((todo) => todo.id === input.id)) {
+        return fail(404, "Todo not found.");
+      }
+      return {
+        result: ok({ id: input.id }),
+        change: { todos: state.todos.filter((todo) => todo.id !== input.id) },
+      };
+    }
+
+    case "note.get":
+      return { result: noteOfDay(input.date, state) ?? ok({ date: state.date, note: state.dailyNote }) };
+
+    case "note.set": {
+      const hasNote = typeof input.note === "string";
+      const hasAppend = typeof input.append === "string";
+      if (hasNote === hasAppend) {
+        return fail(400, `Send either "note" (replace) or "append" (add a line), as a string.`);
+      }
+      const dailyNote = hasNote
+        ? (input.note as string)
+        : [state.dailyNote, input.append as string].filter(Boolean).join("\n");
+      return { result: ok({ date: state.date, note: dailyNote }), change: { dailyNote } };
+    }
+  }
+}

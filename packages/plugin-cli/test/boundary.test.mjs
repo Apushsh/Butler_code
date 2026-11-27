@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "node:test";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const PACKAGES = ["@fuyu/plugin-manifest", "@fuyu/plugin-market", "@fuyu/plugin-review"];
+const allowedPackage = (specifier) => PACKAGES.some((name) => specifier === name || specifier.startsWith(`${name}/`)) || specifier === "@fuyu/plugin-base/protocol";
+const ALLOWED = [/^node:/, /^\.\.?\//, { test: allowedPackage }, /^esbuild$/];
+const HARNESS = "src/shots/harness.mjs";
+const HARNESS_ALLOWED = [/^react$/, /^react-dom\/client$/, /^fuyu-shots:/];
+
+function files(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return files(path);
+    return /\.(mjs|mts)$/.test(entry.name) ? [path] : [];
+  });
+}
+
+test("@fuyu/plugin-cli imports nothing from the app, only Node and the allowed packages", () => {
+  const strays = [];
+  for (const file of [...files(join(root, "src")), ...files(join(root, "bin"))]) {
+    const text = readFileSync(file, "utf8");
+    for (const [, specifier] of text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
+      const outside = specifier.startsWith(".") && relative(root, join(file, "..", specifier)).startsWith("..");
+      const allowed = relative(root, file).split("\\").join("/") === HARNESS ? [...ALLOWED, ...HARNESS_ALLOWED] : ALLOWED;
+      if (outside || !allowed.some((pattern) => pattern.test(specifier))) strays.push(`${relative(root, file)}: ${specifier}`);
+    }
+  }
+  assert.deepEqual(strays, []);
+});

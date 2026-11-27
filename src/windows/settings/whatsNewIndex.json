@@ -1,0 +1,269 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "page": "general",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "网络代理",
+        "title": "代理模式"
+      },
+      "en": {
+        "group": "Network proxy",
+        "title": "Proxy mode"
+      }
+    },
+    {
+      "page": "generalData",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "",
+        "title": "兼容软渲染模式（WARP）"
+      },
+      "en": {
+        "group": "",
+        "title": "Compatibility software rendering (WARP)"
+      }
+    },
+    {
+      "page": "generalData",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "",
+        "title": "清理 WebView 图形缓存"
+      },
+      "en": {
+        "group": "",
+        "title": "Clear WebView graphics cache"
+      }
+    },
+    {
+      "page": "themeStyle",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "字体",
+        "title": "字体样式"
+      },
+      "en": {
+        "group": "Font",
+        "title": "Font style"
+      }
+    },
+    {
+      "page": "themeStyle",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "字体",
+        "title": "字体大小"
+      },
+      "en": {
+        "group": "Font",
+        "title": "Font size"
+      }
+    },
+    {
+      "page": "themeStyle",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "字体",
+        "title": "本地字体"
+      },
+      "en": {
+        "group": "Font",
+        "title": "Local fonts"
+      }
+    },
+    {
+      "page": "islandLayout",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "",
+        "title": "收起条电池显示"
+      },
+      "en": {
+        "group": "",
+        "title": "Collapsed battery display"
+      }
+    },
+    {
+      "page": "islandLayout",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "",
+        "title": "显示电量曲线"
+      },
+      "en": {
+        "group": "",
+        "title": "Show battery curve"
+      }
+    },
+    {
+      "page": "sideDocks",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "屏幕左右侧边翼",
+        "title": "右侧翼"
+      },
+      "en": {
+        "group": "Screen side docks",
+        "title": "Right dock"
+      }
+    },
+    {
+      "page": "sideDocks",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "屏幕左右侧边翼",
+        "title": "左侧翼"
+      },
+      "en": {
+        "group": "Screen side docks",
+        "title": "Left dock"
+      }
+    },
+    {
+      "page": "behavior",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "展开",
+        "title": "页头滚轮切页"
+      },
+      "en": {
+        "group": "Opening",
+        "title": "Scroll header to switch pages"
+      }
+    },
+    {
+      "page": "behavior",
+      "since": "next",
+      "zh-CN": {
+        "group": "展开",
+        "title": "记住上次退出时的面板页面"
+      },
+      "en": {
+        "group": "Opening",
+        "title": "Remember last panel page"
+      }
+    },
+    {
+      "page": "shortcutsIsland",
+      "since": "0.3.14",
+      "zh-CN": {
+        "group": "页面切换",
+        "title": "方向键 / Tab 翻页和展开收起"
+      },
+      "en": {
+        "group": "Page switching",
+        "title": "Arrow keys and Tab turn pages and open or close"
+      }
+    },
+    {
+      "page": "todos",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "小岛显示与排序",
+        "title": "显示已顺延天数"
+      },
+      "en": {
+        "group": "Island display & sorting",
+        "title": "Show carried-over days"
+      }
+    },
+    {
+      "page": "todosReminders",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "到点和到期",
+        "title": "截止日提醒"
+      },
+      "en": {
+        "group": "Timed and due",
+        "title": "Deadline reminder"
+      }
+    },
+    {
+      "page": "calendar",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "已添加的日历",
+        "title": "国家/地区节假日订阅"
+      },
+      "en": {
+        "group": "Your calendars",
+        "title": "Regional public holidays"
+      }
+    },
+    {
+      "page": "calendar",
+      "since": "0.3.14-beta.2",
+      "zh-CN": {
+        "group": "日历面板",
+        "title": "显示国际节日"
+      },
+      "en": {
+        "group": "Calendar panel",
+        "title": "Show international festivals"
+      }
+    },
+    {
+      "page": "music",
+      "since": "0.3.14",
+      "zh-CN": {
+        "group": "任务栏",
+        "title": "在任务栏显示歌词"
+      },
+      "en": {
+        "group": "Taskbar",
+        "title": "Show lyrics on the taskbar"
+      }
+    },
+    {
+      "page": "music",
+      "since": "0.3.14",
+      "zh-CN": {
+        "group": "任务栏",
+        "title": "显示内容"
+      },
+      "en": {
+        "group": "Taskbar",
+        "title": "Show"
+      }
+    },
+    {
+      "page": "music",
+      "since": "0.3.14",
+      "zh-CN": {
+        "group": "任务栏",
+        "title": "不在播放时"
+      },
+      "en": {
+        "group": "Taskbar",
+        "title": "When nothing plays"
+      }
+    },
+    {
+      "page": "screenshot",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "截图时",
+        "title": "延时截图时长"
+      },
+      "en": {
+        "group": "While capturing",
+        "title": "Delayed screenshot timer"
+      }
+    },
+    {
+      "page": "timerAlerts",
+      "since": "0.3.14-beta.3",
+      "zh-CN": {
+        "group": "计时器",
+        "title": "计时器页布局"
+      },
+      "en": {
+        "group": "Timer",
+        "title": "Timer layout"
+      }
+    }
+  ]
+}

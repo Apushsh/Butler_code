@@ -1,0 +1,227 @@
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import test from "node:test";
+import "./settingsCategorySlot.mjs";
+import { DEFAULT_SETTINGS_CATEGORY, FEATURE_PAGES, entryOf, entryPages, isCategoryAvailable, pagesOfFeaturesOff, searchCategories, settingsCategories, settingsCategoryFor, settingsGroups, sidebarItemOf, parentOf, subPagesOf } from "../../src/windows/settings/categories.ts";
+import { categorySlot } from "../../src/windows/settings/slots/categorySlot.ts";
+import { shortcutLabel } from "../../src/lib/shortcut/shortcut.ts";
+import { isTitleHit, isWhatsNewQuery, normalizeSearchText, searchSettingsRows, searchWords } from "../../src/windows/settings/settingsSearch.ts";
+import { applyAutoSince, buildWhatsNewIndex, latestReleaseTag, mergeStates, pairLocales } from "../../scripts/settings-search-index.mjs";
+
+const SETTINGS_CATEGORIES = settingsCategories();
+const SETTINGS_GROUPS = settingsGroups();
+const LOCALES = ["zh-CN", "en"];
+const row = (page, zh, en) => ({ page, "zh-CN": zh, en });
+const ENTRIES = [
+  row("agents", { group: "会话列表", title: "隐藏已退出的会话", description: "按进程是否还在判断" }, { group: "Session list", title: "Hide sessions that have quit", description: "Told by whether the process is alive" }),
+  row("agents", { group: "会话卡片", title: "会话来源", options: ["只显示图标", "图标和名称"] }, { group: "Session cards", title: "Session source", options: ["Icon only", "Icon and name"] }),
+  row("agentAlerts", { group: "弹出提醒", title: "会话完成时" }, { group: "Pop-up alerts", title: "When a session finishes" }),
+];
+const PAGES = { agents: "会话 AI Agent", agentAlerts: "弹出提醒 AI Agent 弹出 提醒" };
+const search = (query, locale = "zh-CN") => searchSettingsRows(query, ENTRIES, locale, LOCALES, (page) => PAGES[page]);
+
+test("search text ignores case, width, spaces and punctuation", () => {
+  assert.equal(normalizeSearchText(" Auto-Tuck　ＡＢ 弹出 提醒。"), "autotuckab弹出提醒");
+  assert.deepEqual(searchWords("  弹出 提醒 "), ["弹出", "提醒"]);
+});
+
+test("a title beats a choice, which beats a description", () => {
+  assert.deepEqual(search("会话").map((hit) => hit.text.title), ["隐藏已退出的会话", "会话来源", "会话完成时"]);
+  assert.deepEqual(search("图标").map((hit) => hit.text.title), ["会话来源"]);
+  assert.deepEqual(search("进程").map((hit) => hit.text.title), ["隐藏已退出的会话"]);
+  assert.ok(search("会话来源")[0].score > search("图标")[0].score);
+});
+
+test("any language finds a row, shown in the language asked for", () => {
+  assert.deepEqual(search("hide sessions").map((hit) => hit.text.title), ["隐藏已退出的会话"]);
+  assert.deepEqual(search("隐藏", "en").map((hit) => hit.text.title), ["Hide sessions that have quit"]);
+});
+
+test("every word must match; the page's own text helps but cannot stand alone", () => {
+  assert.deepEqual(search("弹出 完成").map((hit) => hit.page), ["agentAlerts"]);
+  assert.deepEqual(search("弹出"), [], "a page's name alone lists no rows");
+  assert.deepEqual(search("会话 不存在"), []);
+});
+
+test("Enter opens a row only when the query is in its title", () => {
+  assert.ok(isTitleHit(search("会话来源")[0], "会话来源"));
+  assert.ok(!isTitleHit(search("进程")[0], "进程"));
+  assert.ok(!isTitleHit(undefined, "x"));
+});
+
+test("pages match words written together or apart", () => {
+  const describe = (page) => (page === "agentAlerts" ? "弹出提醒 AI Agent 弹出 提醒 通知" : "");
+  assert.ok(searchCategories("弹出提醒", describe).includes("agentAlerts"));
+  assert.ok(searchCategories("弹出 通知", describe).includes("agentAlerts"));
+});
+
+test("the index keeps each row once and pairs the languages row by row", () => {
+  const on = [{ page: "agents", group: "g", title: "a", since: "0.3.14" }, { page: "agents", group: "g", title: "b" }];
+  const defaults = [{ page: "agents", group: "g", title: "a" }, { page: "agents", group: "g", title: "c" }];
+  const merged = mergeStates([on, defaults]);
+  assert.deepEqual(merged.map((entry) => entry.title), ["a", "b", "c"]);
+  assert.equal(merged[0].since, "0.3.14");
+  const paired = pairLocales({
+    "zh-CN": [{ page: "agents", group: "组", title: "甲", since: "0.3.14" }, { page: "agents", group: "组", title: "乙" }],
+    en: [{ page: "agents", group: "G", title: "A", since: "0.3.14" }, { page: "agents", group: "G", title: "B" }],
+  });
+  assert.deepEqual(paired, [
+    { page: "agents", since: "0.3.14", "zh-CN": { group: "组", title: "甲" }, en: { group: "G", title: "A" } },
+    { page: "agents", "zh-CN": { group: "组", title: "乙" }, en: { group: "G", title: "B" } },
+  ]);
+  assert.deepEqual(buildWhatsNewIndex(paired), [
+    { page: "agents", since: "0.3.14", "zh-CN": { group: "组", title: "甲" }, en: { group: "G", title: "A" } },
+  ]);
+  assert.throws(() => pairLocales({ "zh-CN": [{ page: "agents", group: "", title: "x" }], en: [] }));
+  assert.throws(() => pairLocales({ "zh-CN": [{ page: "agents", group: "", title: "x" }], en: [{ page: "about", group: "", title: "x" }] }));
+  assert.throws(() => pairLocales({ "zh-CN": [{ page: "agents", group: "", title: "x", since: "0.3.14" }], en: [{ page: "agents", group: "", title: "x" }] }));
+});
+
+test("searching new or 本版新增 surfaces active since entries on top", () => {
+  assert.ok(isWhatsNewQuery("new") && isWhatsNewQuery("本版新增") && isWhatsNewQuery("新功能") && !isWhatsNewQuery("外观"));
+  const withSince = [
+    { ...ENTRIES[0], since: "0.3.14" },
+    ENTRIES[1],
+    { ...ENTRIES[2], since: "0.3.12" },
+  ];
+  const hits = searchSettingsRows("new", withSince, "zh-CN", LOCALES, (page) => PAGES[page], new Set(["0.3.14"]));
+  assert.deepEqual(hits.map((hit) => [hit.text.title, hit.isNew]), [["隐藏已退出的会话", true]]);
+  assert.ok(isTitleHit(hits[0], "new"));
+  assert.deepEqual(searchSettingsRows("new", withSince, "zh-CN", LOCALES, (page) => PAGES[page], new Set(["0.3.14"]), new Set(["agentAlerts"])), []);
+  assert.deepEqual(searchSettingsRows("本版新增", withSince, "zh-CN", LOCALES, (page) => PAGES[page], new Set()), []);
+});
+
+test("a page whose feature the system lacks is not offered", () => {
+  const mac = new Set(["clipboard", "music", "qq"]);
+  assert.equal(isCategoryAvailable("clipboard", mac), false);
+  assert.equal(isCategoryAvailable("music", mac), false);
+  assert.equal(isCategoryAvailable("messages", mac), true);
+  assert.equal(isCategoryAvailable("general", mac), true);
+  assert.equal(isCategoryAvailable("clipboard", new Set()), true);
+});
+
+test("on a Mac a shortcut reads with the modifier symbols in Apple's order", () => {
+  assert.equal(shortcutLabel("Shift+Win+V", true), "⇧⌘V");
+  assert.equal(shortcutLabel("Ctrl+Alt+Shift+Win+F5", true), "⌃⌥⇧⌘F5");
+  assert.equal(shortcutLabel("Ctrl+Shift+W", false), "Ctrl+Shift+W");
+});
+
+test("the settings window opens on the overview, and a feature that is off takes its pages out of the menu", () => {
+  assert.equal(DEFAULT_SETTINGS_CATEGORY, "overview");
+  const allOn = Object.fromEntries(Object.keys(FEATURE_PAGES).map((feature) => [feature, true]));
+  assert.equal(pagesOfFeaturesOff(allOn).size, 0);
+  const off = pagesOfFeaturesOff({ ...allOn, agents: false, music: false });
+  assert.deepEqual([...off].sort(), [...FEATURE_PAGES.agents, ...FEATURE_PAGES.music].sort());
+  assert.ok(!off.has("overview") && !off.has("messages") && !off.has("general"));
+  for (const pages of Object.values(FEATURE_PAGES)) for (const page of pages) assert.ok(SETTINGS_CATEGORIES.includes(page), page);
+});
+
+test("Appearance has 3 tabs, island layout has its own page, AI Agent is a group of 4 items, and every page is reachable", () => {
+  assert.deepEqual(entryPages("appearance"), ["theme", "themeStyle", "appearance"]);
+  assert.equal(settingsCategoryFor("appearanceCollapsed"), "islandLayout");
+  assert.equal(sidebarItemOf("islandLayout"), "islandLayout");
+  assert.deepEqual(SETTINGS_GROUPS.find((group) => group.label === "agents")?.categories, ["agents", "agentAppearance", "agentAlerts", "agentRemote"]);
+  assert.equal(sidebarItemOf("sounds"), "agentAlerts");
+  assert.equal(sidebarItemOf("agentRings"), "agentAppearance");
+  assert.equal(settingsCategoryFor("themeMarket"), "theme");
+  assert.equal(sidebarItemOf("music"), "music");
+  assert.deepEqual(entryPages("general"), ["general", "generalData", "generalSync"]);
+  assert.deepEqual(SETTINGS_GROUPS.find((group) => group.label === "extensions")?.categories, ["pluginsV3", "pluginMarket", "generalApi"]);
+  assert.equal(sidebarItemOf("generalApi"), "generalApi");
+  assert.equal(settingsCategoryFor("sync"), "generalSync");
+  const listed = SETTINGS_GROUPS.flatMap((group) => group.categories);
+  assert.equal(new Set(listed).size, listed.length);
+  const reachable = new Set(listed.flatMap((item) => [...entryPages(item), ...subPagesOf(item)]));
+  assert.deepEqual([...reachable].sort(), [...SETTINGS_CATEGORIES].sort());
+});
+
+test("a sub-page stays out of the sidebar, lights up its parent and is listed under it for search", () => {
+  const remove = categorySlot.add({ id: "demoDetails", parent: "about", component: () => null }, "demo");
+  try {
+    assert.ok(settingsCategories().includes("demoDetails"));
+    assert.ok(!settingsGroups().flatMap((group) => group.categories).includes("demoDetails"));
+    assert.equal(parentOf("demoDetails"), "about");
+    assert.equal(parentOf("about"), null);
+    assert.equal(sidebarItemOf("demoDetails"), "about");
+    assert.deepEqual(subPagesOf("about"), ["demoDetails"]);
+    assert.equal(entryOf("demoDetails"), null);
+  } finally {
+    remove();
+  }
+  assert.deepEqual(subPagesOf("about"), []);
+});
+
+test("a category added to settings.category/v1 brings its own group, tabs, switch, availability and old names", () => {
+  const removers = [
+    categorySlot.add({ id: "demoTools", group: "extensions", tabs: ["demoTools", "demoToolsMore"], feature: "demo", aliases: ["demo-old"], component: () => null }, "demo"),
+    categorySlot.add({ id: "demoToolsMore", feature: "demo", available: ({ mac }) => !mac, component: () => null }, "demo"),
+  ];
+  try {
+    const groups = settingsGroups();
+    assert.equal(groups.find((group) => group.label === "extensions").categories.at(-1), "demoTools");
+    assert.deepEqual(groups.at(-1), { label: null, categories: ["about"] });
+    assert.deepEqual(entryPages("demoTools"), ["demoTools", "demoToolsMore"]);
+    assert.equal(sidebarItemOf("demoToolsMore"), "demoTools");
+    assert.equal(isCategoryAvailable("demoToolsMore", new Set(), true), false);
+    assert.equal(isCategoryAvailable("demoToolsMore", new Set(), false), true);
+    const allOn = Object.fromEntries(Object.keys(FEATURE_PAGES).map((feature) => [feature, true]));
+    assert.equal(pagesOfFeaturesOff(allOn).size, 0);
+    assert.deepEqual([...pagesOfFeaturesOff({ ...allOn, demo: false })].sort(), ["demoTools", "demoToolsMore"]);
+    assert.equal(settingsCategoryFor("demo-old"), "demoTools");
+  } finally {
+    for (const remove of removers) remove();
+  }
+  assert.ok(!settingsCategories().includes("demoTools"));
+  assert.equal(isCategoryAvailable("demoToolsMore", new Set(), false), false);
+  assert.equal(settingsCategoryFor("demo-old"), null);
+});
+
+test("applyAutoSince tags new top-level settings as next, skips indented and opted-out rows, preserves history and prunes expired versions", () => {
+  const baseEntries = [
+    { page: "general", "zh-CN": { group: "基础", title: "语言" }, en: { group: "Basic", title: "Language" } },
+    { page: "themeStyle", since: "0.3.14-beta.1", "zh-CN": { group: "外观", title: "外观模式" }, en: { group: "Look", title: "Appearance" } },
+    { page: "music", since: "0.3.10", "zh-CN": { group: "歌词", title: "歌词偏移" }, en: { group: "Lyrics", title: "Lyric offset" } },
+  ];
+  const currentEntries = [
+    ...baseEntries,
+    { page: "general", since: "0.3.13", "zh-CN": { group: "基础", title: "开机自启" }, en: { group: "Basic", title: "Startup" } },
+  ];
+  const collected = [
+    { page: "general", "zh-CN": { group: "基础", title: "界面语言" }, en: { group: "Basic", title: "Language" } },
+    { page: "themeStyle", "zh-CN": { group: "外观", title: "外观模式" }, en: { group: "Look", title: "Appearance" } },
+    { page: "music", "zh-CN": { group: "歌词", title: "歌词偏移" }, en: { group: "Lyrics", title: "Lyric offset" } },
+    { page: "themeStyle", "zh-CN": { group: "字体", title: "字体大小" }, en: { group: "Font", title: "Font size" } },
+    { page: "themeStyle", indent: true, "zh-CN": { group: "字体", title: "字重细节" }, en: { group: "Font", title: "Weight details" } },
+    { page: "themeStyle", since: "off", "zh-CN": { group: "字体", title: "改名测试" }, en: { group: "Font", title: "Renamed item" } },
+    { page: "themeStyle", indent: true, since: "next", "zh-CN": { group: "字体", title: "重点子项" }, en: { group: "Font", title: "Key sub-item" } },
+  ];
+
+  const { entries, autoTagged, expired } = applyAutoSince(collected, {
+    baseEntries,
+    currentEntries,
+    currentVersion: "0.3.14",
+    keepBases: 2,
+  });
+  assert.deepEqual(expired, ["0.3.10"]);
+  assert.deepEqual(autoTagged.map((item) => item["zh-CN"].title), ["字体大小"]);
+  assert.equal(entries[0].since, undefined, "renaming only one locale does not trigger a false NEW");
+  assert.equal(entries[1].since, "0.3.14-beta.1", "recent historical version is preserved");
+  assert.equal(entries[2].since, undefined, "expired version beyond keepBases is pruned");
+  assert.equal(entries[3].since, "next", "new top-level row is auto-tagged as next");
+  assert.equal(entries[4].since, undefined, "indented child row is skipped by auto-tagging");
+  assert.equal(entries[5].since, undefined, "explicit since=\"off\" opts out of auto-tagging");
+  assert.equal(entries[6].since, "next", "explicit since=\"next\" still works on indented rows");
+  assert.ok(entries.every((entry) => !("indent" in entry)));
+  assert.equal(latestReleaseTag(["v0.3.13", "v0.3.14-beta.1", "sdk-v0.5.0", "v0.3.14-beta.2"]), "v0.3.14-beta.2");
+});
+
+test("committed searchIndex.json and whatsNewIndex.json stay in sync with valid since values", () => {
+  const search = JSON.parse(readFileSync("src/windows/settings/searchIndex.json", "utf8"));
+  const whatsNew = JSON.parse(readFileSync("src/windows/settings/whatsNewIndex.json", "utf8"));
+  const expected = buildWhatsNewIndex(search.entries);
+  assert.deepEqual(whatsNew.entries, expected);
+  const validSince = /^(?:next|\d+\.\d+\.\d+(?:-beta\.\d+)?)$/;
+  for (const entry of whatsNew.entries) {
+    assert.match(entry.since, validSince, `${entry.page}:${entry["zh-CN"].title}`);
+  }
+});

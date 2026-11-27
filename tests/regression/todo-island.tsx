@@ -1,0 +1,267 @@
+import "../../src/styles/tokens.css";
+import { act, StrictMode, type CSSProperties, type ReactNode } from "react";
+import { createRoot } from "react-dom/client";
+import { mockIPC } from "@tauri-apps/api/mocks";
+import { I18nProvider } from "../../src/i18n";
+import { TodoIslandArchive } from "../../src/features/todos/island/TodoIslandArchive";
+import { TodoIslandPage } from "../../src/features/todos/island/TodoIslandPage";
+import type { TodoArchive, TodoItem, TodoPageMode, TodoPageProps } from "../../src/features/todos/types";
+import { TODO_ROW_HEIGHT } from "../../src/windows/island/layout";
+
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+const KEPT = "/kept/Fuyu_2026-11-20.png";
+const SHOT = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+const pinned: unknown[] = [];
+mockIPC((command, payload) => {
+  if (command === "screenshot_kept_image") return (payload as { path: string }).path === KEPT ? SHOT : null;
+  if (command === "screenshot_history_pin") pinned.push(payload);
+  return null;
+});
+type Props = TodoPageProps;
+const todo = (id: string, title: string, completed = false): TodoItem => ({ id, title, completed, createdAt: 0 });
+const TODOS = [
+  todo("a", "评审待办页的岛屿风格"),
+  todo("b", "回复 issue #31：快捷翻译在多屏下的位置，顺便把复现步骤和日志整理进任务文档里"),
+  todo("c", "买咖啡豆", true),
+];
+const ARCHIVES: TodoArchive[] = [
+  { date: "2026-11-08", todos: [todo("x", "写周报", true), todo("y", "整理桌面"), todo("z", "跑步 5 公里", true)], dailyNote: "", savedAt: 0, savedToDisk: true },
+  { date: "2026-11-07", todos: [todo("p", "发版 0.3.3", true)], dailyNote: "", savedAt: 0, savedToDisk: true },
+  { date: "2026-10-30", todos: [], dailyNote: "休息", savedAt: 0, savedToDisk: true },
+];
+const focused = (id: string, title: string, completed: boolean, focusMinutes: number, project?: string): TodoItem => ({ ...todo(id, title, completed), focusMinutes, ...(project ? { project } : {}) });
+const WEEK_ARCHIVES: TodoArchive[] = [
+  { date: "2026-11-10", todos: [focused("w1", "写引言", true, 50, "论文"), focused("w2", "跑对比", true, 25, "论文"), focused("w3", "回邮件", true, 45), todo("w4", "买菜")], dailyNote: "", savedAt: 0, savedToDisk: true },
+  { date: "2026-11-09", todos: [focused("w5", "做 PPT", true, 30, "组会"), focused("w6", "排版", true, 90, "浮屿"), todo("w7", "洗衣服", true)], dailyNote: "", savedAt: 0, savedToDisk: true },
+  { date: "2026-11-08", todos: [focused("w8", "写周报", true, 300)], dailyNote: "", savedAt: 0, savedToDisk: true },
+];
+const WEEK_TODAY = [focused("w9", "改岛屿", false, 40, "浮屿"), focused("w10", "记账", true, 10, "家务")];
+const calls: string[] = [];
+const tagSpy = (name: string) => (id: string, tags: object) => { calls.push(`${name}:${id}:${JSON.stringify(tags)}`); };
+const spy = (name: string) => (...args: unknown[]) => { calls.push([name, ...args.filter((arg) => typeof arg !== "object")].join(":")); };
+
+function props(pageMode: TodoPageMode, extra: Partial<Props> = {}): Props {
+  return {
+    todos: TODOS, dailyNote: "上午评审，下午写测试。", draft: "", activeTodoId: "a", currentDate: "2026-11-09", pageMode,
+    archives: ARCHIVES, selectedArchive: pageMode === "review" ? ARCHIVES[0] : null, saveState: "idle",
+    enableTodoReorder: true, scrollStartRows: 5, draftDate: null,
+    scheduledTodos: [{ id: "s", title: "牙医复诊", date: "2026-11-12", createdAt: 0 }],
+    onDraftChange: spy("draft"), onDraftDateChange: spy("date"), onAddTodo: spy("add"), projects: [], canCreateProject: true, onCreateProject: (name: string) => { spy("createProject")(name); return undefined; }, onShowUpcoming: spy("upcoming"),
+    onDeleteScheduledTodo: spy("deleteScheduled"), onTagScheduledTodo: tagSpy("tagScheduled"), onToggleTodo: spy("toggle"), onUpdateTodo: spy("update"), onTagTodo: tagSpy("tag"), onStartTodo: spy("start"),
+    onDeleteTodo: spy("delete"), onReorderTodo: spy("reorder"), onSaveToday: spy("save"), onShowArchive: spy("archive"),
+    onShowDaily: spy("daily"), onShowToday: spy("today"), onDailyNoteChange: spy("note"),
+    onSelectArchive: spy("select"),
+    ...extra,
+  };
+}
+
+const FRAMES: { id: string; caption: string; props: Props; light?: boolean; tall?: boolean }[] = [
+  { id: "today", caption: "今天（进行中、两行、已完成）", props: props("today"), tall: true },
+  { id: "empty", caption: "今天：空", props: props("today", { todos: [], activeTodoId: null, saveState: "saved" }) },
+  { id: "daily", caption: "笔记", props: props("daily") },
+  { id: "daily-shot", caption: "笔记里的截图（C150.11）", props: props("daily", { dailyNote: `看一下这个报错\n![截图](<${KEPT}>)\n![截图](</kept/gone.png>)` }) },
+  { id: "upcoming", caption: "已安排", props: props("upcoming") },
+  { id: "archive", caption: "归档", props: props("archive") },
+  { id: "week", caption: "归档：本周小结带专注时长（C140.4）", tall: true, props: props("archive", { currentDate: "2026-11-11", archives: WEEK_ARCHIVES, todos: WEEK_TODAY }) },
+  { id: "review", caption: "回看某一天", props: props("review") },
+  { id: "projects", caption: "按项目分组（issue #44）", tall: true, props: props("today", { activeTodoId: null, projects: ["组会", "论文", "空项目"], todos: [
+    { ...todo("p1", "写引言"), project: "论文" }, todo("p2", "买菜"), { ...todo("p3", "做 PPT"), project: "组会" },
+    { ...todo("p4", "跑对比"), project: "论文" }, { ...todo("p5", "交初稿", true), project: "论文" },
+  ] }) },
+  { id: "multi", caption: "同时进行两件（C62）", props: props("today", { activeTodoId: "m2", todos: [
+    { ...todo("m1", "等回复"), startedAt: 1 }, { ...todo("m2", "写测试"), startedAt: 2 }, todo("m3", "买菜"),
+  ] }) },
+  { id: "tags", caption: "优先级和颜色（C72）", props: props("today", { activeTodoId: null, todos: [
+    { ...todo("t1", "交报销单"), priority: "high", color: "red" }, { ...todo("t2", "订会议室"), priority: "medium" },
+    { ...todo("t3", "看论文"), color: "blue" }, todo("t4", "买菜"),
+  ] }) },
+  { id: "tags-light", caption: "优先级和颜色：浅色岛", light: true, props: props("upcoming", { scheduledTodos: [
+    { id: "s1", title: "牙医复诊", date: "2026-11-12", createdAt: 0, priority: "high", color: "green" },
+    { id: "s2", title: "交房租", date: "2026-11-15", createdAt: 0, priority: "low", color: "yellow" },
+  ] }) },
+  { id: "light", caption: "浅色岛屿底色", props: props("today", { saveState: "needs-path", draftDate: "2026-11-10" }), light: true, tall: true },
+];
+
+let scrolledTo = 0;
+document.addEventListener("scroll", () => { scrolledTo = window.scrollY; }, true);
+const pages = document.getElementById("pages")!;
+const results = document.getElementById("results")!;
+const messages: string[] = [];
+function check(condition: unknown, label: string) {
+  if (!condition) throw new Error(label);
+  messages.push(`PASS ${label}`);
+}
+
+for (const frame of FRAMES) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<p class="caption">${frame.caption}</p>`;
+  const island = document.createElement("div");
+  island.className = `frame${frame.light ? " frame--light" : ""}${frame.tall ? " frame--tall" : ""}`;
+  island.id = `frame-${frame.id}`;
+  island.style.setProperty("--island-ink-rgb", frame.light ? "28, 27, 31" : "241, 240, 246");
+  const host = document.createElement("div");
+  island.append(host);
+  wrap.append(island);
+  pages.append(wrap);
+  await act(async () => {
+    createRoot(host).render(<StrictMode><I18nProvider><div style={{ height: "100%" } as CSSProperties}><TodoIslandPage {...frame.props} /></div></I18nProvider></StrictMode>);
+  });
+}
+
+const $ = (frame: string, selector: string) => document.querySelector<HTMLElement>(`#frame-${frame} ${selector}`);
+const $$ = (frame: string, selector: string) => [...document.querySelectorAll<HTMLElement>(`#frame-${frame} ${selector}`)];
+const click = (element: HTMLElement | null) => act(async () => { element!.click(); });
+const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+const settle = async (done: () => boolean, ms = 2000) => { for (let spent = 0; !done() && spent < ms; spent += 50) await wait(50); };
+const menuOpen = () => document.querySelectorAll(".row-menu").length === 1;
+const openMenu = async (button: HTMLElement | null) => {
+  await settle(() => scrolledTo === window.scrollY);
+  await click(button);
+  await settle(menuOpen);
+};
+
+try {
+  const tabs = $$("today", ".todo-island__tab");
+  check(tabs.map((tab) => tab.textContent).join("|") === "今天2|笔记|已安排1|归档", "四个有名字的标签页，今天和已安排带数量");
+  check(tabs[0].getAttribute("aria-selected") === "true", "今天是当前标签页");
+  check(!$("archive", ".todo-island__tab-count") || $$("upcoming", ".todo-island__tab").length === 4, "已安排页打开时标签一直在");
+  check($$("empty", ".todo-island__tab").length === 4, "有已安排的待办时显示已安排标签");
+  await click(tabs[1]);
+  await click(tabs[3]);
+  check(calls.includes("daily") && calls.includes("archive"), "点标签切换页面");
+
+  const rows = $$("today", ".todo-list [data-todo-id]");
+  check(rows.length === 3, "每个待办一行，带 data-todo-id（插件菜单和拖动用）");
+  check(Math.abs(rows[0].getBoundingClientRect().height + 2 - TODO_ROW_HEIGHT) < 1, "一行加间距正好是岛屿按行长高的 34px");
+  const extraLines = Math.round(rows[1].querySelector<HTMLElement>(".todo-island-row__title")!.offsetHeight / 19) - 1;
+  check(extraLines > 0 && Math.abs(rows[1].getBoundingClientRect().height - rows[0].getBoundingClientRect().height - 19 * extraLines) < 1, "标题每多一行多 19px，和岛屿增高的行高一致");
+  check(rows[0].classList.contains("todo-island-row--active") && $("today", ".todo-island-row__stop")?.textContent === "进行中结束", "进行中的待办有强调条和结束按钮");
+  check(getComputedStyle(rows[2].querySelector(".todo-island-row__title")!).textDecorationLine === "line-through", "已完成的划掉");
+  const multi = $$("multi", ".todo-list [data-todo-id]");
+  check(multi.map((row) => row.classList.contains("todo-island-row--active")).join() === "true,true,false" && $$("multi", ".todo-island-row__stop").length === 2, "两件同时进行中，各有自己的结束按钮");
+  await click(multi[0].querySelector<HTMLElement>(".todo-island-row__stop"));
+  check(calls.includes("start:m1"), "点其中一件的结束只停那一件");
+  check(getComputedStyle(rows[1].querySelector(".todo-island-row__action")!).opacity === "0", "其他操作平时隐藏");
+  const heights = rows.map((row) => [Math.round(row.querySelector<HTMLElement>(".todo-island-row__title")!.offsetHeight / 19), row.offsetHeight]);
+  check(heights.every(([lines, height]) => height === 13 + 19 * lines) && heights.some(([lines]) => lines > 1), `行高跟着标题实际换行：一行 32px，每多一行加 19px（${heights.map(([l, h]) => l + "行 " + h + "px").join("，")}）`);
+  await click(rows[1].querySelector<HTMLElement>(".todo-island-row__check"));
+  await click(rows[1].querySelector<HTMLElement>(".todo-island-row__action"));
+  check(calls.includes("toggle:b") && calls.includes("start:b"), "勾选和开始");
+
+  const input = $("today", ".todo-island__composer input") as HTMLInputElement;
+  check(input.placeholder === "添加待办，回车保存", "输入框提示");
+  await act(async () => { input.closest("form")!.requestSubmit(); });
+  check(calls.includes("add"), "回车添加");
+  check(($("light", ".todo-island__composer input") as HTMLInputElement).placeholder === "添加 2026-11-10 的待办"
+    && $("light", ".todo-date-picker__button--later"), "选了以后的日子：提示写日期，日期按钮变紫");
+  check(!$("today", ".todo-island__save") && $("today", ".todo-island__progress")?.textContent === "今天完成 1/3", "平时右上角是今天的进度，不放保存按钮");
+  const menuItem = (label: string) => [...document.querySelectorAll<HTMLElement>(".row-menu__item")].find((item) => item.textContent?.includes(label)) ?? null;
+  await openMenu($("today", 'button[aria-haspopup="menu"]'));
+  await click(menuItem("保存今天的清单"));
+  check(calls.includes("save"), "「⋯」里保存今天");
+  await openMenu($("today", 'button[aria-haspopup="menu"]'));
+  await click(menuItem("清除已完成（1 件）"));
+  check(calls.includes("delete:c") && !calls.includes("delete:a"), "「⋯」里清除已完成，只删做完的");
+  check($("light", ".todo-island__save--needs-path")?.getAttribute("aria-label")?.includes("保存位置"), "保存有话要说时（没设位置、失败、保存中、刚保存好）按钮出现在「⋯」旁边");
+  const fold = $("today", ".todo-island__done-fold button")!;
+  check(fold.textContent === "已完成 1" && fold.getAttribute("aria-expanded") === "true", "做完的收在「已完成」下面");
+  await click(fold);
+  check($$("today", ".todo-list [data-todo-id]").length === 2 && fold.getAttribute("aria-expanded") === "false", "「已完成」可以折叠");
+  await click(fold);
+
+  const chipText = (frame: string) => $$(frame, ".todo-project-filter__chip").map((chip) => chip.textContent || "+").join("|");
+  check(chipText("today") === "全部|临时|+" && !$("today", ".todo-project-heading"), "没有项目时筛选只有全部、临时和 +，不分组");
+  check($("today", ".todo-island__project-pick")?.textContent === "临时", "输入框旁一直有项目按钮，默认临时");
+  const chips = $$("projects", ".todo-project-filter__chip");
+  check(chipText("projects") === "全部|临时|组会|论文|空项目|+" && chips[0].getAttribute("aria-pressed") === "true", "筛选按保存的顺序列出项目，没有待办的项目也在");
+  const headings = () => $$("projects", ".todo-project-heading").map((heading) => heading.textContent);
+  check(headings().join("|") === "组会1|论文2|临时1", "未完成的按保存的顺序分组，组标题写未完成数，临时放最后");
+  const titlesIn = (frame: string) => $$(frame, ".todo-list [data-todo-id] .todo-island-row__title").map((title) => title.textContent);
+  check(titlesIn("projects").join("|") === "做 PPT|写引言|跑对比|买菜|论文交初稿", "组内保持原来的顺序；已完成的不分组，标题前写项目");
+  await click(chips[1]);
+  check(titlesIn("projects").join("|") === "买菜" && headings().length === 0, "选临时只看没有项目的待办");
+  await click(chips[3]);
+  check(titlesIn("projects").join("|") === "写引言|跑对比|交初稿" && headings().length === 0, "选一个项目只看它的待办，不再分组");
+  check($("projects", ".todo-island__project-pick")?.textContent === "论文", "筛选时项目按钮跟着变成这个项目");
+  await act(async () => { ($("projects", ".todo-island__composer") as HTMLFormElement).requestSubmit(); });
+  check(calls.includes("add:论文"), "筛选时新加的待办归到这个项目");
+  await click($("projects", ".todo-project-filter__add")!);
+  const name = $("projects", ".todo-project-filter__name") as HTMLInputElement;
+  name.value = "读书";
+  await act(async () => { name.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); });
+  check(calls.includes("createProject:读书"), "+ 输入名字回车新建项目");
+  await click($$("projects", ".todo-project-filter__chip")[0]);
+
+  const text = (frame: string) => getComputedStyle($(frame, ".todo-island-row__title")!).color;
+  check(text("today") !== text("light") && text("light").startsWith("rgba(28, 27, 31"), "文字颜色跟着岛屿底色：浅底深字");
+
+  check($("empty", ".todo-island__empty")?.textContent === "今天还很轻在上面输入一件事，回车添加", "空列表有说明");
+  check(($("daily", ".todo-island__note") as HTMLTextAreaElement).value === "上午评审，下午写测试。" && !$("daily", ".todo-note-images"), "笔记页");
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  const shots = $$("daily-shot", ".todo-note-images__item");
+  check(shots.length === 2 && shots[0].querySelector("img")?.getAttribute("src") === SHOT && shots[1].classList.contains("todo-note-images__item--gone"), "笔记里的截图显示成缩略图，删掉的显示占位");
+  await act(async () => { (shots[0] as HTMLButtonElement).click(); });
+  check(JSON.stringify(pinned[0]) === JSON.stringify({ path: KEPT }), "点缩略图把截图贴到屏幕上");
+  check($("upcoming", ".scheduled-list__item")?.textContent === "牙医复诊", "已安排页沿用分日期的列表");
+
+  const tagRows = $$("tags", ".todo-list [data-todo-id]");
+  const marks = (row: HTMLElement) => [...row.querySelectorAll(".todo-tag-dot, .todo-tag-flag")].map((mark) => mark.getAttribute("data-color") ?? mark.getAttribute("class")?.match(/--(\w+)/)?.[1] ?? "plain").join(",");
+  check(tagRows.map(marks).join("|") === "red,high|medium|blue|plain", "行上显示颜色点和优先级旗子，没设的只有一面隐藏的旗子");
+  check(tagRows[0].dataset.priority === "high" && !tagRows[3].dataset.priority, "行上带 data-priority");
+  check(getComputedStyle(tagRows[3].querySelector(".todo-tag-button")!).opacity === "0" && getComputedStyle(tagRows[0].querySelector(".todo-tag-button")!).opacity === "1", "没设标签的按钮平时隐藏，设了的一直显示");
+  check(getComputedStyle(tagRows[0].querySelector(".todo-tag-dot")!).backgroundColor !== getComputedStyle(tagRows[2].querySelector(".todo-tag-dot")!).backgroundColor, "不同颜色的点颜色不同");
+  check(tagRows.every((row) => row.offsetHeight === 32), "加了标签按钮，一行仍是 32px");
+  await openMenu(tagRows[3].querySelector<HTMLElement>(".todo-tag-button"));
+  check([...document.querySelectorAll(".row-menu__item")].map((item) => item.textContent).join("|") === "截止日…|高优先级|中优先级|低优先级|红色|橙色|黄色|绿色|蓝色|紫色|每天重复|法定工作日重复|每周重复|每月重复|每年重复|每年重复（农历）", "菜单列出截止日、三档优先级、六种颜色和六种重复规则");
+  await click(menuItem("高优先级"));
+  check(calls.includes('tag:t4:{"priority":"high"}'), "选优先级只改优先级");
+  await openMenu(tagRows[3].querySelector<HTMLElement>(".todo-tag-button"));
+  await click(menuItem("法定工作日重复"));
+  check(calls.includes('tag:t4:{"recurrence":{"kind":"workdays"}}'), "选重复规则写入 recurrence");
+  await openMenu(tagRows[0].querySelector<HTMLElement>(".todo-tag-button"));
+  check(menuItem("红色")?.hasAttribute("disabled") && menuItem("不设颜色") && menuItem("不设优先级"), "已选的那项不能再点，设了的可以清掉");
+  await click(menuItem("不设颜色"));
+  check(calls.includes("tag:t1:{}"), "清掉颜色");
+  const scheduled = $$("tags-light", ".scheduled-list__item");
+  check(scheduled.map(marks).join("|") === "green,high|yellow,low" && scheduled.every((item) => getComputedStyle(item.querySelector(".todo-tag-button")!).opacity === "1"), "已安排的待办也显示颜色和优先级");
+  await openMenu(scheduled[1].querySelector<HTMLElement>(".todo-tag-button"));
+  await click(menuItem("紫色"));
+  check(calls.includes('tagScheduled:s2:{"color":"purple"}'), "已安排的待办也能改标签");
+
+  const days = $$("archive", ".todo-island__archive-day");
+  check($$("archive", ".todo-island__section-label").map((label) => label.textContent).join("|") === "2026年11月|2026年10月", "归档按月分组，新的在上");
+  check(days.length === 3 && days[0].textContent?.includes("写") === false && days[0].textContent?.includes("整理桌面") && days[0].textContent?.includes("2/3"), "每天显示第一件没做完的和完成数");
+  await click(days[1]);
+  check(calls.includes("select:2026-11-07"), "点某一天打开它");
+
+  const weekDays = (frame: string) => $$(frame, ".todo-week__day");
+  const weekTexts = (frame: string, selector: string) => $$(frame, selector).map((item) => item.textContent).join("|");
+  check($("archive", ".todo-island__archive")?.firstElementChild?.classList.contains("todo-week"), "本周小结在归档列表最上面");
+  check(weekTexts("archive", ".todo-week__sum > *") === "1|本周完成" && !$("archive", ".todo-week__projects"), "没有专注时长：只有今天完成的 1 件，不写专注，没有项目行");
+  check(weekTexts("archive", ".todo-week__day span") === "一|二|三|四|五|六|日" && weekDays("archive").map((day) => day.dataset.done).join() === "1,0,0,0,0,0,0", "中文一周从周一开始，上周日的归档不算进来");
+  check(weekTexts("week", ".todo-week__sum > *") === "7|本周完成 · 专注 4h 50m", "本周完成 7 件，专注一共 4 小时 50 分");
+  check(weekDays("week").map((day) => day.dataset.done).join() === "3,3,1,0,0,0,0" && weekDays("week").map((day) => day.classList.contains("todo-week__day--today")).indexOf(true) === 2, "七根小柱一天一根，今天那根单独标出");
+  check(weekDays("week")[0].getAttribute("aria-label") === "星期一完成 3 件" && weekDays("week")[2].getAttribute("aria-current") === "date", "小柱读得出是哪天、完成几件");
+  check(weekTexts("week", ".todo-week__project") === "浮屿2h 10m|论文1h 15m|临时45m", "专注最多的三个项目，没有项目的算临时，第四名以后不列");
+  const barHeights = weekDays("week").map((day) => day.querySelector("i")!.getBoundingClientRect().height);
+  check(barHeights[0] === barHeights[1] && barHeights[2] < barHeights[0] && barHeights[3] > 0 && barHeights[3] < barHeights[2], "小柱高度跟着件数，没完成的那天留一条短线");
+  const detached = async (node: ReactNode) => {
+    const host = document.createElement("div");
+    await act(async () => { createRoot(host).render(<StrictMode><I18nProvider>{node}</I18nProvider></StrictMode>); });
+    return host;
+  };
+  const off = await detached(<TodoIslandArchive archives={WEEK_ARCHIVES} todos={WEEK_TODAY} currentDate="2026-11-11" showWeekSummary={false} onSelect={spy("select")} />);
+  check(!off.querySelector(".todo-week") && off.querySelectorAll(".todo-island__archive-day").length === 3, "关掉本周小结后归档页只剩每天的列表");
+  const blank = await detached(<TodoIslandArchive archives={[]} todos={[todo("n", "没做完")]} currentDate="2026-11-11" onSelect={spy("select")} />);
+  check(!blank.querySelector(".todo-week") && blank.textContent === "还没有保存过的清单", "本周没完成过、也没有归档时不显示小结");
+  check($("review", ".todo-island__back")?.textContent === "2026-11-08" && $("review", ".todo-island__progress")?.textContent === "完成 2/3", "回看某一天：返回按钮、日期和完成数");
+  check(!$("review", ".todo-island__composer") && !$("review", ".todo-island-row__action"), "回看时只读，没有输入框和操作");
+  await click($("review", ".todo-island__back"));
+  check(calls.filter((call) => call === "archive").length === 2, "返回归档");
+
+  results.textContent = `${messages.join("\n")}\n\n全部 ${messages.length} 项检查通过。`;
+  results.dataset.result = "passed";
+} catch (error) {
+  results.textContent = `${messages.join("\n")}\nFAIL ${String(error)}`;
+  results.dataset.result = "failed";
+}

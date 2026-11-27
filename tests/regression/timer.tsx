@@ -1,0 +1,282 @@
+import { act, StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { emit } from "@tauri-apps/api/event";
+import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
+import { createServiceProxy } from "@fuyu/plugin-base/client";
+import { timersV1 } from "@fuyu/plugin-services";
+import "../../src/styles/tokens.css";
+import { I18nProvider } from "../../src/i18n";
+import { windowServices } from "../../src/features/plugin-kernel/services";
+import { adoptTimers, changeTimer, dismissRung, idOf, ringDue, startTimer } from "../../src/features/timer/host/rules.mjs";
+import { updatePluginNames } from "../../src/features/plugin-kernel/pluginNames";
+import { nextDueIn, type Timer } from "../../src/features/timer/timers";
+import { configureTimers, TIMERS_KEY, TIMERS_MIGRATED_KEY, useTimers } from "../../src/features/timer/store";
+import { TimerPanel } from "../../src/features/timer/TimerPanel";
+import { TimerChip } from "../../src/features/timer/TimerChip";
+import { TimerNotice, TimerNoticeActions } from "../../src/features/timer/TimerNotice";
+import { BreakRemindersGroup } from "../../src/features/timer/BreakRemindersGroup";
+import { ReminderNotice, ReminderNoticeActions } from "../../src/features/timer/ReminderNotice";
+import { pushIslandReminder } from "../../src/features/timer/reminders";
+import { BREAK_REMINDERS_KEY, TIMER_RECENTS_KEY } from "../../src/features/timer/storage";
+import { useIslandReminder } from "../../src/features/timer/useIslandReminder";
+
+Object.assign(globalThis, { isTauri: true, IS_REACT_ACT_ENVIRONMENT: true });
+localStorage.removeItem(BREAK_REMINDERS_KEY);
+localStorage.removeItem(TIMERS_KEY);
+localStorage.removeItem(TIMERS_MIGRATED_KEY);
+localStorage.removeItem(TIMER_RECENTS_KEY);
+mockIPC((command) => (command === "get_foreground_fullscreen" ? { active: false, onIslandMonitor: false } : null), { shouldMockEvents: true });
+mockWindows("main");
+
+const hostState: { timers: readonly Timer[]; counter: number; alarm: number } = { timers: [], counter: 0, alarm: 0 };
+
+const hostProxy = createServiceProxy(async (method, payload) => {
+  if (method !== "service.call") return true;
+  const { service, method: callMethod, params } = payload as { service: string; method: string; params: unknown };
+  if (service !== timersV1.name) throw Object.assign(new Error("unknown service"), { code: "not-ready" });
+  const scheduleHost = () => {
+    window.clearTimeout(hostState.alarm);
+    hostState.alarm = 0;
+    const wait = nextDueIn(hostState.timers, Date.now());
+    if (wait === null) return;
+    hostState.alarm = window.setTimeout(() => {
+      hostState.alarm = 0;
+      const now = Date.now();
+      const rung = ringDue(hostState.timers, now);
+      if (rung.due.length > 0) commitHost(rung.timers, now, rung.due);
+      else scheduleHost();
+    }, Math.max(0, wait));
+  };
+  const commitHost = (next: readonly Timer[], now: number, due: Timer[] = []) => {
+    hostState.timers = next;
+    for (const timer of due) hostProxy.deliver({ service: timersV1.name, event: "due", data: { timer, at: now } });
+    hostProxy.deliver({ service: timersV1.name, event: "changed", data: { timers: [...next], at: now } });
+    scheduleHost();
+  };
+  switch (callMethod) {
+    case "list": return { timers: [...hostState.timers], at: Date.now() };
+    case "start": {
+      const now = Date.now();
+      hostState.counter += 1;
+      const next = startTimer(hostState.timers, params, now, `${now.toString(36)}-${hostState.counter}`);
+      commitHost(next.timers, now);
+      return { timer: next.timer };
+    }
+    case "pause":
+    case "resume":
+    case "extend": {
+      const now = Date.now();
+      const next = changeTimer(hostState.timers, callMethod, params, now);
+      if (next.timers !== hostState.timers) commitHost(next.timers, now);
+      return { timer: next.timer };
+    }
+    case "remove": {
+      const id = idOf(params, "remove");
+      const next = hostState.timers.filter((timer) => timer.id !== id);
+      if (next.length === hostState.timers.length) return { removed: false };
+      commitHost(next, Date.now());
+      return { removed: true };
+    }
+    case "dismissRinging": {
+      const next = dismissRung(hostState.timers);
+      const removed = hostState.timers.length - next.length;
+      if (removed > 0) commitHost(next, Date.now());
+      return { removed };
+    }
+    case "adopt": {
+      const now = Date.now();
+      const next = adoptTimers(hostState.timers, params, now);
+      if (next.added > 0) commitHost(next.timers, now, next.due);
+      return { timers: [...hostState.timers], added: next.added, at: now };
+    }
+    default:
+      throw Object.assign(new Error(`no method ${callMethod}`), { code: "no-method" });
+  }
+});
+
+hostProxy.update([{ name: timersV1.name, plugin: "timer", methods: Object.keys(timersV1.methods), events: Object.keys(timersV1.events) }]);
+windowServices.attach(hostProxy);
+
+function Harness() {
+  const ringing = useTimers().timers.filter((timer) => timer.alerted);
+  const reminder = useIslandReminder();
+  return (
+    <div style={{ width: 760, display: "grid", gap: 10, background: "var(--island-background-color, #000)", padding: 12 }}>
+      <div className="bar" style={{ display: "flex", alignItems: "center", gap: 8, height: 38, padding: "0 18px" }}>
+        {ringing.length > 0 && <><TimerNotice ringing={ringing} /><TimerNoticeActions /></>}
+        <TimerChip paused={false} />
+      </div>
+      <div className="reminder-bar" style={{ display: "flex", alignItems: "center", gap: 8, height: 38, padding: "0 18px" }}>
+        {reminder && <><ReminderNotice reminder={reminder} /><ReminderNoticeActions reminder={reminder} /></>}
+      </div>
+      <div style={{ height: 248, display: "flex" }}>
+        <TimerPanel isOpen />
+      </div>
+      <div className="settings-harness" style={{ width: 360 }}>
+        <BreakRemindersGroup />
+      </div>
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <I18nProvider>
+      <Harness />
+    </I18nProvider>
+  </StrictMode>,
+);
+
+const results = document.getElementById("results")!;
+const messages: string[] = [];
+const check = (condition: unknown, message: string) => {
+  if (!condition) throw new Error(message);
+  messages.push(`PASS ${message}`);
+};
+const wait = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
+const input = () => document.querySelector<HTMLInputElement>(".timer-panel__input")!;
+const button = (label: string, scope = document.body) => scope.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+const click = (target: HTMLElement | null) => act(async () => { target!.click(); });
+const rows = () => [...document.querySelectorAll<HTMLElement>(".timer-panel__row")];
+const text = (selector: string) => document.querySelector(selector)?.textContent ?? "";
+const typeAndStart = async (value: string) => {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input(), value);
+    input().dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => { input().form!.requestSubmit(); });
+};
+
+async function runChecks() {
+  try {
+    for (let tries = 0; tries < 50 && !input(); tries += 1) await wait(20);
+    check(text(".timer-panel__empty").includes("输入时长"), "With no timers the page says how to start one");
+    check(!document.querySelector(".timer-chip"), "…and the collapsed bar shows nothing");
+
+    await typeAndStart("abc");
+    check(text(".timer-panel__problem").includes("看不懂") && rows().length === 0, "A length it cannot read is refused with a hint");
+
+    await typeAndStart("10m");
+    check(rows().length === 1 && rows()[0].textContent?.includes("倒计时 · 10:00") && text(".timer-panel__time") === "10:00", `10m starts a ten minute countdown (${text(".timer-panel__time")})`);
+    check(input().value === "", "…and clears the box");
+    check(text(".timer-chip__time") === "10:00", "The collapsed bar shows the time left");
+
+    await click(button("开始秒表"));
+    check(rows().length === 2 && rows()[1].textContent?.includes("秒表"), "The stopwatch button adds a stopwatch");
+    check(text(".timer-chip__time") === "10:00", "…while the bar keeps showing the countdown");
+
+    await click(button("暂停", rows()[0]));
+    check(button("继续", rows()[0]) && rows()[0].classList.contains("timer-panel__row--paused"), "A countdown can be paused");
+    await wait(600);
+    check(text(".timer-chip__time").startsWith("00:0"), `With the countdown paused, the bar shows the running stopwatch (${text(".timer-chip__time")})`);
+    await click(button("继续", rows()[0]));
+    check(button("暂停", rows()[0]), "…and resumed");
+
+    check(hostState.timers.map((timer) => timer.kind).join() === "countdown,stopwatch", "Timers are kept in the host's timers/v1 service so they survive closing the window");
+
+    await click(button("取消", rows()[1]));
+    check(rows().length === 1, "Cancel removes a timer");
+
+    configureTimers(true, false);
+    await typeAndStart("1s");
+    await wait(1400);
+    check(text(".timer-notice").includes("00:01 的计时到了"), `When a countdown ends, the island says so (${text(".timer-notice")})`);
+    check(document.querySelector(".timer-panel__row--done")?.textContent?.includes("到点了"), "…and its row says time is up");
+    check(document.querySelector(".timer-chip--done"), "…and the bar marks it");
+    await click(button("再加 5 分钟", document.querySelector<HTMLElement>(".bar")!));
+    check(!document.querySelector(".timer-notice") && rows().some((row) => row.textContent?.includes("05:00")), "Five more minutes takes the alert away and starts it again");
+
+    await checkPluginTimers();
+    await checkBreakReminders();
+    await checkLayouts();
+
+    results.textContent = `${messages.join("\n")}\n\n全部 ${messages.length} 项检查通过。`;
+    results.dataset.result = "passed";
+  } catch (error) {
+    results.textContent = `${messages.join("\n")}\nFAIL ${String(error)}`;
+    results.dataset.result = "failed";
+  }
+}
+
+async function checkPluginTimers() {
+  const deliver = (event: "changed" | "due", data: unknown) => act(async () => { hostProxy.deliver({ service: timersV1.name, event, data }); });
+  const before = rows().length;
+  const now = Date.now();
+  updatePluginNames([{ id: "pomodoro", displayName: { "zh-CN": "番茄钟", en: "Pomodoro" } }]);
+  const shown = startTimer(hostState.timers, { kind: "countdown", durationMs: 25 * 60_000 }, now, "plugin-shown", "pomodoro").timer;
+  const hidden = startTimer([], { kind: "countdown", durationMs: 1000, hidden: true }, now, "plugin-hidden", "pomodoro").timer;
+  hostState.timers = [...hostState.timers, shown, hidden];
+  await deliver("changed", { timers: [...hostState.timers], at: now });
+  check(rows().length === before + 1, "A plugin's hidden timer stays off the timer page");
+  const last = () => rows()[rows().length - 1];
+  check(last()?.querySelector(".timer-panel__source")?.textContent === "来自 番茄钟", `A plugin's visible timer names the plugin (${last()?.textContent})`);
+  check(!text(".timer-chip__time").startsWith("00:0"), `The collapsed bar does not pick the hidden one even though it ends first (${text(".timer-chip__time")})`);
+  const rung = ringDue(hostState.timers, now + 2000);
+  hostState.timers = rung.timers;
+  await deliver("due", { timer: rung.due[0], at: now + 2000 });
+  await deliver("changed", { timers: [...hostState.timers], at: now + 2000 });
+  check(rung.due.length === 1 && rung.due[0].id === "plugin-hidden" && !document.querySelector(".timer-notice"), "When the hidden timer is due the island shows no notice");
+  await click(button("暂停", last()));
+  check(hostState.timers.find((timer) => timer.id === "plugin-shown")?.runningSince === null, "The user can still pause a plugin's visible timer");
+  hostState.timers = hostState.timers.filter((timer) => timer.id !== "plugin-hidden");
+  await deliver("changed", { timers: [...hostState.timers], at: Date.now() });
+}
+
+async function checkBreakReminders() {
+  const group = document.querySelector<HTMLElement>(".settings-harness")!;
+  const reminderRows = () => [...group.querySelectorAll<HTMLElement>(".break-reminder-row")];
+  const toggle = group.querySelector<HTMLInputElement>("input[role=switch]")!;
+  check(!toggle.checked && reminderRows().length === 0, "Break reminders are off by default and list nothing");
+  await click(toggle);
+  const names = reminderRows().map((row) => row.querySelector<HTMLInputElement>(".break-reminder-row__name")!.placeholder);
+  const minutes = reminderRows().map((row) => row.querySelector<HTMLInputElement>(".break-reminder-row__number")!.value);
+  check(names.join() === "久坐,护眼" && minutes.join() === "60,20", `Turned on, they start with sitting every 60 and eyes every 20 minutes (${names} ${minutes})`);
+  await click([...group.querySelectorAll<HTMLButtonElement>("button")].find((entry) => entry.textContent?.includes("添加提醒")) ?? null);
+  check(reminderRows().length === 3, "Add reminder adds a third one");
+  await click(button("换个图标", reminderRows()[2]));
+  await click(button("删除这项提醒", reminderRows()[0]));
+  const stored = JSON.parse(localStorage.getItem(BREAK_REMINDERS_KEY) ?? "{}") as { enabled: boolean; items: { id: string; icon: string }[] };
+  check(stored.enabled && stored.items.map((item) => `${item.id}:${item.icon}`).join() === "eyes:eye,custom-3:stand", `Changes are saved in fuyu-break-reminders (${JSON.stringify(stored.items)})`);
+
+  const settled: string[] = [];
+  await act(async () => {
+    pushIslandReminder({ id: "eyes", source: "test", icon: "eye", title: "护眼", detail: "看看远处", onSnooze: () => settled.push("snooze"), onDismiss: () => settled.push("skip") });
+    pushIslandReminder({ id: "todo", source: "test", icon: "flag", title: "交周报", snoozable: false });
+  });
+  const reminderBar = document.querySelector<HTMLElement>(".reminder-bar")!;
+  check(text(".reminder-notice") === "护眼 · 看看远处 · 还有 1 条", `A due reminder shows on the island with the rest counted (${text(".reminder-notice")})`);
+  await act(async () => { await emit("foreground-fullscreen-changed", { active: true, onIslandMonitor: true }); });
+  check(!document.querySelector(".reminder-notice"), "In full screen the reminder waits");
+  await act(async () => { await emit("foreground-fullscreen-changed", { active: false, onIslandMonitor: false }); });
+  check(text(".reminder-notice").startsWith("护眼"), "…and shows again after leaving full screen");
+  await click(button("5 分钟后再提醒", reminderBar));
+  check(settled.join() === "snooze" && text(".reminder-notice") === "交周报", "Snooze hands the reminder back to its owner and shows the next one");
+  check(!button("5 分钟后再提醒", reminderBar) && button("跳过", reminderBar), "A reminder that can't be snoozed only offers skip");
+  await click(button("跳过", reminderBar));
+  check(!document.querySelector(".reminder-notice"), "Skip clears it");
+}
+
+async function checkLayouts() {
+  const panel = () => document.querySelector<HTMLElement>(".timer-panel")!;
+  const openLayoutMenu = async () => {
+    const trigger = panel().querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+    await click(trigger);
+  };
+  const pickLayout = async (name: string) => {
+    await openLayoutMenu();
+    const item = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((entry) => entry.textContent?.includes(name)) ?? null;
+    await click(item);
+  };
+
+  check(panel().dataset.layout === "split", "Timer page starts on the split layout by default");
+  await pickLayout("双模式大表盘");
+  check(panel().dataset.layout === "dial" && Boolean(panel().querySelector(".timer-dial__tabs")), "Switching to dial layout shows countdown and stopwatch tabs");
+  await pickLayout("速启卡片网格");
+  check(panel().dataset.layout === "grid" && panel().querySelectorAll(".timer-grid__tile").length >= 6, "Switching to grid layout fills the tile grid");
+  await pickLayout("时间中枢");
+  check(panel().dataset.layout === "hub" && Boolean(panel().querySelector(".timer-hub__right")), "Switching to hub layout shows the break reminders panel");
+  await pickLayout("左右双栏");
+  check(panel().dataset.layout === "split", "Switching back returns to the default split layout");
+}
+
+void runChecks();

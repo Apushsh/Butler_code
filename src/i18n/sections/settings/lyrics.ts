@@ -1,0 +1,254 @@
+export type SettingsLyricsText = {
+  title: string;
+  hint: string;
+  folder: string;
+  folderHint: string;
+  folderPlaceholder: string;
+  online: string;
+  onlineHint: string;
+  chinese: string;
+  chineseHint: string;
+  offset: string;
+  offsetHint: string;
+  offsetValue: (ms: number) => string;
+  offsetReset: string;
+  onIsland: string;
+  onIslandHint: string;
+  styleNeedsIsland: string;
+  onIslandNoSource: string;
+  intro: string;
+  introHint: string;
+  introTodo: string;
+  introSong: string;
+  introNote: string;
+  inflink: {
+    title: string;
+    hint: string;
+    needsBetterNcm: string;
+    getBetterNcm: string;
+    install: string;
+    update: string;
+    installing: string;
+    about: string;
+    installed: (version: string) => string;
+    updateAvailable: (installed: string, latest: string) => string;
+    restart: (version: string) => string;
+    failed: (error: string) => string;
+    manual: (folder: string) => string;
+    releasePage: string;
+  };
+  appleMusic: {
+    title: string;
+    hint: string;
+    token: string;
+    tokenHint: string;
+    tokenIsSaved: string;
+    tokenPlaceholder: string;
+    tokenReplace: string;
+    save: string;
+    clear: string;
+    tokenSaved: string;
+    tokenCleared: string;
+  };
+  karaoke: {
+    title: string;
+    highlightTitle: string;
+    hint: string;
+    preview: string;
+    previewLine: string;
+    enabled: string;
+    enabledHint: string;
+    fallback: string;
+    fallbackHint: string;
+    fallbackLine: string;
+    fallbackNone: string;
+    fill: string;
+    fillSmooth: string;
+    fillWord: string;
+    color: string;
+    colorInk: string;
+    colorAccent: string;
+    colorCustom: string;
+    customColor: string;
+    dim: string;
+    dimHint: string;
+    dimValue: (percent: number) => string;
+    dimReset: string;
+    glow: string;
+    glowHint: string;
+    follow: string;
+    followHint: string;
+    coverColor: string;
+    coverColorHint: string;
+  };
+};
+
+export const zhCN: SettingsLyricsText = {
+  title: "歌词",
+  hint: "找到带时间轴的歌词时，音乐页在波形上方显示滚动歌词。先找本地文件夹，再查在线歌词库。某首歌对不上时，可以在音乐页右上角单独调它的快慢。",
+  folder: "本地歌词文件夹",
+  folderHint: "放 .lrc 文件，文件名写成「歌手 - 歌名」「歌名 - 歌手」或「歌名」。只找这一层，不找子文件夹。",
+  folderPlaceholder: "例如 D:\\Music\\Lyrics",
+  online: "在线查找歌词",
+  onlineHint: "本地找不到时查 LRCLIB（lrclib.net，免费开源的歌词库），会把歌名、歌手、专辑和时长发过去。每首歌只查一次，结果存在本机。中文歌收录较少。",
+  chinese: "也查酷狗、QQ 音乐和网易云",
+  chineseHint: "中文歌收录多，有翻译，多数能逐字跟唱；几个来源里有逐字歌词的先用。这些是非官方接口，可能随时失效；会把歌名、歌手和时长发给它们。装了酷狗客户端时先读它本机缓存的歌词（只读）；装了网易云的 InfLink 插件时按歌曲直接查，更准。",
+  offset: "歌词提前或推后",
+  offsetHint: "歌词比歌声快就往右调，慢就往左调。",
+  offsetValue: (ms) => (ms === 0 ? "0 秒" : `${ms > 0 ? "推后" : "提前"} ${Math.abs(ms) / 1000} 秒`),
+  offsetReset: "恢复为 0",
+  onIsland: "在收起的岛上显示当前歌词",
+  onIslandHint: "播放中、找到带时间轴的歌词时，收起的岛显示正在唱的那一句；暂停、间奏和没找到歌词时照常显示待办。",
+  styleNeedsIsland: "歌词样式管的是收起的岛上那一句歌词。先在「岛上显示」里打开它。",
+  onIslandNoSource: "还没有歌词来源：设置本地歌词文件夹，或打开「在线查找歌词」。",
+  intro: "前奏时显示",
+  introHint: "第一句歌词开始之前，收起的岛和音乐页显示什么。第一句开始时切到歌词。",
+  introTodo: "待办",
+  introSong: "歌名",
+  introNote: "音符",
+  inflink: {
+    title: "网易云精确同步（InfLink-rs）",
+    hint: "网易云插件，让网易云把播放进度和歌曲 ID 告诉系统：音乐页有进度条，歌词按歌曲直接查、不会对不上。从 GitHub 下载，放进 BetterNCM 的插件文件夹。",
+    needsBetterNcm: "要先装 BetterNCM（网易云的第三方插件管理器）：它会往网易云的程序文件夹里放一个文件，所以由你自己安装，岛屿不改网易云。装好并打开一次网易云后，回到这里一键安装 InfLink-rs。",
+    getBetterNcm: "获取 BetterNCM",
+    install: "安装",
+    update: "更新",
+    installing: "正在安装…",
+    about: "项目主页",
+    installed: (version) => `已安装 v${version}。`,
+    updateAvailable: (installed, latest) => `已安装 v${installed}，有新版本 v${latest}。`,
+    restart: (version) => `已安装 v${version}，重启网易云后生效。`,
+    failed: (error) => `安装失败：${error}`,
+    manual: (folder) => `也可以手动安装：打开 Release 页，下载 .plugin 文件，放进 ${folder}，再重启网易云。`,
+    releasePage: "Release 页",
+  },
+  appleMusic: {
+    title: "Apple Music 官方歌词",
+    hint: "用 Apple Music 播放时，先查 Apple 自己的逐字歌词和翻译，要 Apple Music 订阅。只在播放器是 Apple Music 时才问 Apple，会把歌名、歌手和时长发过去。",
+    token: "Apple Music 令牌",
+    tokenHint: "还没有保存令牌。取法：在浏览器登录 music.apple.com，打开开发者工具 → 应用（Application）→ Cookie，复制 media-user-token 的值贴到这里。只存在系统凭据里，过期了重新贴一次。",
+    tokenIsSaved: "令牌已保存在系统凭据里。歌词拿不到时可能是过期了，重新贴一次。",
+    tokenPlaceholder: "media-user-token 的值",
+    tokenReplace: "贴新的令牌替换",
+    save: "保存",
+    clear: "清除",
+    tokenSaved: "已保存，正在重新查歌词。",
+    tokenCleared: "已清除。",
+  },
+  karaoke: {
+    title: "岛上的歌词样式",
+    highlightTitle: "高亮与外观",
+    hint: "只影响收起的岛上那一行；音乐页的歌词照旧。",
+    preview: "预览",
+    previewLine: "而风声吹到这 已不需要释怀",
+    enabled: "逐字高亮",
+    enabledHint: "正在唱的那一句从左到右变亮。酷狗、QQ 音乐、部分网易云歌词和带逐字时间的本地 .lrc 按每个字的时间走。",
+    fallback: "没有逐字时间的歌",
+    fallbackHint: "LRCLIB 和部分网易云歌词只有每句的时间。按整句填充：在这一句的时间里匀速变亮（最长 8 秒），和歌声大致对得上。",
+    fallbackLine: "按整句填充",
+    fallbackNone: "不填充",
+    fill: "变亮方式",
+    fillSmooth: "平滑填充",
+    fillWord: "逐字点亮",
+    color: "高亮颜色",
+    colorInk: "跟随岛屿",
+    colorAccent: "强调色",
+    colorCustom: "自定义",
+    customColor: "自定义颜色",
+    dim: "没唱到的字",
+    dimHint: "亮度越低，高亮越显眼。",
+    dimValue: (percent) => `${percent}%`,
+    dimReset: "恢复默认",
+    glow: "发光",
+    glowHint: "整句带一圈柔和的光，颜色跟高亮颜色走。",
+    follow: "长句跟着滚动",
+    followHint: "一句比岛宽时，唱到右边缘附近整句往左移，正在唱的字一直看得见。关掉则在末尾用省略号截断。",
+    coverColor: "跟随封面颜色",
+    coverColorHint: "从当前歌曲的封面取主色，给收起岛的波形、卡拉 OK 高亮和音乐页的光晕上色，换歌时渐变。颜色会调到在深色、浅色岛上都看得清；没有封面时用强调色。高亮颜色选了「自定义」时，歌词高亮用你选的颜色，封面色只管波形和光晕。",
+  },
+};
+
+export const en: SettingsLyricsText = {
+  title: "Lyrics",
+  hint: "When synced lyrics are found, the music page scrolls them above the waveform. Your folder is searched first, then the online lyrics library. A song that runs out of step can be moved on its own at the music page's top right.",
+  folder: "Lyrics folder",
+  folderHint: "Holds .lrc files named \"Artist - Title\", \"Title - Artist\" or \"Title\". Subfolders are not searched.",
+  folderPlaceholder: "For example D:\\Music\\Lyrics",
+  online: "Find lyrics online",
+  onlineHint: "When the folder has none, asks LRCLIB (lrclib.net, a free and open lyrics library), sending the title, artist, album and length. Each song is asked about once and the answer is kept on this computer.",
+  chinese: "Also ask Kugou, QQ Music and NetEase",
+  chineseHint: "Many more Chinese songs, with translations, mostly timed word by word; word-timed lyrics are preferred when any of them has some. These are unofficial interfaces that may stop working at any time; the title, artist and length are sent to them. With the Kugou app installed, its cached lyrics on this computer are read first (read only). With NetEase's InfLink plugin the song is looked up by its id, which is more exact.",
+  offset: "Lyrics earlier or later",
+  offsetHint: "Move right if the lyrics run ahead of the singing, left if they lag.",
+  offsetValue: (ms) => (ms === 0 ? "0 s" : `${Math.abs(ms) / 1000} s ${ms > 0 ? "later" : "earlier"}`),
+  offsetReset: "Reset to 0",
+  onIsland: "Show the current line on the collapsed island",
+  onIslandHint: "While a song plays and synced lyrics are found, the collapsed island shows the line being sung; paused, between verses or without lyrics it shows your todo as usual.",
+  styleNeedsIsland: "These styles apply to the lyric line on the collapsed island. Turn that on under On the island first.",
+  onIslandNoSource: "No lyrics source yet: set a lyrics folder or turn on Find lyrics online.",
+  intro: "Before the first line",
+  introHint: "What the collapsed island and the music page show before the first line starts. The lyrics take over when it does.",
+  introTodo: "Todo",
+  introSong: "Title",
+  introNote: "Note",
+  inflink: {
+    title: "Exact NetEase sync (InfLink-rs)",
+    hint: "A NetEase Cloud Music plugin that tells Windows the playback position and song id: the music page gets a progress bar, and lyrics are looked up by song and stay in step. Downloaded from GitHub into BetterNCM's plugins folder.",
+    needsBetterNcm: "Needs BetterNCM first (a third-party plugin manager for NetEase). It puts a file in NetEase's program folder, so you install it yourself; the island does not change NetEase. Once it is installed and NetEase has been opened once, install InfLink-rs here.",
+    getBetterNcm: "Get BetterNCM",
+    install: "Install",
+    update: "Update",
+    installing: "Installing…",
+    about: "Project page",
+    installed: (version) => `v${version} is installed.`,
+    updateAvailable: (installed, latest) => `v${installed} is installed; v${latest} is out.`,
+    restart: (version) => `v${version} is installed. Restart NetEase Cloud Music to use it.`,
+    failed: (error) => `Install failed: ${error}`,
+    manual: (folder) => `To install by hand: open the Releases page, download the .plugin file, put it in ${folder}, then restart NetEase Cloud Music.`,
+    releasePage: "Releases",
+  },
+  appleMusic: {
+    title: "Apple Music lyrics",
+    hint: "While Apple Music plays, Apple's own word-by-word lyrics and translations are tried first; needs an Apple Music subscription. Apple is asked only when the player is Apple Music, and gets the title, artist and length.",
+    token: "Apple Music token",
+    tokenHint: "No token saved yet. To get one, sign in at music.apple.com in a browser, open the developer tools → Application → Cookies, and paste the value of media-user-token here. It is kept only in the system's credential store; paste it again when it expires.",
+    tokenIsSaved: "The token is saved in the system's credential store. If lyrics stop coming, it may have expired: paste it again.",
+    tokenPlaceholder: "Value of media-user-token",
+    tokenReplace: "Paste a new token to replace it",
+    save: "Save",
+    clear: "Clear",
+    tokenSaved: "Saved; looking up the lyrics again.",
+    tokenCleared: "Cleared.",
+  },
+  karaoke: {
+    title: "Lyrics on the island",
+    highlightTitle: "Highlight and look",
+    hint: "Only the line on the collapsed island; the music page's lyrics stay as they are.",
+    preview: "Preview",
+    previewLine: "And the wind blows by, nothing left to let go",
+    enabled: "Light up as sung",
+    enabledHint: "The line being sung lights up from left to right. Kugou, QQ Music, some NetEase lyrics and local .lrc files with word times follow each word.",
+    fallback: "Songs without word times",
+    fallbackHint: "LRCLIB and some NetEase lyrics only time each line. Fill the line: it lights evenly over the line's time (at most 8 s), roughly with the singing.",
+    fallbackLine: "Fill the line",
+    fallbackNone: "Do not fill",
+    fill: "How it lights",
+    fillSmooth: "Smooth",
+    fillWord: "Word by word",
+    color: "Highlight colour",
+    colorInk: "Island text",
+    colorAccent: "Accent",
+    colorCustom: "Custom",
+    customColor: "Custom colour",
+    dim: "Words not sung yet",
+    dimHint: "The dimmer, the more the highlight stands out.",
+    dimValue: (percent) => `${percent}%`,
+    dimReset: "Reset",
+    glow: "Glow",
+    glowHint: "A soft glow around the line, in the highlight colour.",
+    follow: "Scroll long lines",
+    followHint: "A line wider than the island slides left as the singing nears the edge, so the word being sung stays in view. Off, it ends in an ellipsis.",
+    coverColor: "Match album art",
+    coverColorHint: "Takes the main colour of the current cover for the collapsed island's waveform, the karaoke highlight and the glow on the music page, fading between songs. It is adjusted to stay readable on dark and light islands; without a cover the accent colour is used. When the highlight colour is set to Custom, the lyrics use your colour and the cover colour only tints the waveform and the glow.",
+  },
+};

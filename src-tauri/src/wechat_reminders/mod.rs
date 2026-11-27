@@ -1,0 +1,719 @@
+mod button;
+mod chats;
+mod gate;
+mod reader;
+mod shell_hub;
+mod source;
+
+#[cfg(test)]
+mod tests;
+
+use reader::{ChatReader, Flash, Listing, PlainReason};
+use serde::Serialize;
+use source::installed_executable;
+use std::{
+    path::Path,
+    sync::{Arc, Mutex, OnceLock},
+    thread,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
+use tauri::{AppHandle, Emitter, Manager};
+use windows::Win32::Foundation::HWND;
+
+#[allow(unused_imports)]
+pub(crate) use shell_hub::{
+    is_running as is_shell_attention_running, subscribe as subscribe_shell_attention,
+    subscribe_executables as subscribe_executable_attention, ShellSubscription,
+};
+#[allow(unused_imports)]
+pub(crate) use source::{ReminderSignal, ShellMatcher};
+
+use crate::messages_plugin::{self, SourceWorker};
+use crate::plugin_kernel::worker::{Stop, Worker};
+use crate::user_error::UserError;
+use crate::win32;
+
+const EVENT_NAME: &str = "wechat-reminder-changed";
+
+static SERVICE: OnceLock<Arc<ReminderService>> = OnceLock::new();
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReminderSnapshot {
+    revision: u64,
+    enabled: bool,
+    status: String,
+    pending: bool,
+    last_attention_at: Option<u64>,
+    error: Option<UserError>,
+    message: Option<ChatMessage>,
+    items: Vec<ReminderItem>,
+    expose_ui: bool,
+    expose_status: Option<UserError>,
+    hide_taskbar_button: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessage {
+    chat: String,
+    contact: String,
+    preview: String,
+    unread: Option<u32>,
+    at: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReminderItem {
+    at: u64,
+    message: Option<ChatMessage>,
+    reason: Option<PlainReason>,
+}
+
+const MAX_ITEMS: usize = 20;
+
+impl Default for ReminderSnapshot {
+    fn default() -> Self {
+        Self {
+            revision: 0,
+            enabled: false,
+            status: "disabled".into(),
+            pending: false,
+            last_attention_at: None,
+            error: None,
+            message: None,
+            items: Vec::new(),
+            expose_ui: false,
+            expose_status: None,
+            hide_taskbar_button: false,
+        }
+    }
+}
+
+#[derive(Default)]
+struct ReminderState {
+    snapshot: ReminderSnapshot,
+    generation: u64,
+    auto_clear: bool,
+}
+
+impl ReminderState {
+    fn set_enabled(&mut self, enabled: bool) -> bool {
+        if self.snapshot.enabled == enabled {
+            return false;
+        }
+        self.generation += 1;
+        self.snapshot = ReminderSnapshot {
+            revision: self.snapshot.revision + 1,
+            enabled,
+            status: if enabled { "waiting" } else { "disabled" }.into(),
+            expose_ui: self.snapshot.expose_ui,
+            expose_status: self.snapshot.expose_status.take(),
+            hide_taskbar_button: self.snapshot.hide_taskbar_button,
+            ..Default::default()
+        };
+        true
+    }
+
+    fn set_expose_ui(&mut self, on: bool) -> bool {
+        if self.snapshot.expose_ui == on {
+            return false;
+        }
+        self.snapshot.expose_ui = on;
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn set_hide_taskbar_button(&mut self, on: bool) -> bool {
+        if self.snapshot.hide_taskbar_button == on {
+            return false;
+        }
+        self.snapshot.hide_taskbar_button = on;
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn set_expose_status(&mut self, status: Option<UserError>) -> bool {
+        if self.snapshot.expose_status == status {
+            return false;
+        }
+        self.snapshot.expose_status = status;
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn apply(&mut self, generation: u64, signal: ReminderSignal, now: u64) -> bool {
+        if !self.snapshot.enabled || self.generation != generation {
+            return false;
+        }
+        match signal {
+            ReminderSignal::Attention => return self.remind(generation, now, None),
+            ReminderSignal::Activated => {
+                let acknowledged = std::mem::replace(&mut self.snapshot.pending, false);
+                let forgot = self.auto_clear && self.forget_before(now);
+                if !acknowledged && !forgot {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn clear(&mut self) -> bool {
+        if self.snapshot.items.is_empty() && !self.snapshot.pending {
+            return false;
+        }
+        self.snapshot.items.clear();
+        self.snapshot.pending = false;
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn forget_before(&mut self, at: u64) -> bool {
+        let before = self.snapshot.items.len();
+        self.snapshot.items.retain(|item| item.at > at);
+        self.snapshot.items.len() != before
+    }
+
+    fn forget_seen(&mut self, at: u64) -> bool {
+        if !self.snapshot.enabled || !self.auto_clear || !self.forget_before(at) {
+            return false;
+        }
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn remind(&mut self, generation: u64, now: u64, reason: Option<PlainReason>) -> bool {
+        if !self.snapshot.enabled || self.generation != generation || self.snapshot.pending {
+            return false;
+        }
+        self.snapshot.pending = true;
+        self.snapshot.last_attention_at = Some(now);
+        self.remember(ReminderItem {
+            at: now,
+            message: None,
+            reason,
+        });
+        self.snapshot.revision += 1;
+        true
+    }
+
+    fn remember(&mut self, item: ReminderItem) {
+        self.snapshot.items.insert(0, item);
+        self.snapshot.items.truncate(MAX_ITEMS);
+    }
+
+    fn receive(&mut self, generation: u64, message: ChatMessage) -> bool {
+        if !self.snapshot.enabled || self.generation != generation {
+            return false;
+        }
+        if !self.snapshot.pending {
+            self.snapshot.pending = true;
+            self.snapshot.last_attention_at = Some(message.at);
+        }
+        self.remember(ReminderItem {
+            at: message.at,
+            message: Some(message.clone()),
+            reason: None,
+        });
+        self.snapshot.message = Some(message);
+        self.snapshot.revision += 1;
+        true
+    }
+}
+
+struct ReminderService {
+    app: AppHandle,
+    state: Mutex<ReminderState>,
+    gate: Mutex<gate::Keeper>,
+    button: Mutex<button::Keeper>,
+}
+
+pub fn init(app: &AppHandle) -> Result<(), String> {
+    if SERVICE.get().is_some() {
+        return Ok(());
+    }
+    let folder = crate::home_dir::fuyu_home(app.path())
+        .unwrap_or_else(|_| std::env::temp_dir())
+        .join("wechat-gate");
+    let service = Arc::new(ReminderService {
+        app: app.clone(),
+        state: Mutex::new(ReminderState::default()),
+        gate: Mutex::new(gate::Keeper::new(folder)),
+        button: Mutex::new(button::Keeper::default()),
+    });
+    if SERVICE.set(service.clone()).is_err() {
+        return Ok(());
+    }
+    let listening = service.clone();
+    let worker = Worker::new("wechat-reminders", move |stop| monitor(listening.clone(), &stop));
+    let switched = service.clone();
+    let source = SourceWorker::new(messages_plugin::WECHAT, worker, move |enabled| {
+        set_enabled(&switched, enabled)
+    })
+    .after_stop(move || release(&service));
+    messages_plugin::register(messages_plugin::WECHAT, source);
+    Ok(())
+}
+
+fn release(service: &ReminderService) {
+    let _ = service.gate.lock().map(|mut gate| gate.off());
+    let _ = service.button.lock().map(|mut button| button.restore());
+}
+
+fn ready(app: &AppHandle) -> Result<&'static Arc<ReminderService>, UserError> {
+    init(app)?;
+    service()
+}
+
+fn service() -> Result<&'static Arc<ReminderService>, UserError> {
+    SERVICE
+        .get()
+        .ok_or_else(|| UserError::new("wechat.notReady", "The WeChat reminder service is not ready yet."))
+}
+
+fn unavailable() -> UserError {
+    UserError::new("wechat.unavailable", "The WeChat reminder state is unavailable.")
+}
+
+fn publish(service: &ReminderService, snapshot: ReminderSnapshot) {
+    let visible = crate::coexist::banner_visible(
+        service
+            .app
+            .get_webview_window(crate::island::WINDOW_LABEL)
+            .is_some_and(|window| window.is_visible().unwrap_or(false)),
+    );
+    let payload = serde_json::json!({"snapshot": snapshot, "windowVisible": visible});
+    let _ = service.app.emit_to(
+        crate::settings_window::WINDOW_LABEL,
+        EVENT_NAME,
+        payload.clone(),
+    );
+    let _ = service
+        .app
+        .emit_to(crate::island::WINDOW_LABEL, EVENT_NAME, payload);
+}
+
+pub(crate) fn diagnostic_state() -> Result<serde_json::Value, String> {
+    let state = service()
+        .map_err(|error| error.to_string())?
+        .state
+        .lock()
+        .map_err(|_| unavailable().to_string())?;
+    Ok(serde_json::json!({
+        "enabled": state.snapshot.enabled,
+        "status": state.snapshot.status,
+        "pending": state.snapshot.pending,
+        "lastAttentionAt": state.snapshot.last_attention_at,
+        "error": state.snapshot.error,
+    }))
+}
+
+fn set_enabled(service: &ReminderService, enabled: bool) {
+    update(service, |state| state.set_enabled(enabled));
+}
+
+#[tauri::command]
+pub fn set_wechat_expose_ui(app: AppHandle, enabled: bool) -> Result<ReminderSnapshot, UserError> {
+    let service = ready(&app)?;
+    if !enabled {
+        let _ = service.gate.lock().map(|mut gate| gate.off());
+    }
+    let (snapshot, changed) = {
+        let mut state = service.state.lock().map_err(|_| unavailable())?;
+        let mut changed = state.set_expose_ui(enabled);
+        if !enabled {
+            changed |= state.set_expose_status(None);
+        }
+        (state.snapshot.clone(), changed)
+    };
+    if changed {
+        publish(service, snapshot.clone());
+    }
+    Ok(snapshot)
+}
+
+#[tauri::command]
+pub fn set_wechat_hide_taskbar_button(
+    app: AppHandle,
+    enabled: bool,
+) -> Result<ReminderSnapshot, UserError> {
+    let service = ready(&app)?;
+    let (snapshot, changed) = {
+        let mut state = service.state.lock().map_err(|_| unavailable())?;
+        let changed = state.set_hide_taskbar_button(enabled);
+        (state.snapshot.clone(), changed)
+    };
+    if changed {
+        publish(service, snapshot.clone());
+    }
+    Ok(snapshot)
+}
+
+#[tauri::command]
+pub fn set_wechat_auto_clear(app: AppHandle, enabled: bool) -> Result<ReminderSnapshot, UserError> {
+    let mut state = ready(&app)?.state.lock().map_err(|_| unavailable())?;
+    state.auto_clear = enabled;
+    Ok(state.snapshot.clone())
+}
+
+#[tauri::command]
+pub fn clear_wechat_reminders() -> Result<ReminderSnapshot, UserError> {
+    let service = service()?;
+    let snapshot = {
+        let mut state = service.state.lock().map_err(|_| unavailable())?;
+        if !state.clear() {
+            return Ok(state.snapshot.clone());
+        }
+        state.snapshot.clone()
+    };
+    publish(service, snapshot.clone());
+    Ok(snapshot)
+}
+
+pub(crate) fn shutdown() {
+    if let Some(service) = SERVICE.get() {
+        release(service);
+    }
+}
+
+fn keep_button(service: &ReminderService, executable: &Path) {
+    let on = service.state.lock().is_ok_and(|state| {
+        let snapshot = &state.snapshot;
+        snapshot.enabled && snapshot.expose_ui && snapshot.hide_taskbar_button
+    });
+    if let Ok(mut button) = service.button.lock() {
+        button.tick(on, || main_window(executable));
+    }
+}
+
+fn keep_gate(service: &ReminderService, executable: &Path) -> bool {
+    let on = service
+        .state
+        .lock()
+        .is_ok_and(|state| state.snapshot.enabled && state.snapshot.expose_ui);
+    let Ok(mut gate) = service.gate.lock() else {
+        return false;
+    };
+    let was_on = gate.is_on();
+    if !gate.tick(on, || main_window(executable)) {
+        return false;
+    }
+    let status = gate.status.clone();
+    let now_on = gate.is_on();
+    drop(gate);
+    let snapshot = service.state.lock().ok().and_then(|mut state| {
+        state
+            .set_expose_status(status)
+            .then(|| state.snapshot.clone())
+    });
+    if let Some(snapshot) = snapshot {
+        publish(service, snapshot);
+    }
+    now_on && !was_on
+}
+
+fn now_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+fn update(service: &ReminderService, change: impl FnOnce(&mut ReminderState) -> bool) {
+    let snapshot = {
+        let Ok(mut state) = service.state.lock() else {
+            return;
+        };
+        if !change(&mut state) {
+            return;
+        }
+        state.snapshot.clone()
+    };
+    publish(service, snapshot);
+}
+
+fn signal(service: &ReminderService, generation: u64, event: ReminderSignal) {
+    update(service, |state| state.apply(generation, event, now_ms()));
+}
+
+fn look(executable: &Path) -> Listing {
+    let Some(window) = main_window(executable) else {
+        return Listing::Unreadable;
+    };
+    match chats::read(window) {
+        Some(rows) => Listing::Rows(rows),
+        None if !win32::window::is_visible(window) => Listing::Tray,
+        None => Listing::Unreadable,
+    }
+}
+
+fn connection(service: &ReminderService, generation: u64, error: Option<UserError>) {
+    let snapshot = {
+        let Ok(mut state) = service.state.lock() else {
+            return;
+        };
+        if !state.snapshot.enabled || state.generation != generation {
+            return;
+        }
+        let status = if error.is_some() {
+            "error"
+        } else {
+            "listening"
+        };
+        if state.snapshot.status == status && state.snapshot.error == error {
+            return;
+        }
+        state.snapshot.status = status.into();
+        state.snapshot.error = error;
+        state.snapshot.revision += 1;
+        state.snapshot.clone()
+    };
+    publish(service, snapshot);
+}
+
+fn monitor(service: Arc<ReminderService>, stop: &Stop) {
+    loop {
+        let (enabled, generation) = match service.state.lock() {
+            Ok(state) => (state.snapshot.enabled, state.generation),
+            Err(_) => return,
+        };
+        if !enabled {
+            if stop.wait(Duration::from_secs(1)) {
+                return;
+            }
+            continue;
+        }
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let sink = events.clone();
+        let subscription = installed_executable()
+            .map_err(shell_hub::source_user_error)
+            .and_then(|executable| {
+                executable
+                    .canonicalize()
+                    .map_err(|error| UserError::new("wechat.verifyPath", "Could not verify the WeChat installation path.").detail(error))
+            })
+            .and_then(|executable| {
+                let matcher = ShellMatcher::exact_path(&executable.to_string_lossy());
+                shell_hub::subscribe_typed(matcher, move |event| {
+                    if let Ok(mut pending) = sink.lock() {
+                        pending.push(event);
+                    }
+                })
+                .map(|sub| (sub, executable))
+            });
+        match subscription {
+            Ok((_subscription, executable)) => {
+                connection(&service, generation, None);
+                let allowed = || service.state.lock().is_ok_and(|state| state.snapshot.expose_ui);
+                let mut reader = ChatReader::new(|| look(&executable), allowed());
+                loop {
+                    if !service
+                        .state
+                        .lock()
+                        .is_ok_and(|state| state.snapshot.enabled && state.generation == generation)
+                    {
+                        keep_gate(&service, &executable);
+                        keep_button(&service, &executable);
+                        break;
+                    }
+                    if keep_gate(&service, &executable) {
+                        reader.rebaseline();
+                    }
+                    keep_button(&service, &executable);
+                    reader.set_allowed(allowed());
+                    let batch = events
+                        .lock()
+                        .map(|mut pending| std::mem::take(&mut *pending))
+                        .unwrap_or_default();
+                    let now = Instant::now();
+                    for event in batch {
+                        match event {
+                            ReminderSignal::Attention => reader.flashed(now),
+                            ReminderSignal::ActivatedElsewhere => reader.activated(false, now),
+                            ReminderSignal::Activated => {
+                                reader.activated(true, now);
+                                signal(&service, generation, event);
+                            }
+                            _ => signal(&service, generation, event),
+                        }
+                    }
+                    match reader.tick(now) {
+                        Some(Flash::Plain(reason)) => update(&service, |state| {
+                            state.remind(generation, now_ms(), reason)
+                        }),
+                        Some(Flash::Messages(fresh)) => {
+                            let at = now_ms();
+                            for (index, chat) in fresh.into_iter().enumerate() {
+                                let message = ChatMessage {
+                                    chat: chat.key,
+                                    contact: chat.contact,
+                                    preview: chat.preview,
+                                    unread: chat.unread,
+                                    at: at + index as u64,
+                                };
+                                update(&service, |state| state.receive(generation, message));
+                            }
+                        }
+                        None => {}
+                    }
+                    if stop.wait(Duration::from_millis(50)) {
+                        return;
+                    }
+                }
+            }
+            Err(error) => {
+                connection(&service, generation, Some(error));
+                if stop.wait(Duration::from_secs(5)) {
+                    return;
+                }
+            }
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn open_wechat(chat: Option<String>) -> Result<(), UserError> {
+    let asked_at = now_ms();
+    tauri::async_runtime::spawn_blocking(move || {
+        let executable = installed_executable().map_err(shell_hub::source_user_error)?;
+        if activate_existing_wechat(&executable)? {
+            if let Some(chat) = chat {
+                thread::sleep(Duration::from_millis(300));
+                let opened = main_window(&executable)
+                    .ok_or("no main window")
+                    .and_then(|window| chats::open(window, &chat));
+                if let Err(why) = opened {
+                    eprintln!(
+                        "WeChat reminders: could not open the chat ({why}); WeChat shows its last chat"
+                    );
+                }
+            }
+            if let Ok(service) = service() {
+                update(service, |state| state.forget_seen(asked_at));
+            }
+            return Ok(());
+        }
+        Err(UserError::new(
+            "wechat.notRunning",
+            "No running WeChat window was found; open and sign in to desktop WeChat first.",
+        ))
+    })
+    .await
+    .map_err(|error| UserError::new("internal", "Something went wrong inside the island.").detail(error))?
+}
+
+struct WeChatWindow {
+    handle: HWND,
+    started_at: u64,
+    main_sized: bool,
+    visible: bool,
+}
+
+struct WindowSearch {
+    executable: String,
+    found: Vec<WeChatWindow>,
+    running: bool,
+}
+
+fn preferred_window(windows: &[WeChatWindow]) -> Option<&WeChatWindow> {
+    windows
+        .iter()
+        .filter(|window| window.main_sized)
+        .min_by_key(|window| (!window.visible, window.started_at))
+}
+
+fn find_wechat_window(search: &mut WindowSearch, window: HWND) {
+    let process_id = win32::process::window_process_id(window);
+    let Some(path) = win32::process::image_path(process_id) else {
+        return;
+    };
+    if !path.eq_ignore_ascii_case(&search.executable) {
+        return;
+    }
+    let started_at = win32::process_times::start_time(process_id).unwrap_or(u64::MAX);
+    search.running = true;
+    let title = win32::window::window_text(window, 32);
+    if !["微信", "WeChat", "Weixin"].contains(&title.as_str()) {
+        return;
+    }
+    let main_sized = win32::window::normal_position(window).is_some_and(|position| {
+        position.right - position.left >= 500 && position.bottom - position.top >= 300
+    });
+    search.found.push(WeChatWindow {
+        handle: window,
+        started_at,
+        main_sized,
+        visible: win32::window::is_visible(window),
+    });
+}
+
+fn main_window(executable: &Path) -> Option<HWND> {
+    let search = existing_wechat_windows(executable).ok()?;
+    preferred_window(&search.found).map(|window| window.handle)
+}
+
+fn existing_wechat_windows(executable: &std::path::Path) -> Result<WindowSearch, UserError> {
+    let mut search = WindowSearch {
+        executable: executable.to_string_lossy().into_owned(),
+        found: Vec::new(),
+        running: false,
+    };
+    win32::window::for_each_top_level_window(|window| find_wechat_window(&mut search, window))
+        .map_err(|error| UserError::new("wechat.findWindow", "Could not look up running WeChat windows.").detail(error))?;
+    Ok(search)
+}
+
+fn activate_existing_wechat(executable: &std::path::Path) -> Result<bool, UserError> {
+    let search = existing_wechat_windows(executable)?;
+    if !search.running {
+        return Ok(false);
+    }
+    let original = preferred_window(&search.found).ok_or_else(|| {
+        UserError::new(
+            "wechat.noMainWindow",
+            "WeChat is running, but no main window was found; open and sign in to WeChat from the system tray first.",
+        )
+    })?;
+    let expected_process = win32::process::window_process_id(original.handle);
+    tauri_plugin_opener::open_url("weixin://", None::<&str>).map_err(|error| {
+        UserError::new(
+            "wechat.openProtocol",
+            "Could not bring WeChat back via its registered protocol; open WeChat from the system tray.",
+        )
+        .detail(error)
+    })?;
+    for _ in 0..40 {
+        thread::sleep(Duration::from_millis(50));
+        let current = existing_wechat_windows(executable)?;
+        if let Some(window) = preferred_window(&current.found) {
+            let process_id = win32::process::window_process_id(window.handle);
+            if process_id == expected_process
+                && window.visible
+                && !win32::window::is_minimized(window.handle)
+            {
+                return Ok(true);
+            }
+        }
+    }
+    Err(UserError::new(
+        "wechat.restoreFailed",
+        "WeChat did not restore its main window; double-click the WeChat icon in the system tray.",
+    ))
+}
+
+macro_rules! tauri_commands {
+    ($next:ident [$($done:tt)*] $($rest:tt)*) => {
+        $next!([$($done)*
+            crate::wechat_reminders::open_wechat,
+            crate::wechat_reminders::set_wechat_expose_ui,
+            crate::wechat_reminders::set_wechat_hide_taskbar_button,
+            crate::wechat_reminders::clear_wechat_reminders,
+            crate::wechat_reminders::set_wechat_auto_clear,
+        ] $($rest)*)
+    };
+}
+pub(crate) use tauri_commands;

@@ -1,0 +1,380 @@
+mod agent_approval;
+#[cfg(target_os = "macos")]
+mod app_identity;
+mod agent_status;
+mod bluetooth_access;
+mod calendar;
+mod caps_lock;
+mod cc_connect;
+mod claude_usage;
+mod clipboard_history;
+mod custom_fonts;
+#[cfg_attr(not(windows), path = "coexist/unsupported.rs")]
+mod coexist;
+mod dev_lane;
+mod device_events;
+#[cfg_attr(target_os = "macos", path = "device_use/macos.rs")]
+mod device_use;
+#[cfg(any(debug_assertions, test))]
+mod emit_diagnostics;
+mod file_shelf;
+mod fs_write;
+mod home_dir;
+mod im_sources;
+mod island;
+mod local_api;
+mod lyrics;
+mod media_control;
+mod messages_plugin;
+#[cfg(windows)]
+mod messenger_activation;
+mod notification_diagnostics;
+mod onboarding_window;
+mod pets;
+mod phone_push;
+mod plugin_kernel;
+mod mail;
+#[cfg_attr(target_os = "macos", path = "qq_notifications/macos.rs")]
+mod qq_notifications;
+mod recording;
+#[cfg_attr(not(windows), path = "rename_migration/unsupported.rs")]
+mod rename_migration;
+mod screenshot;
+mod settings_file;
+mod settings_window;
+mod side_dock;
+mod shortcut_capture;
+#[cfg_attr(not(any(windows, target_os = "macos")), path = "ssh_tunnel/unsupported.rs")]
+mod ssh_tunnel;
+mod sync;
+mod system;
+mod system_levels;
+mod system_widgets;
+mod theme_market;
+#[cfg_attr(not(windows), path = "taskbar_host/unsupported.rs")]
+mod taskbar_host;
+#[cfg_attr(not(windows), path = "taskbar_lyrics/unsupported.rs")]
+mod taskbar_lyrics;
+mod timer;
+#[cfg(any(windows, test))]
+mod toast_notifications;
+mod todos;
+mod translation;
+mod tray;
+mod tray_menu;
+#[cfg(target_os = "macos")]
+mod tray_mark;
+mod tray_visibility;
+mod uninstall_cleanup;
+mod user_error;
+mod voice_input;
+#[cfg_attr(not(windows), path = "wallpaper/unsupported.rs")]
+mod wallpaper;
+mod webview_gpu;
+#[cfg_attr(not(windows), path = "webview_recovery_unsupported.rs")]
+mod webview_recovery;
+#[cfg_attr(not(windows), path = "webview_visibility_unsupported.rs")]
+mod webview_visibility;
+mod webview_frame_rate;
+#[cfg_attr(not(windows), path = "webview_memory_unsupported.rs")]
+mod webview_memory;
+#[cfg_attr(not(windows), path = "webview_scale_unsupported.rs")]
+mod webview_scale;
+#[cfg_attr(target_os = "macos", path = "wechat_reminders/macos.rs")]
+mod wechat_reminders;
+#[cfg(target_os = "macos")]
+mod macos;
+mod platform;
+mod platform_support;
+#[cfg(windows)]
+mod win32;
+
+use tauri::{Manager, WindowEvent};
+
+macro_rules! collect_commands {
+    ([$($done:tt)*]) => {
+        tauri::generate_handler![$($done)*]
+    };
+    ([$($done:tt)*] $module:ident $(; $rest:ident)*) => {
+        $module::tauri_commands!(collect_commands [$($done)*] $($rest);*)
+    };
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    #[cfg(target_os = "macos")]
+    if let Some(code) = macos::ocr_worker::run_from_args() {
+        std::process::exit(code);
+    }
+    #[cfg(windows)]
+    if let Some(code) = win32::ocr_worker::run_from_args() {
+        std::process::exit(code);
+    }
+    if uninstall_cleanup::maybe_run_from_args() {
+        std::process::exit(0);
+    }
+    let mut context = tauri::generate_context!();
+    if let Some(identifier) = notification_diagnostics::verification_identifier() {
+        context.config_mut().identifier = identifier;
+    }
+    if let Some(lane) = dev_lane::lane() {
+        context.config_mut().identifier = dev_lane::identifier(lane);
+        dev_lane::before_start(lane);
+        #[cfg(target_os = "macos")]
+        dev_lane::separate_webview_storage(lane);
+    }
+    let migrate = context.config().identifier == rename_migration::NEW_IDENTIFIER;
+    if migrate {
+        rename_migration::before_start();
+    }
+    home_dir::init(&context.config().identifier);
+    webview_gpu::apply_startup_args(&context.config().identifier);
+    if let Some(dir) = home_dir::app_data_dir(&context.config().identifier) {
+        sync::device::init(dir);
+    }
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+    let result = builder
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            if let Some(package) = plugin_kernel::package_open::find_in_args(args.iter().skip(1), Some(std::path::Path::new(&cwd))) {
+                plugin_kernel::package_open::open(app, package, false);
+            } else if let Some(plugin) = plugin_kernel::market_link::find_in_args(args.iter().skip(1)) {
+                plugin_kernel::market_link::open(app, plugin, false);
+            } else {
+                tray_visibility::reopen(app);
+            }
+        }))
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .register_asynchronous_uri_scheme_protocol(clipboard_history::image_protocol::SCHEME, |_context, request, responder| {
+            tauri::async_runtime::spawn_blocking(move || responder.respond(clipboard_history::image_protocol::respond(&request)));
+        })
+        .register_asynchronous_uri_scheme_protocol(plugin_kernel::protocol::SCHEME, |_context, request, responder| {
+            tauri::async_runtime::spawn_blocking(move || responder.respond(plugin_kernel::respond(&request)));
+        })
+        .on_page_load(|webview, _| {
+            webview_recovery::attach(webview);
+            webview_memory::page_loaded(webview);
+            webview_visibility::attach(webview);
+            webview_scale::attach(webview);
+            island::apply_initial_file_drop(webview);
+            if let Some(window) = webview.app_handle().get_webview_window(webview.label()) {
+                recording::apply_to_window(&window);
+            }
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::ScaleFactorChanged { scale_factor, .. } = event {
+                webview_scale::follow(window, *scale_factor);
+            }
+            if window.label() == translation::WINDOW_LABEL
+                || window.label() == clipboard_history::POPUP_WINDOW_LABEL
+                || window.label() == clipboard_history::preview_window::WINDOW_LABEL
+            {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+                return;
+            }
+            if window.label().starts_with(screenshot::WINDOW_PREFIX) {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    screenshot::cancel(window.app_handle());
+                }
+                return;
+            }
+            if window.label().starts_with(screenshot::PIN_PREFIX) {
+                if let WindowEvent::Destroyed = event {
+                    screenshot::forget_pin(window.label());
+                }
+                return;
+            }
+            if window.label() != island::WINDOW_LABEL {
+                return;
+            }
+
+            if let WindowEvent::Moved(position) = event {
+                island::record_dragged_position(*position);
+            }
+
+        })
+        .setup(move |app| {
+            #[cfg(debug_assertions)]
+            emit_diagnostics::start(app.handle());
+            system::update_backup::apply_pending_restore();
+            system::proxy::init(app.handle());
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+            #[cfg(target_os = "macos")]
+            app_identity::init(app.handle());
+            tray::build_tray(app)?;
+            plugin_kernel::builtins::init(app.handle());
+            coexist::init(app.handle());
+            if let Ok(window) = island::main_window(app.handle()) {
+                #[cfg(target_os = "macos")]
+                if let Err(error) = macos::island_panel::make_panel(&window) {
+                    eprintln!("failed to make the island a panel: {error}");
+                }
+                #[cfg(target_os = "macos")]
+                macos::island_panel::refresh_top_space(&window);
+                let stage = window.clone();
+                let sized = app.handle().run_on_main_thread(move || {
+                    if let Err(error) = island::apply_stage_geometry(&stage, island::IslandWindowState::default(), false) {
+                        eprintln!("failed to size and position island window: {error}");
+                    }
+                });
+                if let Err(error) = sized {
+                    eprintln!("failed to size and position island window: {error}");
+                }
+                island::start_window_watch(window.clone());
+                island::start_cursor_passthrough_loop(window);
+            }
+            if let Err(error) = clipboard_history::init(app.handle()) {
+                eprintln!("failed to initialize clipboard history: {error}");
+            }
+            translation::init(app.handle());
+            screenshot::init(app.handle());
+            voice_input::init(app.handle());
+            timer::init(app.handle());
+            calendar::init(app.handle());
+            claude_usage::init();
+            if let Err(error) = file_shelf::init(app.handle()) {
+                eprintln!("failed to initialize the file shelf: {error}");
+            }
+            if let Err(error) = sync::init(app.handle()) {
+                eprintln!("failed to initialize sync: {error}");
+            }
+            if let Err(error) = todos::init(app.handle()) {
+                eprintln!("failed to initialize the todo store: {error}");
+            }
+            if let Err(error) = agent_approval::init(app.handle()) {
+                eprintln!("failed to start the agent approval endpoint: {error}");
+            }
+            if migrate {
+                rename_migration::after_start(app.handle().clone());
+            }
+            home_dir::after_start(app.handle().clone());
+            if let Err(error) = local_api::init(app.handle()) {
+                eprintln!("failed to initialize the local API: {error}");
+            }
+            if let Err(error) = ssh_tunnel::init(app.handle()) {
+                eprintln!("failed to initialize the SSH proxy tunnel: {error}");
+            }
+            if let Err(error) = cc_connect::init(app.handle()) {
+                eprintln!("failed to initialize cc-connect: {error}");
+            }
+            if let Err(error) = plugin_kernel::init(app.handle()) {
+                eprintln!("failed to start the plugin platform v3 host: {error}");
+            }
+            plugin_kernel::package_open::mark_started();
+            plugin_kernel::market_link::init();
+            if let Some(package) = plugin_kernel::package_open::find_in_args(std::env::args_os().skip(1), None) {
+                plugin_kernel::package_open::open(app.handle(), package, true);
+            } else if let Some(plugin) = plugin_kernel::market_link::find_in_args(std::env::args().skip(1)) {
+                plugin_kernel::market_link::open(app.handle(), plugin, true);
+            }
+            mail::init();
+            if let Err(error) = qq_notifications::init(app.handle()) {
+                eprintln!("failed to initialize QQ notifications: {error}");
+            }
+            if let Err(error) = wechat_reminders::init(app.handle()) {
+                eprintln!("failed to initialize WeChat reminders: {error}");
+            }
+            if let Err(error) = im_sources::init(app.handle()) {
+                eprintln!("failed to initialize IM sources: {error}");
+            }
+            if let Err(error) = notification_diagnostics::start(app.handle()) {
+                eprintln!("failed to initialize notification diagnostics: {error}");
+            }
+            system::fullscreen::start(app.handle());
+            system::agent_notifications::init(app.handle());
+            media_control::init(app.handle());
+            system_levels::init(app.handle());
+            caps_lock::init(app.handle());
+            agent_status::init();
+            device_events::init(app.handle());
+            Ok(())
+        })
+        .invoke_handler(collect_commands!([]
+            file_shelf;
+            coexist;
+            local_api;
+            plugin_kernel;
+            theme_market;
+            mail;
+            wechat_reminders;
+            qq_notifications;
+            im_sources;
+            island;
+            todos;
+            system;
+            agent_status;
+            calendar;
+            agent_approval;
+            claude_usage;
+            device_use;
+            device_events;
+            bluetooth_access;
+            media_control;
+            lyrics;
+            clipboard_history;
+            custom_fonts;
+            translation;
+            screenshot;
+            recording;
+            voice_input;
+            timer;
+            settings_window;
+            settings_file;
+            side_dock;
+            sync;
+            shortcut_capture;
+            home_dir;
+            onboarding_window;
+            ssh_tunnel;
+            phone_push;
+            cc_connect;
+            pets;
+            platform_support;
+            webview_frame_rate;
+            webview_gpu;
+            tray;
+            tray_menu;
+            tray_visibility;
+            taskbar_host;
+            taskbar_lyrics;
+            system_levels;
+            caps_lock;
+            system_widgets;
+            wallpaper
+        ))
+        .build(context)
+        .map(|app| {
+            app.run(|_app, event| match event {
+                tauri::RunEvent::Exit => {
+                    plugin_kernel::shutdown();
+                    ssh_tunnel::shutdown();
+                    agent_approval::shutdown();
+                    clipboard_history::shutdown();
+                    home_dir::before_exit();
+                    wechat_reminders::shutdown();
+                }
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Opened { urls } => {
+                    let rest = plugin_kernel::package_open::open_opened_urls(_app, &urls);
+                    if !rest.is_empty() {
+                        plugin_kernel::market_link::open_opened_urls(_app, &rest);
+                    }
+                }
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Reopen { .. } => tray_visibility::reopen(_app),
+                _ => {}
+            })
+        });
+    if let Err(error) = result {
+        eprintln!("error while running Fuyu: {error}");
+        std::process::exit(1);
+    }
+}

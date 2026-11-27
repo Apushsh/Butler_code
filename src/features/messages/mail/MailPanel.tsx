@@ -1,0 +1,280 @@
+import { useErrorText, useTranslation } from "../../../i18n";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { ArrowLeft, ArrowUpRight, Check, CheckCheck, Copy, Image, ImageOff, KeyRound, LoaderCircle, MailCheck, PenSquare, Power, RefreshCw, Reply, Settings2 } from "lucide-react";
+import DOMPurify from "dompurify";
+import { copyMessageText } from "../../../lib/api";
+import { mailCopyableText } from "../messageCopy";
+import { extractVerificationCode } from "../otp";
+import { useMessageOtpCopyEnabled } from "../plugin/useSourceSwitches";
+import { MessageSourceIcon } from "../MessageSourceIcon";
+import type { MailMessage } from "./api";
+import { loadRemoteImagePreference, saveRemoteImagePreference } from "./storage";
+import { MailAccountTabs } from "./MailAccountTabs";
+import { MailAttachments } from "./MailAttachments";
+import { MailCompose } from "./MailCompose";
+import "./MailPanel.css";
+import type { MailController } from "./useMail";
+
+let allowRemoteImages = false;
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  if (node.nodeName !== "IMG") return;
+  const src = node.getAttribute("src");
+  if (!src || (!allowRemoteImages && /^https?:/i.test(src))) { node.remove(); return; }
+  node.setAttribute("loading", "lazy");
+  node.setAttribute("decoding", "async");
+  node.setAttribute("referrerpolicy", "no-referrer");
+});
+
+function markDataTables(html: string) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  for (const table of Array.from(template.content.querySelectorAll("table"))) {
+    const rows = Array.from(table.rows);
+    if (rows.length < 2 || rows[0].cells.length < 2) continue;
+    if (!rows.every((row) => row.cells.length >= 2)) continue;
+    if (!Array.from(rows[0].cells).every((cell) => cell.tagName === "TH")) continue;
+    table.setAttribute("data-mail-table", "data");
+  }
+  return template.innerHTML;
+}
+
+export function sanitizeMailHtml(content: string, options?: { allowRemoteImages?: boolean }) {
+  allowRemoteImages = options?.allowRemoteImages ?? false;
+  try {
+    return markDataTables(DOMPurify.sanitize(content, {
+      ALLOWED_TAGS: ["p", "br", "div", "span", "h1", "h2", "h3", "h4", "strong", "b", "em", "i", "u", "s", "blockquote", "pre", "code", "ul", "ol", "li", "table", "thead", "tbody", "tfoot", "tr", "th", "td", "a", "hr", "img"],
+      ALLOWED_ATTR: ["href", "title", "colspan", "rowspan", "src", "alt", "width", "height"],
+      ALLOWED_URI_REGEXP: /^(?:https?:|data:image\/)/i,
+      ALLOW_DATA_ATTR: false,
+      ALLOW_ARIA_ATTR: false,
+    }));
+  } finally {
+    allowRemoteImages = false;
+  }
+}
+
+export function countRemoteImages(content: string) {
+  const template = document.createElement("template");
+  template.innerHTML = content;
+  return Array.from(template.content.querySelectorAll("img"))
+    .filter((image) => /^https?:/i.test(image.getAttribute("src") ?? "")).length;
+}
+
+export { useMail } from "./useMail";
+export type { MailController };
+
+function formatMailTime(time: number, locale: string) {
+  return new Date(time).toLocaleString(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+export function MailPanel({ controller, navigation, onRead, onBack, onOpenSettings }: {
+  controller: MailController;
+  navigation: ReactNode;
+  onOpenSettings?: () => void;
+  onRead?: (message: MailMessage) => void;
+  onBack?: () => void;
+}) {
+  const { snapshot, mailboxes, busy, actionError, setEnabled, refresh, openMail, selectMailbox, markAllRead } = controller;
+  const t = useTranslation();
+  const errorText = useErrorText();
+  const error = actionError || (snapshot.error ? errorText(snapshot.error) : null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
+  const returnFocus = useRef<string | null>(null);
+  const { selectedMail, content, reading, readError, readMail, closeReader, openLink, readerAccount, markRead, compose, startCompose, startReply, closeCompose } = controller;
+  const readerStillUnread = Boolean(selectedMail && mailboxes.find((mailbox) => mailbox.email === readerAccount)?.items.find((item) => item.id === selectedMail.id)?.unread);
+  const [remoteImages, setRemoteImages] = useState(loadRemoteImagePreference);
+  const html = useMemo(() => content?.contentType === "text/html" ? sanitizeMailHtml(content.content, { allowRemoteImages: remoteImages }) : "", [content, remoteImages]);
+  const bodyHtml = useMemo(() => ({ __html: html || DOMPurify.sanitize(`<p>${t.mail.emptyHtml}</p>`) }), [html, t.mail.emptyHtml]);
+  const blockedImages = useMemo(() => content?.contentType === "text/html" && !remoteImages ? countRemoteImages(content.content) : 0, [content, remoteImages]);
+  const toggleRemoteImages = () => setRemoteImages((previous) => { saveRemoteImagePreference(!previous); return !previous; });
+  const readerRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const copyTimerRef = useRef<number | undefined>(undefined);
+  const otpTimerRef = useRef<number | undefined>(undefined);
+  const otpEnabled = useMessageOtpCopyEnabled();
+  const [copiedMailId, setCopiedMailId] = useState<string | null>(null);
+  const [copiedOtpMailId, setCopiedOtpMailId] = useState<string | null>(null);
+  const [linkMenu, setLinkMenu] = useState<{ mailId: string; href: string; x: number; y: number } | null>(null);
+  const activeLinkMenu = selectedMail && linkMenu?.mailId === selectedMail.id ? linkMenu : null;
+  const copyableBody = useMemo(() => selectedMail ? mailCopyableText(selectedMail.subject, content ? { content: content.contentType === "text/html" ? html : content.content, contentType: content.contentType } : null) : "", [content, html, selectedMail]);
+  const otpCode = useMemo(() => !otpEnabled || !selectedMail ? null : extractVerificationCode(selectedMail.subject, content?.contentType === "text/html" ? html : (content?.content ?? ""), content?.contentType ?? "text/plain"), [content, html, otpEnabled, selectedMail]);
+  const bodyCopied = Boolean(selectedMail && copiedMailId === selectedMail.id);
+  const otpCopied = Boolean(selectedMail && copiedOtpMailId === selectedMail.id);
+
+  useEffect(() => () => {
+    window.clearTimeout(copyTimerRef.current);
+    window.clearTimeout(otpTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!activeLinkMenu) return;
+    const close = () => setLinkMenu(null);
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("blur", close);
+    window.addEventListener("wheel", close, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", close);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("wheel", close);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeLinkMenu]);
+
+  const handleCopyBody = () => {
+    if (!selectedMail || !copyableBody) return;
+    const targetId = selectedMail.id;
+    void copyMessageText(copyableBody).then(() => {
+      setCopiedMailId(targetId);
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopiedMailId((current) => (current === targetId ? null : current)), 1400);
+    }).catch(() => undefined);
+  };
+
+  const handleCopyOtp = () => {
+    if (!selectedMail || !otpCode) return;
+    const targetId = selectedMail.id;
+    void copyMessageText(otpCode).then(() => {
+      setCopiedOtpMailId(targetId);
+      window.clearTimeout(otpTimerRef.current);
+      otpTimerRef.current = window.setTimeout(() => setCopiedOtpMailId((current) => (current === targetId ? null : current)), 1400);
+    }).catch(() => undefined);
+  };
+
+  const handleBodyContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!selectedMail) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
+    const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    const href = anchor?.getAttribute("href") ?? "";
+    if (!/^https?:\/\//i.test(href)) return;
+    event.preventDefault();
+    setLinkMenu({
+      mailId: selectedMail.id,
+      href,
+      x: Math.max(6, Math.min(event.clientX, window.innerWidth - 156)),
+      y: Math.max(6, Math.min(event.clientY, window.innerHeight - 40)),
+    });
+  };
+
+  useEffect(() => {
+    const node = bodyRef.current;
+    if (!node) return;
+    const hideBrokenImage = (event: Event) => {
+      if (event.target instanceof HTMLImageElement) event.target.style.display = "none";
+    };
+    node.addEventListener("error", hideBrokenImage, true);
+    return () => node.removeEventListener("error", hideBrokenImage, true);
+  }, [html]);
+  useLayoutEffect(() => {
+    if (!selectedMail && listRef.current) {
+      listRef.current.scrollTop = listScroll.current;
+      if (returnFocus.current) {
+        Array.from(listRef.current.querySelectorAll<HTMLButtonElement>("button[data-mail-id]")).find(button => button.dataset.mailId === returnFocus.current)?.focus({ preventScroll: true });
+        returnFocus.current = null;
+      }
+    }
+    if (selectedMail && readerRef.current) { returnFocus.current = selectedMail.id; readerRef.current.scrollTop = 0; readerRef.current.focus(); }
+  }, [selectedMail]);
+
+  if (compose) return <MailCompose key={compose.draft.replyTo ?? "new"} account={compose.account} draft={compose.draft} onClose={closeCompose} />;
+
+  if (selectedMail) return (
+    <section className="qq-panel qq-mail-panel" aria-label={t.mail.reader}>
+      <header className="qq-panel__header">
+        <button className="message-action qq-mail-back" type="button" onClick={onBack ?? closeReader}><ArrowLeft size={15} strokeWidth={1.8} />{t.mail.back}</button>
+        {content?.contentType === "text/html" && <button className="icon-button" type="button" aria-label={t.mail.remoteImages} aria-pressed={remoteImages} onClick={toggleRemoteImages}>{remoteImages ? <Image size={15} strokeWidth={1.8} /> : <ImageOff size={15} strokeWidth={1.8} />}</button>}
+        <button className={`icon-button${bodyCopied ? " qq-mail-copy--done" : ""}`} type="button" aria-label={bodyCopied ? t.mail.copied : t.mail.copyBody} disabled={reading || !copyableBody} onClick={handleCopyBody}>{bodyCopied ? <Check size={15} strokeWidth={1.8} /> : <Copy size={15} strokeWidth={1.8} />}</button>
+        <button className="message-action" type="button" disabled={busy} onClick={() => void startReply()}><Reply size={14} strokeWidth={1.8} />{t.mail.reply}</button>
+        {readerStillUnread ? <button className="message-action" type="button" disabled={busy} onClick={() => { if (readerAccount && selectedMail) void markRead(readerAccount, selectedMail.id); }}><MailCheck size={14} strokeWidth={1.8} />{t.mail.markRead}</button> : null}
+        <button className="message-action" type="button" onClick={() => void openMail()}>{t.mail.openWeb}<ArrowUpRight size={14} strokeWidth={1.8} /></button>
+      </header>
+      {actionError && <p className="qq-panel__error" role="alert">{actionError}</p>}
+      <div className="qq-mail-reader" ref={readerRef} tabIndex={-1} aria-label={t.mail.body} aria-busy={reading} onScroll={() => { if (activeLinkMenu) setLinkMenu(null); }}>
+        <h2 className="qq-mail-reader__subject">{selectedMail.subject}</h2>
+        <div className="qq-mail-reader__meta"><span>{selectedMail.sender}</span>{selectedMail.receivedAt !== null && <time dateTime={new Date(selectedMail.receivedAt).toISOString()}>{formatMailTime(selectedMail.receivedAt, t.localeTag)}</time>}</div>
+        {otpCode && (
+          <div className="qq-mail-otp">
+            <span className="qq-mail-otp__label">{t.mail.codeLabel}</span>
+            <code className="qq-mail-otp__value">{otpCode}</code>
+            <button className={`message-action qq-mail-otp__copy${otpCopied ? " qq-mail-otp__copy--done" : ""}`} type="button" aria-label={otpCopied ? t.mail.copied : t.mail.copyCode(otpCode)} onClick={handleCopyOtp}>
+              {otpCopied ? <Check size={13} strokeWidth={2} aria-hidden="true" /> : <Copy size={13} strokeWidth={1.8} aria-hidden="true" />}
+              {otpCopied ? t.mail.copied : t.mail.copyShort}
+            </button>
+          </div>
+        )}
+        {blockedImages > 0 && <div className="qq-mail-remote"><span>{t.mail.remoteImagesBlocked(blockedImages)}</span><button className="message-action" type="button" onClick={toggleRemoteImages}>{t.mail.loadRemoteImages}</button></div>}
+        {reading ? <div className="qq-mail-reader__state" role="status"><LoaderCircle size={19} className="qq-mail-spinning" />{t.mail.loading}</div>
+          : readError ? <div className="qq-mail-reader__state"><p className="qq-panel__error" role="alert">{readError}</p><button className="message-action" type="button" onClick={() => void readMail(selectedMail)}><RefreshCw size={14} />{t.common.retry}</button></div>
+          : content?.contentType === "text/html" ? <div className="qq-mail-body" ref={bodyRef} onClick={(event) => {
+              const link = event.target instanceof Element ? event.target.closest("a") : null;
+              if (!link) return;
+              event.preventDefault();
+              if (link.getAttribute("href")) void openLink(link.getAttribute("href")!);
+            }} onContextMenu={handleBodyContextMenu} dangerouslySetInnerHTML={bodyHtml} />
+          : <div className="qq-mail-body qq-mail-body--text">{content?.content || t.mail.emptyText}</div>}
+      </div>
+      {activeLinkMenu && createPortal(
+        <div className="qq-mail-link-menu" role="menu" style={{ left: activeLinkMenu.x, top: activeLinkMenu.y }} onPointerDown={(event) => event.stopPropagation()} onContextMenu={(event) => event.preventDefault()}>
+          <button className="qq-mail-link-menu__item" role="menuitem" type="button" onClick={() => {
+            const href = activeLinkMenu.href;
+            setLinkMenu(null);
+            void copyMessageText(href).catch(() => undefined);
+          }}>
+            <Copy size={13} strokeWidth={1.8} aria-hidden="true" />
+            {t.mail.copyLink}
+          </button>
+        </div>,
+        document.body,
+      )}
+      {content && readerAccount ? <MailAttachments key={content.id} account={readerAccount} messageId={content.id} attachments={content.attachments ?? []} /> : null}
+      <p className="qq-mail-reader__notice">{t.mail.notice}</p>
+    </section>
+  );
+
+  return (
+    <section className="qq-panel qq-mail-panel" aria-label={t.messages.qqMail}>
+      <header className="qq-panel__header">
+        {navigation}
+        <div className="qq-panel__toolbar">
+          {snapshot.configured && <button className="icon-button message-receiver-toggle" type="button" role="switch" aria-checked={snapshot.enabled} aria-label={t.mail.receive} disabled={busy || snapshot.status === "authRequired"} onClick={() => void setEnabled(!snapshot.enabled)}><Power size={15} strokeWidth={1.8} /></button>}
+          {snapshot.configured && snapshot.status !== "authRequired" ? <button className="icon-button" type="button" aria-label={t.mail.compose} disabled={busy} onClick={startCompose}><PenSquare size={16} strokeWidth={1.8} /></button> : null}
+          <button className="icon-button" type="button" aria-label={t.mail.openLabel} onClick={() => void openMail()}><ArrowUpRight size={16} strokeWidth={1.8} /></button>
+          {snapshot.configured && <button className="icon-button" type="button" aria-label={t.mail.refreshLabel} disabled={busy || snapshot.syncing || !snapshot.enabled || snapshot.status === "authRequired"} onClick={() => void refresh()}><RefreshCw size={16} strokeWidth={1.8} className={snapshot.syncing ? "qq-mail-spinning" : undefined} /></button>}
+          {snapshot.configured && snapshot.email && snapshot.status !== "authRequired" && <button className="icon-button" type="button" aria-label={t.mail.markAllRead} disabled={busy || !(snapshot.unreadCount || snapshot.items.some((item) => item.unread))} onClick={() => { if (snapshot.email) void markAllRead(snapshot.email); }}><CheckCheck size={16} strokeWidth={1.8} /></button>}
+        </div>
+      </header>
+      {mailboxes.length > 0 && <MailAccountTabs mailboxes={mailboxes} selected={snapshot.email} busy={busy} onSelect={selectMailbox} onAdd={onOpenSettings} />}
+      {error && <p className="qq-panel__error" role="alert">{error}</p>}
+      {mailboxes.length === 0 ? (
+        <div className="qq-panel__empty qq-mail-setup" role="status">
+          <span className="message-empty-icon">{busy ? <LoaderCircle size={26} strokeWidth={1.5} className="qq-mail-spinning" /> : <MessageSourceIcon source="qqMail" size={28} />}</span>
+          <span>{busy ? t.common.connecting : t.mail.noMailbox}</span>
+          {!busy && onOpenSettings && <button className="message-action" type="button" onClick={onOpenSettings}><Settings2 size={14} strokeWidth={1.8} />{t.mail.addInSettings}</button>}
+        </div>
+      ) : snapshot.status === "authRequired" ? (
+        <div className="qq-panel__empty qq-mail-setup" role="status">
+          <span className="message-empty-icon"><KeyRound size={26} strokeWidth={1.5} /></span>
+          <span>{t.mail.status.authRequired}</span>
+          {onOpenSettings && <button className="message-action" type="button" onClick={onOpenSettings}><Settings2 size={14} strokeWidth={1.8} />{t.mail.reauthorizeInSettings}</button>}
+        </div>
+      ) : (
+      <div className="qq-panel__list qq-mail-list" ref={listRef} onScroll={(event) => { listScroll.current = event.currentTarget.scrollTop; }} role="list" aria-label={t.mail.inbox} aria-busy={snapshot.syncing}>
+        {snapshot.items.length === 0 ? (
+          <div className="qq-panel__empty" role="status"><span className="message-empty-icon">{snapshot.syncing ? <LoaderCircle size={26} strokeWidth={1.5} className="qq-mail-spinning" /> : <MessageSourceIcon source="qqMail" size={28} account={snapshot.email} />}</span><span>{snapshot.syncing ? t.mail.syncing : t.mail.empty}</span></div>
+        ) : snapshot.items.map((item) => (
+          <article className={`qq-panel__item qq-mail-item${item.unread ? " qq-mail-item--unread" : ""}`} key={item.id} role="listitem">
+            <button type="button" data-mail-id={item.id} onClick={() => { if (onRead) onRead(item); else void readMail(item); }} aria-label={t.mail.readMessage(item.subject, item.unread)}>
+              <div className="qq-panel__item-heading"><strong>{item.unread && <span className="qq-mail-unread-dot" aria-hidden="true" />}<span>{item.sender}</span></strong>{item.receivedAt !== null && <time dateTime={new Date(item.receivedAt).toISOString()}>{formatMailTime(item.receivedAt, t.localeTag)}</time>}</div>
+              <p>{item.subject}</p>
+            </button>
+          </article>
+        ))}
+      </div>
+      )}
+    </section>
+  );
+}

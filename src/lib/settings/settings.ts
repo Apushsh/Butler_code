@@ -1,0 +1,135 @@
+import { HEX_COLOR_PATTERN } from "../../utils/color.ts";
+import { normalizeAgentSettings } from "./agentSettings.ts";
+import { normalizeBehaviorSettings } from "./normalizeBehaviorSettings.ts";
+import { normalizeLayoutSettings } from "./normalizeLayoutSettings.ts";
+import { GLASS_SETTING_KEYS } from "./glassSettings.ts";
+import { DEFAULT_SETTINGS } from "./settingsDefaults.ts";
+import { JELLYFISH_STYLES, MAX_CUSTOM_SETTING_PRESETS } from "./settingsLimits.ts";
+import type { IslandPreset, IslandSettings, JellyfishStyle, LegacyIslandSettings } from "./types";
+
+export * from "./settingsLimits.ts";
+export { DEFAULT_SETTINGS } from "./settingsDefaults.ts";
+
+export const THEME_SETTING_KEYS = [
+  "themeMode",
+  "collapsedDark",
+  "panelDark",
+  "windowsDark",
+  "accentMode",
+  "accentColor",
+  "darkBackgroundColor",
+  "darkTextColor",
+  "darkPulseColor",
+  "lightBackgroundColor",
+  "lightTextColor",
+  "lightPulseColor",
+  "darkInkColor",
+  "lightInkColor",
+  "inkColor",
+  "appearanceMode",
+  "fontFamily",
+  "fontScale",
+  "customFontId",
+  "glassIntensity",
+  ...GLASS_SETTING_KEYS,
+  "opacity",
+  "islandOpacity",
+  "topFilletRadius",
+  "islandCornerRadius",
+  "islandCornerShape",
+  "taskTextColor",
+  "pulseColor",
+  "pulseBrightness",
+  "islandBackgroundColor",
+] as const satisfies readonly (keyof IslandSettings)[];
+
+export const LAYOUT_SETTING_KEYS = [
+  "islandForm",
+  "collapsedScale",
+  "expandedScale",
+  "maxPanelHeight",
+  "panelWidth",
+  "collapsedWidthExtra",
+  "showTitle",
+  "showCollapsedText",
+] as const satisfies readonly (keyof IslandSettings)[];
+
+function withKeysFrom(keys: readonly (keyof IslandSettings)[], settings: IslandSettings, source: IslandSettings): IslandSettings {
+  return { ...settings, ...Object.fromEntries(keys.map((key) => [key, source[key]])) };
+}
+
+export function withThemeFrom(settings: IslandSettings, source: IslandSettings): IslandSettings {
+  return withKeysFrom(THEME_SETTING_KEYS, settings, source);
+}
+
+export function carriedJellyfishStyle(value: unknown): { jellyfishStyle?: JellyfishStyle } {
+  return JELLYFISH_STYLES.includes(value as JellyfishStyle) ? { jellyfishStyle: value as JellyfishStyle } : {};
+}
+
+export function withPresetFrom(settings: IslandSettings, preset: IslandPreset): IslandSettings {
+  return { ...withThemeFrom(settings, normalizeSettings(preset.settings)), ...carriedJellyfishStyle(preset.jellyfishStyle) };
+}
+
+export function withLayoutFrom(settings: IslandSettings, source: IslandSettings): IslandSettings {
+  return withKeysFrom(LAYOUT_SETTING_KEYS, settings, source);
+}
+
+export const LEGACY_DEFAULT_PRESET_IDS = new Set(["default-white", "default-khaki"]);
+export const LEGACY_DEFAULT_PRESET_NAMES = new Set(["白色", "卡其"]);
+
+export function hexToRgba(hex: string, alpha: number) {
+  const normalized = HEX_COLOR_PATTERN.test(hex)
+    ? hex.slice(1)
+    : DEFAULT_SETTINGS.pulseColor.slice(1);
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
+export function normalizeSettings(
+  settings: LegacyIslandSettings | null | undefined,
+): IslandSettings {
+  return {
+    ...normalizeLayoutSettings(settings),
+    ...normalizeAgentSettings(settings),
+    ...normalizeBehaviorSettings(settings),
+  };
+}
+
+export function createPresetId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function getDefaultSettingPresets(): IslandPreset[] {
+  return [];
+}
+
+export function mergeWithDefaultSettingPresets(presets: IslandPreset[]) {
+  const defaultPresets = getDefaultSettingPresets();
+  const customPresets = presets
+    .filter(
+      (preset) =>
+        !preset.isDefault &&
+        !LEGACY_DEFAULT_PRESET_IDS.has(preset.id) &&
+        !LEGACY_DEFAULT_PRESET_NAMES.has(preset.name.trim()),
+    )
+    .map((preset) => ({ ...preset, isDefault: false }))
+    .slice(0, MAX_CUSTOM_SETTING_PRESETS);
+
+  return [...defaultPresets, ...customPresets];
+}
+
+export function isDefaultSettingPreset(presetId: string) {
+  return LEGACY_DEFAULT_PRESET_IDS.has(presetId);
+}
+
+export function isSameSettings(a: IslandSettings, b: IslandSettings) {
+  return (Object.keys(a) as (keyof IslandSettings)[]).every(
+    (key) => a[key] === b[key],
+  );
+}

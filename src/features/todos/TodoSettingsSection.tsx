@@ -1,0 +1,122 @@
+import { SettingsChoice } from "../../components/settings/SettingsChoice";
+import { SettingsGroup } from "../../components/settings/SettingsGroup";
+import { SettingsNumberRow } from "../../components/settings/SettingsNumberRow";
+import { SettingsRow } from "../../components/settings/SettingsRow";
+import { SettingsSelect } from "../../components/settings/SettingsSelect";
+import { SettingsToggleRow } from "../../components/settings/SettingsToggleRow";
+import { useTranslation } from "../../i18n";
+import type { IslandSettings } from "../../lib/settings/types";
+import { IslandPlacementRow } from "../plugin-kernel/IslandPlacementRow";
+import { TodoNewTaskSettingsRows } from "./TodoNewTaskSettingsRows";
+import type { TodoDoneDisplay, TodoInsertPosition, TodoSortBy } from "./todoPrefs.ts";
+import { useTodoPrefs } from "./useTodoPrefs";
+
+export function TodoSettingsSection({ settings, onSettingsChange }: {
+  settings: IslandSettings;
+  onSettingsChange: (settings: IslandSettings) => void;
+}) {
+  const t = useTranslation();
+  const text = t.settings.todo;
+  const [prefs, setPrefs] = useTodoPrefs();
+
+  const sortOptions: readonly { value: TodoSortBy; label: string }[] = [
+    { value: "manual", label: text.sortOptions.manual },
+    { value: "priority", label: text.sortOptions.priority },
+    { value: "createdDesc", label: text.sortOptions.createdDesc },
+  ];
+
+  const doneDisplayOptions: readonly { value: TodoDoneDisplay; label: string }[] = [
+    { value: "fold", label: text.doneDisplayOptions.fold },
+    { value: "inline", label: text.doneDisplayOptions.inline },
+    { value: "hide", label: text.doneDisplayOptions.hide },
+  ];
+
+  const insertOptions: readonly { value: TodoInsertPosition; label: string }[] = [
+    { value: "bottom", label: text.insertOptions.bottom },
+    { value: "top", label: text.insertOptions.top },
+  ];
+
+  return (
+    <>
+      <SettingsGroup title={text.displayGroup}>
+        <IslandPlacementRow item="todos-count" title={t.settings.layout.showIdleTodoCount} />
+        <SettingsToggleRow
+          title={text.showElapsed}
+          description={text.showElapsedHint}
+          checked={prefs.showElapsed}
+          onChange={(showElapsed) => setPrefs((current) => ({ ...current, showElapsed }))}
+        />
+        <SettingsToggleRow
+          title={text.showCarriedDays}
+          description={text.showCarriedDaysHint}
+          checked={prefs.showCarriedDays}
+          onChange={(showCarriedDays) => setPrefs((current) => ({ ...current, showCarriedDays }))}
+        />
+        <SettingsToggleRow
+          title={text.rotateTodos}
+          checked={settings.rotateTodos}
+          onChange={(rotateTodos) => onSettingsChange({ ...settings, rotateTodos })}
+        />
+        {settings.rotateTodos && (
+          <SettingsNumberRow
+            title={text.rotationSeconds}
+            indent
+            value={settings.todoRotationSeconds}
+            min={1}
+            max={3_600}
+            onChange={(todoRotationSeconds) => onSettingsChange({ ...settings, todoRotationSeconds })}
+          />
+        )}
+        <SettingsRow
+          title={text.sortBy}
+          control={
+            <SettingsSelect
+              value={prefs.sortBy}
+              options={sortOptions}
+              ariaLabel={text.sortBy}
+              onChange={(sortBy) => setPrefs((current) => ({ ...current, sortBy }))}
+            />
+          }
+        />
+        <SettingsToggleRow
+          title={text.enableReorder}
+          checked={settings.enableTodoReorder}
+          disabled={prefs.sortBy === "createdDesc"}
+          onChange={(enableTodoReorder) => onSettingsChange({ ...settings, enableTodoReorder })}
+        />
+        <SettingsRow
+          title={text.doneDisplay}
+          control={
+            <SettingsSelect
+              value={prefs.doneDisplay}
+              options={doneDisplayOptions}
+              ariaLabel={text.doneDisplay}
+              onChange={(doneDisplay) => setPrefs((current) => ({ ...current, doneDisplay }))}
+            />
+          }
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title={text.inputGroup}>
+        <SettingsToggleRow
+          title={text.inlineSyntax}
+          description={text.inlineSyntaxHint}
+          checked={prefs.inlineSyntax}
+          onChange={(inlineSyntax) => setPrefs((current) => ({ ...current, inlineSyntax }))}
+        />
+        <SettingsRow
+          title={text.insertPosition}
+          control={
+            <SettingsChoice
+              value={prefs.insertPosition}
+              options={insertOptions}
+              ariaLabel={text.insertPosition}
+              onChange={(insertPosition) => setPrefs((current) => ({ ...current, insertPosition }))}
+            />
+          }
+        />
+        <TodoNewTaskSettingsRows projects={settings.todoProjects} />
+      </SettingsGroup>
+    </>
+  );
+}

@@ -1,0 +1,99 @@
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { timersV1 } from "@fuyu/plugin-services";
+import { nextDueIn } from "../timers.ts";
+import { DATA_FILE, readTimers, writeTimers } from "./dataFile.mjs";
+import { adoptTimers, changeTimer, dismissRung, removeTimer, ringDue, startTimer } from "./rules.mjs";
+
+export const name = "timer";
+export const RECHECK_MS = 60_000;
+
+export function apply(ctx) {
+  const file = pathToFileURL(join(ctx.dataDir, DATA_FILE));
+  const logger = ctx.logger("timer");
+  const loaded = readTimers(file);
+  if (loaded.problem) logger.warn(`could not read ${fileURLToPath(file)}, starting with no timers: ${loaded.problem.message}`);
+  let timers = loaded.timers;
+  let counter = 0;
+  let alarm = null;
+
+  function save() {
+    try {
+      writeTimers(file, timers);
+    } catch (error) {
+      logger.error(`could not save the timers to ${fileURLToPath(file)}: ${error?.message ?? error}`);
+    }
+  }
+
+  function commit(next, now, due = []) {
+    timers = next;
+    save();
+    for (const timer of due) provider.emit("due", { timer, at: now });
+    provider.emit("changed", { timers, at: now });
+    schedule();
+  }
+
+  function schedule() {
+    if (alarm) void alarm();
+    alarm = null;
+    const wait = nextDueIn(timers, Date.now());
+    if (wait !== null) alarm = ctx.setTimeout(ring, Math.min(RECHECK_MS, wait));
+  }
+
+  function ring() {
+    alarm = null;
+    const now = Date.now();
+    const rung = ringDue(timers, now);
+    if (rung.due.length > 0) commit(rung.timers, now, rung.due);
+    else schedule();
+  }
+
+  function nextId(now) {
+    let id;
+    do {
+      counter += 1;
+      id = `${now.toString(36)}-${counter}`;
+    } while (timers.some((timer) => timer.id === id));
+    return id;
+  }
+
+  function change(method, params, caller) {
+    const now = Date.now();
+    const next = changeTimer(timers, method, params, now, caller?.plugin);
+    if (next.timers !== timers) commit(next.timers, now);
+    return { timer: next.timer };
+  }
+
+  const provider = ctx.services.provide(timersV1, {
+    list: () => ({ timers, at: Date.now() }),
+    start: (params, caller) => {
+      const now = Date.now();
+      const next = startTimer(timers, params, now, nextId(now), caller?.plugin);
+      commit(next.timers, now);
+      return { timer: next.timer };
+    },
+    pause: (params, caller) => change("pause", params, caller),
+    resume: (params, caller) => change("resume", params, caller),
+    extend: (params, caller) => change("extend", params, caller),
+    remove: (params, caller) => {
+      const next = removeTimer(timers, params, caller?.plugin);
+      if (next.length === timers.length) return { removed: false };
+      commit(next, Date.now());
+      return { removed: true };
+    },
+    dismissRinging: (params, caller) => {
+      const next = dismissRung(timers, caller?.plugin);
+      const removed = timers.length - next.length;
+      if (removed > 0) commit(next, Date.now());
+      return { removed };
+    },
+    adopt: (params, caller) => {
+      const now = Date.now();
+      const next = adoptTimers(timers, params, now, caller?.plugin);
+      if (next.added > 0) commit(next.timers, now, next.due);
+      return { timers, added: next.added, at: now };
+    },
+  });
+
+  schedule();
+}

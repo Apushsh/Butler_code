@@ -1,0 +1,898 @@
+export type SettingsAgentText = {
+  hooksRemoved: string;
+  clearing: string;
+  clearStatus: string;
+  sessionTitleSection: string;
+  sessionTitle: string;
+  sessionTitleHint: string;
+  titleMode: string;
+  titleModeHint: string;
+  titleModeOptions: { changes: string; running: string };
+  lightSectionTitle: string;
+  lightSectionHint: string;
+  lightStyle: string;
+  lightStyleHint: string;
+  lightStyleOptions: { mark: string; dot: string };
+  lightStyleHints: { mark: string; dot: string };
+  jellyStyle: string;
+  jellyStyleHint: string;
+  jellyDoze: string;
+  jellyDozeHint: string;
+  jellyStyleOptions: { vector: string; flat: string; sticker: string; mono: string; neon: string; chunky: string; fine: string };
+  jellyStyleHints: { vector: string; flat: string; sticker: string; mono: string; neon: string; chunky: string; fine: string };
+  agentPageSection: string;
+  expandChildren: string;
+  expandChildrenHint: string;
+  sessionPageSection: string;
+  hostDisplay: string;
+  hostDisplayOptions: { both: string; icon: string; name: string; off: string };
+  sessionView: string;
+  sessionViewHint: string;
+  sessionViewPreview: string;
+  sessionViewOptions: { focused: string; split: string; bento: string; projects: string; minimal: string };
+  sessionViewHints: { focused: string; split: string; bento: string; projects: string; minimal: string };
+  sessionPreviewSample: { waitTitle: string; runTitle: string; replyTitle: string; doneTitle: string; waitPrompt: string; replyText: string };
+  archiveMotion: string;
+  archiveMotionHint: string;
+  archiveMotionOptions: { slide: string; dissolve: string };
+  cardEffects: string;
+  cardEffectsHint: string;
+  cardEffectsOptions: { off: string; sparkle: string; gradient: string; orbit: string };
+  hostDisplayHint: string;
+  hostDisplayHintMac: string;
+  sessionHours: string;
+  sessionHoursOption: (hours: number) => string;
+  sessionHoursHint: string;
+  sessionCardSection: string;
+  remoteIntro: string;
+  remoteRequirements: string;
+  remoteHostsSection: string;
+  remoteHostsFooter: string;
+  remoteRefresh: string;
+  remoteRefreshing: string;
+  remoteRefreshed: string;
+  remoteEmpty: string;
+  remoteEmptyHint: string;
+  remoteFromConfig: string;
+  remoteFetching: string;
+  remoteFetchedAt: (time: string, sessions: number) => string;
+  remoteFailed: (reason: string) => string;
+  remoteApprovalFailed: (reason: string) => string;
+  remoteRemove: (name: string) => string;
+  remoteAdd: string;
+  remoteAddHint: string;
+  remoteName: string;
+  remoteNamePlaceholder: string;
+  remoteUser: string;
+  remoteUserPlaceholder: string;
+  remoteHost: string;
+  remoteHostPlaceholder: string;
+  remotePort: string;
+  remoteSave: string;
+  remoteCancel: string;
+  hooks: {
+    summaryFix: (count: number, names: string) => string;
+    summaryScripts: string;
+    summaryMissing: string;
+    fixAll: string;
+    installAll: string;
+    working: string;
+    install: string;
+    fix: string;
+    connected: string;
+    connectedTitle: string;
+    failed: (name: string, error: string) => string;
+    done: (names: string) => string;
+    menu: (name: string) => string;
+    menuInstall: string;
+    menuReinstall: string;
+    turnOff: (name: string) => string;
+    turnOffKeep: string;
+    turnOffRemove: string;
+    tips: Partial<Record<"codex" | "dsh" | "trae" | "traeCn", string>>;
+    optionsSection: string;
+    autoInstall: string;
+    autoInstallHint: string;
+    autoUpdate: string;
+    autoUpdateHint: string;
+    reinstallAll: string;
+    reinstallAllHint: string;
+    reinstallAllButton: string;
+    reinstalledAll: string;
+    listJoin: string;
+    removeAll: string;
+    removeAllHint: string;
+    removeAllButton: string;
+  };
+  agentsSection: string;
+  agentsEnabledCount: (enabled: number, total: number) => string;
+  moreAgents: (count: number) => string;
+  showAgentsHint: string;
+  hookBadgeOutdated: string;
+  hookBadgeNotInstalled: string;
+  notDetectedBadge: string;
+  sessionOnlyBadge: string;
+  externalBadge: string;
+  hideFinished: string;
+  hideFinishedHint: string;
+  hideClosed: string;
+  hideClosedHint: string;
+  showElapsed: string;
+  showElapsedHint: string;
+  showModel: string;
+  showActivity: string;
+  showActivityHint: string;
+  usagePageTitle: string;
+  usagePageHint: string;
+  usagePreview: string;
+  usageShowTitle: string;
+  usageShowHint: string;
+  usageReading: string;
+  usageNone: string;
+  usageNoRead: (names: string[]) => string;
+  usagePlanTag: string;
+  usageCreditTag: string;
+  usageProviders: string;
+  usageWindows: string;
+  usageWindowOptions: Record<"fiveHour" | "sevenDay" | "models", string>;
+  usageTightest: string;
+  usageReset: string;
+  usageResetOptions: Record<"tightest" | "each" | "off", string>;
+  usageStyle: string;
+  usageStyleOptions: Record<"number" | "bar" | "ring", string>;
+  usageLayout: string;
+  usageLayoutHints: Record<"strip" | "chips" | "tiles" | "lead" | "ruler" | "table", string>;
+  emptyStyle: string;
+  emptyStyleHint: string;
+  emptyStyleOptions: Record<"sleep" | "standby" | "recent" | "quota" | "tide" | "minimal", string>;
+  emptyStyleHints: Record<"sleep" | "standby" | "recent" | "quota" | "tide" | "minimal", string>;
+  emptyGroup: string;
+  emptyUse: string;
+  emptyInUse: string;
+  emptyPrevious: string;
+  emptyNext: string;
+  alerts: {
+    title: string;
+    hint: string;
+    started: string;
+    startedOptions: Record<"everyTurn" | "newSession" | "off", string>;
+    completed: string;
+    failed: string;
+    waiting: string;
+    seconds: string;
+    secondsValue: (seconds: number) => string;
+    remind: string;
+    remindDescription: string;
+    remindValue: (seconds: number) => string;
+    quotaSectionTitle: string;
+    quota: string;
+    quotaDescription: string;
+    quotaValue: (percent: number) => string;
+  };
+  push: {
+    title: string;
+    enabled: string;
+    enabledHint: string;
+    channel: string;
+    channels: Record<"bark" | "ccConnect", string>;
+    ccConnect: {
+      thisComputer: string;
+      hostHint: string;
+      projectTitle: string;
+      project: (name: string, agent: string) => string;
+      picked: (count: number) => string;
+      projectHint: string;
+      noProjects: string;
+      noChats: string;
+      off: string;
+      offHint: string;
+      refresh: string;
+      reading: string;
+      notRunning: string;
+      program: string;
+      notFound: string;
+      notFoundHint: string;
+      viaLocal: string;
+      viaLocalHint: string;
+      testBody: string;
+    };
+    server: string;
+    serverHint: string;
+    key: string;
+    keyHint: string;
+    keyIsSaved: string;
+    keyIsSavedMac: string;
+    keyPlaceholder: string;
+    saveKey: string;
+    clearKey: string;
+    keySaved: string;
+    keyCleared: string;
+    events: Record<"waiting" | "completed" | "failed", string>;
+    away: string;
+    awayHint: string;
+    awayValue: (minutes: number) => string;
+    test: string;
+    testAction: string;
+    testTitle: string;
+    testBody: string;
+    testSent: string;
+    hint: string;
+    ccConnectHint: string;
+  };
+  approval: {
+    title: string;
+    onIsland: string;
+    whenInFront: string;
+    whenInFrontHint: string;
+    hint: string;
+    hintMac: string;
+  };
+  filters: {
+    title: string;
+    hint: string;
+    kinds: { folder: string; prompt: string };
+    kindLabel: string;
+    add: string;
+    addButton: string;
+    folderPlaceholder: string;
+    promptPlaceholder: string;
+    remove: (value: string) => string;
+  };
+  silentLaunch: {
+    title: string;
+    hint: string;
+    shellLabel: string;
+    shells: { sh: string; powershell: string; node: string };
+    copy: string;
+    copied: string;
+  };
+  replyMarker: {
+    title: string;
+    toggle: string;
+    hint: string;
+    legendTurn: string;
+    legendTurnHint: string;
+    legendBg: string;
+    legendBgHint: string;
+    legendDone: string;
+    legendDoneHint: string;
+    filesTitle: string;
+    fileInstalled: string;
+    fileOutdated: string;
+    filePending: string;
+    fileError: string;
+    linked: (target: string) => string;
+    noFiles: string;
+    outdated: string;
+    preview: string;
+  };
+  editorExtension: {
+    title: string;
+    hint: string;
+    none: string;
+    installed: string;
+    install: string;
+    installing: string;
+    noCli: string;
+    done: (editor: string) => string;
+  };
+  hooksDevBuild: string;
+  dshBridge: string;
+  remoteResult: (host: string, error: string | null) => string;
+};
+
+export const zhCN: SettingsAgentText = {
+  hooksRemoved: "已从各家 AI Agent 配置中移除浮屿钩子与脚本；正在运行的 AI Agent 重启后生效。",
+  clearing: "清除中",
+  clearStatus: "清除状态",
+  sessionTitleSection: "小岛显示",
+  sessionTitle: "在小岛显示会话标题",
+  sessionTitleHint: "在待办的位置显示 Agent 图标和会话标题。标题直接读取 Claude Code 和 Codex 的会话记录，不需要安装钩子。",
+  titleMode: "什么时候显示",
+  titleModeHint: "有变化时：会话开始、跑完或出错时显示 4 秒，等你确认时一直显示到你处理，其余时间留给待办和中心图案。运行时一直显示：有 Agent 在运行就显示，结束 3 秒后恢复待办。",
+  titleModeOptions: { changes: "有变化时", running: "运行时一直显示" },
+  lightSectionTitle: "浮屿水母",
+  lightSectionHint: "水母是浮屿的标志，一直待在收起条上。开着 Agent 时，它的颜色和动作会跟着 Agent 的状态变；样式在「岛屿布局」里水母那一项改。",
+  lightStyle: "样式",
+  lightStyleHint: "收起条上浮屿标志的样子。水母：和条上的环一样高，平时米白、偶尔游一下眨眨眼；开着 Agent 时，运行变蓝划水，等你确认变黄跳动，失败或可能中断变红皱眉，跑完变绿笑一下。圆点：极简的小圆点，开着 Agent 时按状态变色。Agent 页会话列表每行的状态灯也用这个样子。",
+  lightStyleOptions: { mark: "水母", dot: "圆点" },
+  lightStyleHints: { mark: "浮屿的小水母，开着 Agent 时随状态变", dot: "简洁的小圆点呼吸灯" },
+  jellyStyle: "水母画风",
+  jellyStyleHint: "水母出现的地方一起换：收起条、中心图案、Fuyu 页签、Agent 空页面和今日小组件。像素画风一格一格地动，并按屏幕像素对齐，系统缩放是 125%、175% 时会比矢量的小一圈。鼠标停在卡片上可以看各个状态的样子。Mac 菜单栏上的图标也跟着换成像素的；应用图标和 Windows 托盘图标不变。",
+  jellyDoze: "深夜打瞌睡",
+  jellyDozeHint: "晚上 11 点到早上 6 点，没有 Agent 在运行、也没有刚结束的会话时，收起条上的水母闭眼睡觉；有会话开始运行或等你处理时马上醒。",
+  jellyStyleOptions: { vector: "矢量", flat: "扁平", sticker: "描边", mono: "单色", neon: "霓虹", chunky: "大颗粒", fine: "精细" },
+  jellyStyleHints: { vector: "原来的圆润水母", flat: "像素，最接近原样", sticker: "像素，带深色描边", mono: "像素，只用一个颜色", neon: "像素，发光的轮廓", chunky: "像素，格子最粗", fine: "像素，格子最细" },
+  agentPageSection: "Agent 页",
+  expandChildren: "子 Agent / 子会话默认展开",
+  expandChildrenHint: "会话行下面的子 Agent 列表和 Claude 桌面版的子会话一打开就展开。手动展开或收起过的行照你点的来。",
+  sessionPageSection: "会话列表",
+  hostDisplay: "会话来源",
+  hostDisplayOptions: { both: "图标和名称", icon: "只显示图标", name: "只显示名称", off: "不显示" },
+  sessionView: "显示方式",
+  sessionViewHint: "在下面挑一种列表布局，改了马上在岛屿预览里看到；在 Agent 页右上角的「排列与布局」里也能随时切换。",
+  sessionViewPreview: "会话列表预览",
+  sessionViewOptions: { focused: "分层聚焦", split: "双栏工作台", bento: "双列卡片", projects: "项目指挥台", minimal: "极简清单" },
+  sessionViewHints: {
+    focused: "活跃轻卡 + 已完成静默单行",
+    split: "左栏极简索引，右栏实时详情",
+    bento: "紧急项置顶，双列同屏看全",
+    projects: "按项目收纳，去掉重复前缀",
+    minimal: "去边框胶囊，纯排版键盘流",
+  },
+  sessionPreviewSample: {
+    waitTitle: "运行审批排查",
+    runTitle: "Mac 刘海面板优化",
+    replyTitle: "多窗口状态同步评审",
+    doneTitle: "全面分析与后续规划",
+    waitPrompt: "瘦身按推荐的来",
+    replyText: "已整理三种同步方案，推荐事件广播方案，是否按方案 B 开始实现？",
+  },
+  archiveMotion: "归档动画",
+  archiveMotionHint: "滑出：会话向右滑出再收起。粒子消散：会话从左到右化成状态颜色的粒子散开再收起。系统要求减少动画时直接移除。",
+  archiveMotionOptions: { slide: "滑出", dissolve: "粒子消散" },
+  cardEffects: "卡片光效",
+  cardEffectsHint: "粒子流苏与渐变带只在「卡片」和「紧凑」显示方式下生效；流光边框在三种显示方式下都只给等你确认的会话加上绕边框流动的光带，减少动画时静止。",
+  cardEffectsOptions: { off: "关", sparkle: "粒子流苏", gradient: "渐变带", orbit: "流光边框" },
+  hostDisplayHint: "会话在哪个程序里运行，比如 Orca、Windows Terminal、VS Code、Codex。正在运行的 Claude Code 会话会自动识别；岛屿启动前就结束的会话没有来源。",
+  hostDisplayHintMac: "会话在哪个程序里运行，比如 Orca、终端、iTerm、VS Code、Codex。正在运行的 Claude Code 会话会自动识别；岛屿启动前就结束的会话没有来源。",
+  sessionHours: "列出多久内的会话",
+  sessionHoursOption: (hours) => `最近 ${hours} 小时`,
+  sessionHoursHint: "最后一次活动在这段时间内的会话才会列出。",
+  sessionCardSection: "会话卡片",
+  remoteIntro: "在 Agent 页列出其他电脑上的 Claude Code、Codex、DSH 和 Antigravity CLI 会话：打开的主机，岛屿和它保持一条 ssh 连接，每 3 秒读一次它最近的会话记录，服务器上不用安装任何东西。",
+  remoteRequirements: "只能用密钥登录，不会弹出密码框，先确认终端里 ssh 能直接登上去。点「钩子与代理」底部的「全部重装」后，远程的 Claude Code 能在岛上审批；远程会话不能切到它的窗口。",
+  remoteHostsSection: "主机",
+  remoteHostsFooter: "~/.ssh/config 里的 Host 和在这里添加的主机都列在上面，最多同时打开 8 台。",
+  remoteRefresh: "立即刷新",
+  remoteRefreshing: "正在刷新…",
+  remoteRefreshed: "已刷新",
+  remoteEmpty: "还没有主机",
+  remoteEmptyHint: "在下面添加一台，或者在 ~/.ssh/config 里写好 Host 再回到这一页。",
+  remoteFromConfig: "来自 ~/.ssh/config",
+  remoteFetching: "正在读取…",
+  remoteFetchedAt: (time, sessions) => `${time} 读取 · ${sessions} 个会话`,
+  remoteFailed: (reason) => `读取失败：${reason}`,
+  remoteApprovalFailed: (reason) => `审批卡片收不到这台电脑的请求，会在它的终端里确认：${reason}`,
+  remoteRemove: (name) => `删除「${name}」`,
+  remoteAdd: "添加主机",
+  remoteAddHint: "存在岛屿自己的配置里，不会改 ~/.ssh/config。需要跳板机、指定密钥这类设置时，写进 ~/.ssh/config 更合适。",
+  remoteName: "名称",
+  remoteNamePlaceholder: "不填时用主机地址",
+  remoteUser: "用户名",
+  remoteUserPlaceholder: "不填时用本机用户名",
+  remoteHost: "主机地址",
+  remoteHostPlaceholder: "例如 192.168.1.20 或 dev.example.com",
+  remotePort: "端口",
+  remoteSave: "添加",
+  remoteCancel: "取消",
+  hooks: {
+    summaryFix: (count, names) => `${count} 个 Agent 的钩子是旧版本：${names}。修复后重启它们，“等待确认”这类新功能才会生效。`,
+    summaryScripts: "浮屿的钩子脚本是旧版本，状态灯可能不准。",
+    summaryMissing: "还没有给任何 Agent 装钩子，状态灯和会话标题不会工作。",
+    fixAll: "全部修复",
+    installAll: "全部安装",
+    working: "处理中",
+    install: "安装",
+    fix: "修复",
+    connected: "已接入",
+    connectedTitle: "钩子已是最新",
+    failed: (name, error) => `${name} 没装上：${error}`,
+    done: (names) => `已处理 ${names} 的钩子，重启后生效。`,
+    menu: (name) => `${name} 的更多操作`,
+    menuInstall: "安装钩子",
+    menuReinstall: "重新安装钩子",
+    turnOff: (name) => `关闭 ${name}？`,
+    turnOffKeep: "只关闭",
+    turnOffRemove: "关闭并移除钩子",
+    tips: {
+      codex: "装好后要在 Codex 的 /hooks 里信任新钩子。",
+      dsh: "DSH 家目录里已有自定义 cordis.patch.yml 时不会直接覆盖，装完会给出要加的几行。",
+      trae: "建议在 TRAE 里设成“自动执行”，岛上点允许就能直接执行。",
+      traeCn: "建议在 TRAE CN 里设成“自动执行”，岛上点允许就能直接执行。",
+    },
+    optionsSection: "钩子设置",
+    autoInstall: "自动配置新 Agent",
+    autoInstallHint: "装了一家支持的 Agent 后，自动给它装钩子，并在岛上提示。只在已经装过钩子的电脑上生效，开关关掉的 Agent 不动。",
+    autoUpdate: "自动更新旧版钩子",
+    autoUpdateHint: "浮屿升级后，已接入的 Agent 的钩子自动换成新版。",
+    reinstallAll: "重新安装全部钩子",
+    reinstallAllHint: "一家一家重装，也会装上 SSH 远程主机里的钩子；某一家失败不影响其他家。",
+    reinstallAllButton: "全部重装",
+    reinstalledAll: "已重新安装全部钩子，重启正在用的 Agent 后生效。",
+    listJoin: "、",
+    removeAll: "移除全部钩子",
+    removeAllHint: "从各家 Agent 的配置里删掉浮屿加的钩子和脚本，正在运行的 Agent 重启后生效。",
+    removeAllButton: "全部移除",
+  },
+  agentsSection: "接入哪些 Agent",
+  agentsEnabledCount: (enabled, total) => `已启用 ${enabled} / ${total}`,
+  moreAgents: (count) => `更多支持的 Agent（${count}）`,
+  showAgentsHint: "关掉的 Agent 不出现在 Agent 页，也不算进岛上的运行数量；关掉时可以顺带移除它的钩子。",
+  hookBadgeOutdated: "钩子待更新",
+  hookBadgeNotInstalled: "未装钩子",
+  notDetectedBadge: "未检测到",
+  sessionOnlyBadge: "会话记录",
+  externalBadge: "外部上报",
+  hideFinished: "只显示进行中的会话",
+  hideFinishedHint: "隐藏已完成和失败的会话，只留正在运行、等待确认和可能中断的。",
+  hideClosed: "隐藏已退出的会话",
+  hideClosedHint: "Claude Code 或 Codex 已经退出的会话不再列出，SessionEnd hook 没触发也算：按进程是否还在判断，远程电脑上的 Claude Code 会话同样适用。",
+  showElapsed: "显示运行时长",
+  showElapsedHint: "进行中的会话显示\"已运行多久\"，每秒更新；结束的显示这一轮\"用时多久\"。从最近一次提问开始算。",
+  showModel: "显示模型和推理强度",
+  showActivity: "显示最近提问和正在用的工具",
+  showActivityHint: "进行中的会话在回复上方显示你最近一次的提问，运行时显示它正在调用的工具（如 Bash 命令、正在改的文件）。",
+  usagePageTitle: "Agent 页顶部的额度",
+  usagePageHint: "跟着这台电脑上开着的 Agent 走，读得到额度的才列一行。新接入的默认显示，点图标或下面的胶囊隐藏那一家，点列隐藏整列；岛上右键额度行有同样的菜单。Claude Code 读它每次回复时交给状态栏的额度（安装钩子时接上，原来的状态栏照常显示），只用桌面端或隔得久了就让本机的 Claude Code 自己查一次，也读它自己缓存的额度和 claude-hud 的快照，Codex 读会话记录，其余几家和用量环用同一套读取；WorkBuddy 和 DeepSeek Harness 没有百分比，写的是积分和余额，GLM、Kimi 套餐在用量环里填了 Key 才有。",
+  usagePreview: "额度预览",
+  usageShowTitle: "显示哪家、哪些额度",
+  usageShowHint: "布局、样式、重置时间也在这里调，改了马上在下面的岛上看到；某个布局用不上的选项会收起来。",
+  usageReading: "正在读取额度…",
+  usageNone: "这台电脑上开着的 Agent 都还读不到额度",
+  usageNoRead: (names) => `现在读不到额度（没登录、没数据或数据已过期），不占位置：${names.join("、")}`,
+  usagePlanTag: "套餐",
+  usageCreditTag: "积分/余额",
+  usageProviders: "显示哪家",
+  usageWindows: "显示哪些额度",
+  usageWindowOptions: { fiveHour: "5 小时", sevenDay: "7 天", models: "其他额度" },
+  usageTightest: "只看最紧的",
+  usageReset: "重置时间",
+  usageResetOptions: { tightest: "最紧的那项", each: "每项都写", off: "不显示" },
+  usageStyle: "额度样式",
+  usageStyleOptions: { number: "数字", bar: "进度条", ring: "圆环" },
+  usageLayout: "布局",
+  usageLayoutHints: { strip: "无胶囊细条，最安静省空间", chips: "一家一颗，只写最紧的", tiles: "大数字，一眼看全", lead: "只突出最紧的一项", ruler: "都摆在一根刻度上", table: "每个窗口都列出来" },
+  emptyStyle: "没有会话时显示",
+  emptyStyleHint: "Agent 页上没有会话可列时的画面。",
+  emptyStyleOptions: { sleep: "水母打盹", standby: "待命台", recent: "上一个会话", quota: "额度大圆环", tide: "今天的潮汐", minimal: "极简水平线" },
+  emptyStyleHints: {
+    sleep: "最安静的陪伴感",
+    standby: "各家接好没有，一眼看出是不是没连上",
+    recent: "会话被筛掉时给出「显示已结束的」按钮",
+    quota: "空着时把额度放大当主角",
+    tide: "今天几点有 Agent 在跑",
+    minimal: "只有一行字",
+  },
+  emptyGroup: "没有会话时",
+  emptyUse: "用这个",
+  emptyInUse: "正在用这个",
+  emptyPrevious: "上一个样式",
+  emptyNext: "下一个样式",
+  alerts: {
+    title: "弹出提醒",
+    hint: "收起的岛屿会自动打开 Agent 页。会话所在窗口已在前台、游戏模式勿扰时，或你正在用展开的岛屿时不弹。",
+    started: "会话开始时",
+    startedOptions: { everyTurn: "每一轮开始", newSession: "只在新会话开始", off: "不弹" },
+    completed: "会话完成时",
+    failed: "会话出错时",
+    waiting: "等待你确认或回答时",
+    seconds: "停留时间",
+    secondsValue: (seconds) => `${seconds} 秒`,
+    remind: "没处理时再提醒",
+    remindDescription: "等你确认或回答的会话过了这么久还在等，再弹一次并再响一次；每次等待只补一次",
+    remindValue: (seconds) => (seconds === 0 ? "不再提醒" : seconds < 60 ? `${seconds} 秒后` : `${seconds / 60} 分钟后`),
+    quotaSectionTitle: "用量额度",
+    quota: "额度提醒",
+    quotaDescription: "Claude 或 Codex 的 5 小时、7 天用量到这条线时，在收起的岛屿上提醒一次；额度刷新后再提醒一次",
+    quotaValue: (percent) => (percent === 0 ? "不提醒" : `用到 ${percent}%`),
+  },
+  push: {
+    title: "手机推送",
+    enabled: "推送到手机",
+    enabledHint: "Agent 等你、完成或出错时推到手机：iPhone 上的 Bark，或 cc-connect 在 Telegram、Discord、飞书上的机器人",
+    channel: "推送通道",
+    channels: { bark: "Bark", ccConnect: "cc-connect 机器人" },
+    ccConnect: {
+      thisComputer: "本机",
+      hostHint: "推送这台电脑上的会话",
+      projectTitle: "项目",
+      project: (name, agent) => `${name} · ${agent}`,
+      picked: (count) => `已选 ${count} 个`,
+      projectHint: "可以在几个项目里各选机器人；接管命令只附给 Agent 和会话相同的项目",
+      noProjects: "还没有聊过的项目：在手机上给机器人发一句话，再点刷新。",
+      noChats: "这个项目还没有聊天：在手机上给它的机器人发一句话，再点刷新。",
+      off: "cc-connect 手机连接没打开",
+      offHint: "先打开本页下面「cc-connect 手机连接」一节的开关。",
+      refresh: "刷新",
+      reading: "正在经 SSH 读取…",
+      notRunning: "cc-connect 没在运行，推送会发不出去",
+      program: "cc-connect 程序",
+      notFound: "没找到 cc-connect",
+      notFoundHint: "在下面「cc-connect 手机连接」里选这台电脑、填它的路径，或改用本机的机器人推",
+      viaLocal: "改用本机的机器人推",
+      viaLocalHint: "能收到推送，但不附接管命令：本机的 cc-connect 续不上另一台电脑上的会话",
+      testBody: "🔔 浮屿：cc-connect 推送已接通",
+    },
+    server: "服务器地址",
+    serverHint: "留空用 Bark 官方服务器；自建 bark-server 时填它的地址",
+    key: "设备 Key",
+    keyHint: "在 Bark 里复制推送地址粘贴进来，或只粘贴其中那串字母数字",
+    keyIsSaved: "已保存在 Windows 凭据管理器里",
+    keyIsSavedMac: "已保存在钥匙串里",
+    keyPlaceholder: "https://api.day.app/xxxxxxxx",
+    saveKey: "保存",
+    clearKey: "清除",
+    keySaved: "设备 Key 已保存。",
+    keyCleared: "设备 Key 已清除。",
+    events: { waiting: "等你确认或回答时", completed: "完成一轮时", failed: "出错时" },
+    away: "什么时候推",
+    awayHint: "锁屏立即推；没锁屏时没有键盘鼠标操作满这么久才推。离开前在电脑上看过的不再推，坐在电脑前时不打扰手机",
+    awayValue: (minutes) => (minutes === 0 ? "总是推送" : `离开 ${minutes} 分钟后`),
+    test: "发送测试",
+    testAction: "发送",
+    testTitle: "Fuyu",
+    testBody: "Bark 推送已接通",
+    testSent: "已发送，看看手机。",
+    hint: "推送只包含会话名称和发生了什么，不包含命令、回复或代码。官方服务器由 Bark 运营；在意的话可以自建 bark-server。",
+    ccConnectHint: "推送包含 Agent 在问什么（问题、计划或回复，太长会截断）。每台电脑的会话由那台电脑上的机器人发出，Agent 相同的项目还附上在手机上接管的 /cd、/switch 命令。消息也会经过 Telegram、Discord 或飞书的服务器。",
+  },
+  approval: {
+    title: "在岛上审批",
+    onIsland: "在岛上允许或拒绝 Agent 的操作",
+    whenInFront: "终端在前台时也在岛上弹出",
+    whenInFrontHint: "关闭时，会话所在的终端或编辑器窗口在前台，就直接在终端里审批。",
+    hint: "Claude Code 或 Codex 要运行命令、改文件时，岛上弹出卡片，可以允许、拒绝或交回终端（快捷键 Ctrl+Alt+Y / N / T）。卡片显示期间终端里不出审批框；2 分钟没处理、游戏模式勿扰时自动交回终端。需要先在「钩子与代理」里给它装上钩子。Codex 还要在它的 /hooks 里信任新钩子。auto 模式自己批准的操作不会弹出。Cursor 会同时在岛上和编辑器里弹出：真正运行或跳过在 Cursor 里点，岛上点「去 Cursor」跳过去。TRAE / TRAE CN 建议在 IDE 里设为“自动执行”，这样岛上点允许即可直接执行（无需回 TRAE 再点一次），点交回才在 TRAE 弹窗。",
+    hintMac: "Claude Code 或 Codex 要运行命令、改文件时，岛上弹出卡片，可以允许、拒绝或交回终端（快捷键 ⌃⌥Y / N / T）。卡片显示期间终端里不出审批框；2 分钟没处理、游戏模式勿扰时自动交回终端。需要先在「钩子与代理」里给它装上钩子。Codex 还要在它的 /hooks 里信任新钩子。auto 模式自己批准的操作不会弹出。Cursor 会同时在岛上和编辑器里弹出：真正运行或跳过在 Cursor 里点，岛上点「去 Cursor」跳过去。TRAE / TRAE CN 建议在 IDE 里设为“自动执行”，这样岛上点允许即可直接执行（无需回 TRAE 再点一次），点交回才在 TRAE 弹窗。",
+  },
+  filters: {
+    title: "隐藏会话",
+    hint: "符合任一条的会话在岛上完全不出现：Agent 页、会话数、收起条标题、提醒和音效都不算它。目录规则也隐藏它的子目录，可以用 * 代表任意字符，例如 */agy-title-* 能藏住每次换一个临时目录的脚本会话；文字规则匹配会话标题（没有标题时是第一句提示词）或最近一句提示词，不分大小写。",
+    kinds: { folder: "所在目录", prompt: "标题或提示词包含" },
+    kindLabel: "规则类型",
+    add: "添加规则",
+    addButton: "添加",
+    folderPlaceholder: "例如 E:\\Projects\\scratch 或 */agy-title-*",
+    promptPlaceholder: "例如 /loop",
+    remove: (value) => `删除规则「${value}」`,
+  },
+  silentLaunch: {
+    title: "静默启动",
+    hint: "给脚本和插件在后台起的一次性代理（例如 agy -p、claude -p、codex exec）用：启动时带上环境变量 FUYU_AGENT_STATUS=off，浮屿的钩子见到它就直接退出，这个会话不提醒、不响、不点亮状态灯。Antigravity 这类只靠钩子上报会话的，整条不进列表；Claude Code、Codex 的会话浮屿还会从会话文件里读到，要列表里也不显示，再加一条上面的隐藏规则。只对之后启动的进程生效。",
+    shellLabel: "写法",
+    shells: { sh: "bash / zsh", powershell: "PowerShell", node: "Node.js" },
+    copy: "复制",
+    copied: "已复制",
+  },
+  replyMarker: {
+    title: "回复状态标记",
+    toggle: "让 AI 代理在回复末尾标出在等什么（推荐打开）",
+    hint: "打开后，会在各家 AI 代理的全局提示词文件末尾追加一段说明（Claude Code 的 CLAUDE.md，Codex、opencode 和 DeepSeek Harness 的 AGENTS.md，Antigravity 的 GEMINI.md，WorkBuddy 和 CodeBuddy 的 CODEBUDDY.md，Qoder 的 AGENTS.md，Qwen Code 的 QWEN.md，Kimi Code 的 ~/.kimi-code/AGENTS.md，GitHub Copilot CLI 的 ~/.copilot/copilot-instructions.md，Droid 的 ~/.factory/AGENTS.md，pi 的 ~/.pi/agent/AGENTS.md；只动这一段，文件其他内容不动），让它每次回复的最后一行写一个符号：↩ 等你回复、⋯ 在等它自己启动的后台任务、✓ 做完了。岛屿据此区分“等你回复”和“做完了”：Agent 页、会话环，以及提醒和音效（等你回复按“等你确认或回答”弹出、用提问音效；等后台任务时不弹不响）。这一行会出现在回复里。文件是软链时写在它指向的文件里，几家指向同一份文件时只写一段。SSH 远程页里打开的电脑也会写上。只对之后开始的会话生效；关掉时删掉这一段。",
+    legendTurn: "等你回复",
+    legendTurnHint: "弹出提醒 · 提问音效",
+    legendBg: "等后台任务",
+    legendBgHint: "保持运行 · 不打扰",
+    legendDone: "做完了",
+    legendDoneHint: "标为完成 · 完成提醒",
+    filesTitle: "本机全局提示词文件",
+    fileInstalled: "已写入",
+    fileOutdated: "待更新",
+    filePending: "未写入",
+    fileError: "异常",
+    linked: (target) => `软链，写在 ${target}`,
+    noFiles: "本机没有找到这几家 AI 代理。",
+    outdated: "说明是旧版本，或者还在旧的规则文件 rules/fuyu-reply-marker.md 里，或者有一家还没写上；关掉再打开，或在「钩子与代理」里点「全部重装」即可更新。",
+    preview: "查看将写入的内容",
+  },
+  editorExtension: {
+    title: "编辑器扩展",
+    hint: "会话跑在 VS Code（或 Cursor、Windsurf 等）的终端里时，岛屿只能把编辑器窗口调到前面。装上岛屿的扩展后，点会话还会打开终端面板并切到这个会话的终端。扩展只处理岛屿打开的链接，不向任何地方发送数据。",
+    none: "没有找到 VS Code 或基于它的编辑器。",
+    installed: "已安装",
+    install: "安装",
+    installing: "正在安装…",
+    noCli: "找不到命令行，先打开这个编辑器",
+    done: (editor) => `已装进 ${editor}。已经打开的 ${editor} 窗口要重新加载（命令面板 → Reload Window）后才生效。`,
+  },
+  dshBridge: "DeepSeek Harness 已有自定义 cordis.patch.yml，岛屿没有直接覆盖。把下面几行加到 DSH 家目录（或 profiles/<名字>）下的 cordis.patch.yml 末尾，重启 DSH 后在它的卡片上再点一次“修复”：",
+  hooksDevBuild: "开发版读的是正式版的 Agent 状态。在这里装的是正式版的钩子：脚本放在正式版的数据目录，审批走正式版的端口，开发版关掉后照样能用。",
+  remoteResult: (host, error) => (error ? `SSH 远程 ${host}：失败，${error}` : `SSH 远程 ${host}：已完成`),
+};
+
+export const en: SettingsAgentText = {
+  hooksRemoved: "Removed Fuyu's hooks and scripts from the AI agent configs; restart running AI agents to finish.",
+  clearing: "Clearing",
+  clearStatus: "Clear status",
+  sessionTitleSection: "On the island",
+  sessionTitle: "Show the session title on the island",
+  sessionTitleHint: "Shows the agent icon and session title where the todo goes. Titles are read from the Claude Code and Codex session files, so no hooks are needed.",
+  titleMode: "When to show it",
+  titleModeHint: "On changes: for 4 seconds when a session starts, finishes or fails, and while it waits for your approval; otherwise the todo and the center pattern stay. While running: the whole time an agent runs, then the todo again 3 seconds after it finishes.",
+  titleModeOptions: { changes: "On changes", running: "While running" },
+  lightSectionTitle: "Fuyu jellyfish",
+  lightSectionHint: "The jellyfish is the Fuyu mark and always sits on the collapsed bar. With Agent on, its colour and moves follow the agents' state; change its style under the jellyfish item in Island layout.",
+  lightStyle: "Style",
+  lightStyleHint: "How the Fuyu mark looks on the collapsed bar. Jellyfish: as tall as the rings on the bar, cream with a swim and a blink now and then; with Agent on it turns blue and paddles while running, yellow and hops while waiting for you, red and frowns when failed or possibly stopped, and green with a smile when done. Dot: a minimal dot that takes the state colour with Agent on. The status light on each row of the Agent session list follows this too.",
+  lightStyleOptions: { mark: "Jellyfish", dot: "Dot" },
+  lightStyleHints: { mark: "The little Fuyu jellyfish; follows the agents' state with Agent on", dot: "Minimal breathing dot" },
+  jellyStyle: "Jellyfish look",
+  jellyStyleHint: "Changes the jellyfish everywhere it appears: the collapsed bar, the centre pattern, the Fuyu tab, the empty Agent page and the Today widget. The pixel looks move one square at a time and line up with screen pixels, so at 125% or 175% display scaling they come out a little smaller than the smooth one. Rest the pointer on a card to see each state. On a Mac the menu bar icon turns into pixels too; the app icon and the Windows tray icon stay the same.",
+  jellyDoze: "Doze at night",
+  jellyDozeHint: "Between 11 pm and 6 am, while no agent is running and none has just finished, the jellyfish on the collapsed bar closes its eyes and sleeps. It wakes as soon as a session starts running or needs you.",
+  jellyStyleOptions: { vector: "Smooth", flat: "Flat", sticker: "Outlined", mono: "One colour", neon: "Neon", chunky: "Chunky", fine: "Fine" },
+  jellyStyleHints: { vector: "The original rounded jellyfish", flat: "Pixels, closest to the original", sticker: "Pixels with a dark outline", mono: "Pixels in a single colour", neon: "Pixels, a glowing outline", chunky: "Pixels, the biggest squares", fine: "Pixels, the smallest squares" },
+  agentPageSection: "Agent page",
+  expandChildren: "Expand subagents and child sessions",
+  expandChildrenHint: "Subagent lists under a session and Claude desktop child sessions start expanded. Rows you open or close yourself stay the way you left them.",
+  sessionPageSection: "Session list",
+  hostDisplay: "Session source",
+  hostDisplayOptions: { both: "Icon and name", icon: "Icon only", name: "Name only", off: "Hidden" },
+  sessionView: "Layout",
+  sessionViewHint: "Pick a session layout below and see it live on the island preview; you can also switch anytime from the top-right button on the Agent page.",
+  sessionViewPreview: "Session list preview",
+  sessionViewOptions: { focused: "Focused", split: "Split", bento: "Bento", projects: "Projects", minimal: "Minimal" },
+  sessionViewHints: {
+    focused: "Active cards above compact finished rows",
+    split: "Fast index on the left, live console on the right",
+    bento: "Urgent spotlight with two-column cards",
+    projects: "Grouped by folder with aligned columns",
+    minimal: "Borderless launcher rows with keyboard hints",
+  },
+  sessionPreviewSample: {
+    waitTitle: "Approval flow check",
+    runTitle: "Mac notch tab polish",
+    replyTitle: "Multi-window sync review",
+    doneTitle: "Architecture roadmap",
+    waitPrompt: "Trim it down as suggested",
+    replyText: "Prepared 3 sync options and recommend event broadcast — ready to implement option B?",
+  },
+  archiveMotion: "Archive animation",
+  archiveMotionHint: "Slide: the session slides out to the right, then folds away. Dissolve: it turns into dust in its state's colour from left to right, then folds away. When Windows asks for less motion it goes at once.",
+  archiveMotionOptions: { slide: "Slide", dissolve: "Dissolve" },
+  cardEffects: "Card light effects",
+  cardEffectsHint: "Sparkle band and Gradient apply in Cards and Compact; Flowing border adds an orbiting light ribbon only to sessions waiting for your approval across all three layouts, staying still under reduced motion.",
+  cardEffectsOptions: { off: "Off", sparkle: "Sparkle band", gradient: "Gradient", orbit: "Flowing border" },
+  hostDisplayHint: "The program a session runs in, such as Orca, Windows Terminal, VS Code or Codex. Running Claude Code sessions are recognized automatically; sessions that ended before the island started have no source.",
+  hostDisplayHintMac: "The program a session runs in, such as Orca, Terminal, iTerm, VS Code or Codex. Running Claude Code sessions are recognized automatically; sessions that ended before the island started have no source.",
+  sessionHours: "List sessions from the last",
+  sessionHoursOption: (hours) => (hours === 1 ? "1 hour" : `${hours} hours`),
+  sessionHoursHint: "Only sessions active within this time are listed.",
+  sessionCardSection: "Session cards",
+  remoteIntro: "Lists Claude Code, Codex, DSH and Antigravity CLI sessions on other computers on the Agent page: for each host that is on, the island keeps an ssh connection open and reads its recent sessions every 3 seconds. Nothing is installed on the server.",
+  remoteRequirements: "Key login only, with no password prompt: check that ssh logs in by itself in a terminal first. After Reinstall all at the bottom of Hooks and agents, remote Claude Code can be approved on the island; the windows of remote sessions cannot be brought up.",
+  remoteHostsSection: "Hosts",
+  remoteHostsFooter: "The Hosts in ~/.ssh/config and the ones added here are listed above; at most 8 can be on.",
+  remoteRefresh: "Refresh now",
+  remoteRefreshing: "Refreshing…",
+  remoteRefreshed: "Refreshed",
+  remoteEmpty: "No hosts yet",
+  remoteEmptyHint: "Add one below, or write a Host in ~/.ssh/config and come back to this page.",
+  remoteFromConfig: "From ~/.ssh/config",
+  remoteFetching: "Reading…",
+  remoteFetchedAt: (time, sessions) => `Read at ${time} · ${sessions === 1 ? "1 session" : `${sessions} sessions`}`,
+  remoteFailed: (reason) => `Failed: ${reason}`,
+  remoteApprovalFailed: (reason) => `Approvals from here cannot reach the island's cards and are asked in its terminal: ${reason}`,
+  remoteRemove: (name) => `Remove ${name}`,
+  remoteAdd: "Add host",
+  remoteAddHint: "Kept in the island's own settings; ~/.ssh/config is not changed. For jump hosts or a particular key, ~/.ssh/config is the better place.",
+  remoteName: "Name",
+  remoteNamePlaceholder: "The address when left empty",
+  remoteUser: "User",
+  remoteUserPlaceholder: "Your local user name when left empty",
+  remoteHost: "Address",
+  remoteHostPlaceholder: "e.g. 192.168.1.20 or dev.example.com",
+  remotePort: "Port",
+  remoteSave: "Add",
+  remoteCancel: "Cancel",
+  hooks: {
+    summaryFix: (count, names) => `${count === 1 ? "1 agent has" : `${count} agents have`} outdated hooks: ${names}. Repair and restart them so newer features such as "waiting for you" work.`,
+    summaryScripts: "Fuyu's hook scripts are outdated, so the status light may be off.",
+    summaryMissing: "No agent has Fuyu's hooks yet, so the status light and session titles stay off.",
+    fixAll: "Repair all",
+    installAll: "Install all",
+    working: "Working",
+    install: "Install",
+    fix: "Repair",
+    connected: "Connected",
+    connectedTitle: "Hooks are up to date",
+    failed: (name, error) => `${name} was not set up: ${error}`,
+    done: (names) => `Updated the hooks for ${names}. Restart to apply.`,
+    menu: (name) => `More for ${name}`,
+    menuInstall: "Install hooks",
+    menuReinstall: "Reinstall hooks",
+    turnOff: (name) => `Turn off ${name}?`,
+    turnOffKeep: "Turn off",
+    turnOffRemove: "Turn off and remove hooks",
+    tips: {
+      codex: "Trust the new hooks in Codex's /hooks afterwards.",
+      dsh: "If the DSH home already has its own cordis.patch.yml, it is left alone and you get the lines to add.",
+      trae: "Set TRAE to auto-run so Allow on the island runs the step right away.",
+      traeCn: "Set TRAE CN to auto-run so Allow on the island runs the step right away.",
+    },
+    optionsSection: "Hook settings",
+    autoInstall: "Set up new agents",
+    autoInstallHint: "When a supported agent is installed, give it hooks and say so on the island. Only on a computer that already has hooks, and never for agents switched off.",
+    autoUpdate: "Update outdated hooks",
+    autoUpdateHint: "After Fuyu updates, connected agents get the new hooks.",
+    reinstallAll: "Reinstall all hooks",
+    reinstallAllHint: "Agent by agent, including the SSH remote hosts; one failing does not stop the rest.",
+    reinstallAllButton: "Reinstall all",
+    reinstalledAll: "Reinstalled all hooks; restart the agents you use to apply.",
+    listJoin: ", ",
+    removeAll: "Remove all hooks",
+    removeAllHint: "Takes Fuyu's hooks and scripts out of every agent's config; running agents pick it up after a restart.",
+    removeAllButton: "Remove all",
+  },
+  agentsSection: "Agents connected",
+  agentsEnabledCount: (enabled, total) => `${enabled} / ${total} on`,
+  moreAgents: (count) => `${count} more supported agents`,
+  showAgentsHint: "Agents switched off are left out of the Agent page and the island's running count; turning one off can also remove its hooks.",
+  hookBadgeOutdated: "Hooks outdated",
+  hookBadgeNotInstalled: "No hooks yet",
+  notDetectedBadge: "Not detected",
+  sessionOnlyBadge: "Session log",
+  externalBadge: "External",
+  hideFinished: "Only sessions in progress",
+  hideFinishedHint: "Hide finished and failed sessions; keep running, waiting and possibly stalled ones.",
+  hideClosed: "Hide sessions that have quit",
+  hideClosedHint: "Sessions whose Claude Code or Codex has quit are no longer listed, even when the SessionEnd hook did not run: told by whether the process still runs, for Claude Code sessions on remote computers too.",
+  showElapsed: "Show how long it has run",
+  showElapsedHint: "A session in progress shows how long it has been running, updated every second; a finished one shows how long its last turn took. Counted from the latest prompt.",
+  showModel: "Show the model and effort",
+  showActivity: "Show the latest prompt and the tool in use",
+  showActivityHint: "Sessions in progress show your latest prompt above the reply and, while running, the tool they are calling (a Bash command, the file being edited).",
+  usagePageTitle: "Usage on the agent page",
+  usagePageHint: "Follows the agents turned on for this computer: each one whose usage can be read gets a row. New agents show by default; click an icon or a chip below to hide that agent, or a window chip to hide that column; right-clicking the usage row on the island opens the same menu. Claude Code is read from the limits it hands its status line with every reply (hooked up when you install the hooks; your own status line still shows), with Claude Code itself asked for the usage when you only use the desktop app or after a long gap, plus its own cached reading and the claude-hud snapshot if you use it, Codex from its session logs, and the rest the same way as the usage rings; WorkBuddy and DeepSeek Harness have no percentages, so their credits and balance are shown, and the GLM and Kimi plans need a key set under the usage rings.",
+  usagePreview: "Usage preview",
+  usageShowTitle: "Which agents and windows",
+  usageShowHint: "Layout, style and reset time are set here too; the island below shows each change at once, and options a layout does not use are hidden.",
+  usageReading: "Reading usage…",
+  usageNone: "None of the agents turned on for this computer has usage to read yet",
+  usageNoRead: (names) => `No usage to read right now (signed out, no data or out of date), so not shown: ${names.join(", ")}`,
+  usagePlanTag: "plan",
+  usageCreditTag: "credits",
+  usageProviders: "Show usage for",
+  usageWindows: "Usage windows",
+  usageWindowOptions: { fiveHour: "5 hours", sevenDay: "7 days", models: "Other limits" },
+  usageTightest: "Only the tightest",
+  usageReset: "Reset time",
+  usageResetOptions: { tightest: "Tightest only", each: "For each", off: "Hidden" },
+  usageStyle: "Usage style",
+  usageStyleOptions: { number: "Numbers", bar: "Bars", ring: "Rings" },
+  usageLayout: "Layout",
+  usageLayoutHints: { strip: "Frameless hairline strip, ultra-clean", chips: "One per agent, tightest only", tiles: "Big numbers at a glance", lead: "Only the tightest stands out", ruler: "All on one scale", table: "Every window listed" },
+  emptyStyle: "When there are no sessions",
+  emptyStyleHint: "What the agent page shows when it has no sessions to list.",
+  emptyStyleOptions: { sleep: "Sleeping jellyfish", standby: "Standby", recent: "Last session", quota: "Big usage rings", tide: "Today's tide", minimal: "Minimal waterline" },
+  emptyStyleHints: {
+    sleep: "The quietest company",
+    standby: "Which agents are connected, so a missing hook stands out",
+    recent: "When filters hide every session, offers to show the finished ones",
+    quota: "Puts the usage front and centre while nothing runs",
+    tide: "When agents ran today",
+    minimal: "Just one line",
+  },
+  emptyGroup: "With no sessions",
+  emptyUse: "Use this",
+  emptyInUse: "In use",
+  emptyPrevious: "Previous look",
+  emptyNext: "Next look",
+  alerts: {
+    title: "Pop-up alerts",
+    hint: "A collapsed island opens the Agent page by itself. Not while the session's window is in front, game mode keeps the island quiet, or you are using the open island.",
+    started: "When a session starts",
+    startedOptions: { everyTurn: "Every turn", newSession: "New sessions only", off: "Off" },
+    completed: "When a session finishes",
+    failed: "When a session fails",
+    waiting: "When it waits for your approval or answer",
+    seconds: "Stays open for",
+    secondsValue: (seconds) => `${seconds} s`,
+    remind: "Remind again",
+    remindDescription: "If a session is still waiting for your approval or answer this long, pop up and sound once more; once per wait",
+    remindValue: (seconds) => (seconds === 0 ? "Never" : seconds < 60 ? `after ${seconds} s` : `after ${seconds / 60} min`),
+    quotaSectionTitle: "Quota",
+    quota: "Usage alert",
+    quotaDescription: "When Claude's or Codex's 5-hour or 7-day usage reaches this level, say so once on the collapsed island, and again when it resets",
+    quotaValue: (percent) => (percent === 0 ? "Off" : `at ${percent}%`),
+  },
+  push: {
+    title: "Phone push",
+    enabled: "Push to your phone",
+    enabledHint: "When an agent needs you, finishes or fails, push it to your phone: Bark on an iPhone, or cc-connect's bot on Telegram, Discord or Feishu",
+    channel: "Channel",
+    channels: { bark: "Bark", ccConnect: "cc-connect bot" },
+    ccConnect: {
+      thisComputer: "This computer",
+      hostHint: "Push the sessions on this computer",
+      projectTitle: "Project",
+      project: (name, agent) => `${name} · ${agent}`,
+      picked: (count) => `${count} picked`,
+      projectHint: "Bots of several projects can be picked; takeover commands go only with a project of the session's agent",
+      noProjects: "No project has chats yet: send a bot a message from your phone, then refresh.",
+      noChats: "This project has no chats yet: send its bot a message from your phone, then refresh.",
+      off: "The cc-connect phone link is off",
+      offHint: "Turn on the \"cc-connect phone link\" group further down this page first.",
+      refresh: "Refresh",
+      reading: "Reading over SSH…",
+      notRunning: "cc-connect is not running, so pushes will not go out",
+      program: "cc-connect program",
+      notFound: "cc-connect was not found",
+      notFoundHint: "Pick this computer under cc-connect phone link below and enter its path there, or push with this computer's bots instead",
+      viaLocal: "Push with this computer's bots",
+      viaLocalHint: "The push arrives, without takeover commands: this computer's cc-connect cannot resume a session that lives on another",
+      testBody: "🔔 Fuyu: cc-connect push is set up",
+    },
+    server: "Server",
+    serverHint: "Leave empty for Bark's own server; for a self-hosted bark-server, enter its address",
+    key: "Device key",
+    keyHint: "Copy the push URL in Bark and paste it here, or just the letters and digits in it",
+    keyIsSaved: "Saved in Windows Credential Manager",
+    keyIsSavedMac: "Saved in the Keychain",
+    keyPlaceholder: "https://api.day.app/xxxxxxxx",
+    saveKey: "Save",
+    clearKey: "Clear",
+    keySaved: "Device key saved.",
+    keyCleared: "Device key cleared.",
+    events: { waiting: "When it waits for you", completed: "When a turn finishes", failed: "When it fails" },
+    away: "When to push",
+    awayHint: "At once when the screen is locked; otherwise after this long without keyboard or mouse. What you looked at on the computer before leaving is not pushed, so the phone stays quiet while you sit there",
+    awayValue: (minutes) => (minutes === 0 ? "Always" : `After ${minutes} min away`),
+    test: "Send a test",
+    testAction: "Send",
+    testTitle: "Fuyu",
+    testBody: "Bark push is set up",
+    testSent: "Sent; check your phone.",
+    hint: "A push only says which session and what happened, never commands, replies or code. Bark's own server is run by Bark; host bark-server yourself if that matters to you.",
+    ccConnectHint: "A push says what the agent asks (its question, plan or reply, cut when long). Each computer's sessions are sent by that computer's bots; a project of the session's agent also gets the /cd and /switch commands that take it over on the phone. It goes through Telegram's, Discord's or Feishu's servers too.",
+  },
+  approval: {
+    title: "Approve on the island",
+    onIsland: "Allow or deny agent actions on the island",
+    whenInFront: "Also while the terminal is in front",
+    whenInFrontHint: "Off, a request from a session whose terminal or editor window is in front is approved in that terminal.",
+    hint: "When Claude Code or Codex wants to run a command or change a file, a card on the island lets you allow, deny or hand it back to the terminal (Ctrl+Alt+Y / N / T). The terminal shows no prompt while the card is up; after 2 minutes, or while game mode keeps the island quiet, it goes back to the terminal. Give the agent hooks in Hooks and agents first, and trust the new hook in Codex's /hooks. Actions auto mode approves by itself don't show up. Cursor prompts on both the island and in the editor: run or skip in Cursor; Open Cursor on the island jumps there. In TRAE / TRAE CN, set tools to Auto Run so allowing on the island runs them without a second prompt in TRAE (handing back still asks in TRAE).",
+    hintMac: "When Claude Code or Codex wants to run a command or change a file, a card on the island lets you allow, deny or hand it back to the terminal (⌃⌥Y / N / T). The terminal shows no prompt while the card is up; after 2 minutes, or while game mode keeps the island quiet, it goes back to the terminal. Give the agent hooks in Hooks and agents first, and trust the new hook in Codex's /hooks. Actions auto mode approves by itself don't show up. Cursor prompts on both the island and in the editor: run or skip in Cursor; Open Cursor on the island jumps there. In TRAE / TRAE CN, set tools to Auto Run so allowing on the island runs them without a second prompt in TRAE (handing back still asks in TRAE).",
+  },
+  filters: {
+    title: "Hide sessions",
+    hint: "Sessions matching any rule do not show on the island at all: not on the Agent page, in the session count or the collapsed title, nor in alerts and sounds. A folder rule hides its subfolders too and takes * for any characters, so */agy-title-* hides script sessions that get a new temp folder each run; a text rule matches the session's title (its first prompt when it has none) or latest prompt, ignoring case.",
+    kinds: { folder: "In folder", prompt: "Title or prompt contains" },
+    kindLabel: "Rule type",
+    add: "Add a rule",
+    addButton: "Add",
+    folderPlaceholder: "e.g. E:\\Projects\\scratch or */agy-title-*",
+    promptPlaceholder: "e.g. /loop",
+    remove: (value) => `Remove the rule \"${value}\"`,
+  },
+  silentLaunch: {
+    title: "Silent launch",
+    hint: "For one-off agents that scripts and plugins start in the background (such as agy -p, claude -p or codex exec): start them with the environment variable FUYU_AGENT_STATUS=off and Fuyu's hooks quit at once, so the session raises no alert, plays no sound and lights no status light. Agents that report sessions only through hooks, like Antigravity, stay off the list entirely; Fuyu still reads Claude Code and Codex sessions from their session files, so add a hide rule above to keep those off the list too. It applies to processes started from then on.",
+    shellLabel: "Syntax",
+    shells: { sh: "bash / zsh", powershell: "PowerShell", node: "Node.js" },
+    copy: "Copy",
+    copied: "Copied",
+  },
+  replyMarker: {
+    title: "Reply status marker",
+    toggle: "Have the agents mark what they wait for at the end of each reply (recommended)",
+    hint: "When on, the island appends a section to the end of each AI agent's global prompt file (CLAUDE.md for Claude Code, AGENTS.md for Codex, opencode and DeepSeek Harness, GEMINI.md for Antigravity, CODEBUDDY.md for WorkBuddy and CodeBuddy, AGENTS.md for Qoder, QWEN.md for Qwen Code, ~/.kimi-code/AGENTS.md for Kimi Code, ~/.copilot/copilot-instructions.md for GitHub Copilot CLI, ~/.factory/AGENTS.md for Droid, ~/.pi/agent/AGENTS.md for pi; only that section changes, the rest of the file stays as it is), asking the agent to end every reply with one symbol on its own line: ↩ your turn, ⋯ waiting on a background task it started, ✓ done. The island uses it to tell \"your turn\" from \"done\": on the Agent page, the session ring, and in alerts and sounds (your turn pops up as waiting for you, with the question sound; waiting on a background task neither pops up nor sounds). The line shows in the replies. When a file is a link, the section goes into the file it points to, and agents sharing one file get one section. Computers switched on under SSH remote get it too. It applies to sessions started from then on; switching off removes the section.",
+    legendTurn: "Your turn",
+    legendTurnHint: "Pop-up alert · question sound",
+    legendBg: "Background task",
+    legendBgHint: "Stays running · quiet",
+    legendDone: "Finished",
+    legendDoneHint: "Marked done · done alert",
+    filesTitle: "Global prompt files on this computer",
+    fileInstalled: "Written",
+    fileOutdated: "Outdated",
+    filePending: "Not written",
+    fileError: "Error",
+    linked: (target) => `a link; written in ${target}`,
+    noFiles: "None of these AI agents was found on this computer.",
+    outdated: "The instruction is an older version, still in the old rules file rules/fuyu-reply-marker.md, or missing for one of the agents; switch off and on again, or click Reinstall all in Hooks and agents, to update it.",
+    preview: "See what will be written",
+  },
+  editorExtension: {
+    title: "Editor extension",
+    hint: "When a session runs in a terminal inside VS Code (or Cursor, Windsurf and the like), the island can only bring the editor window forward. With the island's extension installed, clicking the session also opens the terminal panel and switches to that session's terminal. The extension only handles links the island opens and sends nothing anywhere.",
+    none: "No VS Code or editor built on it was found.",
+    installed: "Installed",
+    install: "Install",
+    installing: "Installing…",
+    noCli: "Command line not found; open this editor first",
+    done: (editor) => `Installed in ${editor}. ${editor} windows already open need a reload (Command Palette → Reload Window) first.`,
+  },
+  dshBridge: "DeepSeek Harness already has a custom cordis.patch.yml, so Fuyu kept it as is. Add these lines to the end of cordis.patch.yml in the DSH home (or under profiles/<name>), restart DSH, then click Repair on its card again:",
+  hooksDevBuild: "The development build reads the installed Fuyu's agent status. Hooks set up here are the installed Fuyu's: the scripts go to its data folder and approvals go to its port, so they keep working after the development build closes.",
+  remoteResult: (host, error) => (error ? `SSH remote ${host}: failed, ${error}` : `SSH remote ${host}: done`),
+};

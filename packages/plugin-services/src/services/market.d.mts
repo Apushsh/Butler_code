@@ -1,0 +1,239 @@
+import type { ServiceDefinition } from "../define.mjs";
+
+export type MarketLocalizedText = {
+  "zh-CN": string;
+  en: string;
+};
+
+export type MarketTrustChange = "unendorsed-key" | "endorsed-key" | "repo-changed";
+
+export type PluginInstallConfirmation = {
+  unreviewed: boolean;
+  official?: boolean;
+  displayName?: MarketLocalizedText | string;
+  description?: MarketLocalizedText | string;
+  network: string[];
+  nodeApis: string[];
+  provides: string[];
+  replaces: string[];
+  slots: string[];
+  trustChange?: MarketTrustChange;
+  requiredPlugins?: string[];
+};
+
+export type MarketCapabilitySet = {
+  nodeApis: string[];
+  network: string[];
+  replaces: string[];
+};
+
+export type MarketAutoUpdateHeld = {
+  version: string;
+  reason: "new-capabilities";
+  newCapabilities: MarketCapabilitySet;
+};
+
+export type MarketVersionCandidate = {
+  version: string;
+  sha256: string;
+  size: number;
+  publishedAt: string;
+  fresh?: boolean;
+  cooled?: boolean;
+  warned?: boolean;
+  urgent?: boolean;
+  trustChange?: MarketTrustChange;
+  newCapabilities?: MarketCapabilitySet;
+  confirmation: PluginInstallConfirmation;
+};
+
+export type MarketRevocation = {
+  level: "disable" | "warn";
+  reasons: MarketLocalizedText[];
+};
+
+export type MarketCatalogPlugin = {
+  name: string;
+  official: boolean;
+  publisher: { github: string; official: boolean };
+  displayName: MarketLocalizedText;
+  description: MarketLocalizedText;
+  categories: string[];
+  keywords?: string[];
+  icon?: string | null;
+  screenshots?: MarketPluginScreenshot[];
+  firstPublishedAt?: string | null;
+  installedVersion: string | null;
+  enabled: boolean;
+  source: "market" | "manual" | null;
+  revoked: boolean;
+  revocation?: MarketRevocation | null;
+  blocked?: { reason: "engines" | "platform"; range?: string } | null;
+  install: MarketVersionCandidate | null;
+  manual: MarketVersionCandidate | null;
+  autoUpdate: MarketVersionCandidate | null;
+  autoUpdateHeld?: MarketAutoUpdateHeld | null;
+};
+
+export type InstalledPluginReach = {
+  slots: string[];
+  services: string[];
+  config: boolean;
+};
+
+export type InstalledMarketPlugin = {
+  id: string;
+  version: string;
+  source: "market" | "manual";
+  enabled: boolean;
+  revocation?: MarketRevocation | null;
+  displayName?: MarketLocalizedText | string;
+  description?: MarketLocalizedText | string;
+  icon?: string;
+  reach?: InstalledPluginReach;
+};
+
+export type MarketRevocationWarning = "network" | "bad-signature" | "bad-trust" | "invalid" | "older-serial" | "expired" | "behind";
+
+export type MarketDownloadSource = {
+  name: string;
+  at: number;
+};
+
+export type MarketAutoUpdatedPlugin = {
+  name: string;
+  displayName?: Record<string, string>;
+  from: string;
+  to: string;
+};
+
+export type MarketAutoUpdated = {
+  at: number;
+  plugins: MarketAutoUpdatedPlugin[];
+};
+
+export type MarketBundleMember = {
+  name: string;
+  state: "installed" | "disabled" | "available" | "unavailable";
+  reason?: "missing" | "revoked" | "engines" | "platform" | "warned" | "other";
+};
+
+export type MarketCatalogBundle = {
+  id: string;
+  displayName: MarketLocalizedText;
+  description: MarketLocalizedText;
+  onboarding: boolean;
+  members: MarketBundleMember[];
+};
+
+export type MarketBundleInstallResult = {
+  id: string;
+  installed: { name: string; version: string }[];
+  failed: { name: string; code: string; message: string }[];
+};
+
+export type MarketCatalogSnapshot = {
+  plugins: MarketCatalogPlugin[];
+  bundles?: MarketCatalogBundle[];
+  installed: InstalledMarketPlugin[];
+  marketSince?: string | null;
+  updatedAt: number | null;
+  manualAllowed: boolean;
+  error: string | null;
+  revocationWarning?: MarketRevocationWarning | null;
+  lastSource?: MarketDownloadSource | null;
+  autoUpdated?: MarketAutoUpdated | null;
+};
+
+export type MarketInspectedPackage = {
+  id: string;
+  version: string;
+  sha256: string;
+  confirmation: PluginInstallConfirmation;
+};
+
+export type MarketInstallResult = {
+  id: string;
+  version: string;
+  source: "market" | "manual";
+  sha256: string;
+  confirmation: PluginInstallConfirmation;
+};
+
+export type MarketPluginScreenshot = {
+  url: string;
+  caption?: Record<string, string>;
+};
+
+export type MarketPluginCommand = {
+  id: string;
+  title: Record<string, string>;
+  keybinding?: string;
+};
+
+export type MarketPluginVersionSummary = {
+  version: string;
+  publishedAt?: string | null;
+  size?: number | null;
+  reviewed?: boolean;
+  urgent?: boolean;
+  enginesFuyu?: string | null;
+};
+
+export type MarketPluginDetails = {
+  name: string;
+  displayName?: Record<string, string>;
+  description?: Record<string, string>;
+  official: boolean;
+  publisherName?: string;
+  author?: string | null;
+  license?: string | null;
+  homepage?: string | null;
+  repository?: string | null;
+  bugs?: string | null;
+  funding?: string | null;
+  keywords: string[];
+  categories: string[];
+  platforms: string[];
+  preview: boolean;
+  likes: number | null;
+  installedVersion: string | null;
+  latestVersion: string | null;
+  readme: string | null;
+  changelog: string | null;
+  screenshots: MarketPluginScreenshot[];
+  commands: MarketPluginCommand[];
+  slots: string[];
+  provides: string[];
+  replaces: string[];
+  network: string[];
+  nodeApis: string[];
+  requires: Record<string, string>;
+  versions: MarketPluginVersionSummary[];
+};
+
+export type MarketMedia = {
+  url: string;
+  data: string | null;
+};
+
+export type MarketMethods = {
+  catalog(): MarketCatalogSnapshot;
+  refresh(): MarketCatalogSnapshot;
+  details(params: { name: string; locale?: string }): MarketPluginDetails;
+  media(params: { url: string }): MarketMedia;
+  inspectPackage(params: { base64: string }): MarketInspectedPackage;
+  installMarket(params: { name: string; version?: string }): MarketInstallResult;
+  installBundle(params: { id: string }): MarketBundleInstallResult;
+  installFile(params: { base64: string; expectedSha256?: string }): MarketInstallResult;
+  setManualAllowed(params: { allowed: boolean }): { manualAllowed: boolean };
+  setEnabled(params: { id: string; enabled: boolean }): { id: string; enabled: boolean };
+  uninstall(params: { id: string; removeData?: boolean }): { id: string; removed: true };
+  dismissAutoUpdated(params: { at: number }): { dismissed: true };
+};
+
+export type MarketEvents = {
+  changed: {};
+};
+
+export const marketV1: ServiceDefinition<MarketMethods, MarketEvents, {}>;

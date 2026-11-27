@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { popupIndexAfterKey } from "../../src/features/clipboard/popupKeys.ts";
+
+test("arrows move the clipboard window's selection and wrap round", () => {
+  assert.deepEqual(popupIndexAfterKey("ArrowDown", 0, 3, true), { index: 1, paste: false });
+  assert.deepEqual(popupIndexAfterKey("ArrowDown", 2, 3, true), { index: 0, paste: false });
+  assert.deepEqual(popupIndexAfterKey("ArrowUp", 0, 3, true), { index: 2, paste: false });
+  assert.deepEqual(popupIndexAfterKey("End", 0, 3, true), { index: 2, paste: false });
+  assert.equal(popupIndexAfterKey("a", 0, 3, true), null);
+  assert.equal(popupIndexAfterKey("ArrowDown", 0, 0, true), null);
+});
+
+test("digits paste that row only while the search box is empty", () => {
+  assert.deepEqual(popupIndexAfterKey("1", 2, 3, true), { index: 0, paste: true });
+  assert.deepEqual(popupIndexAfterKey("3", 0, 3, true), { index: 2, paste: true });
+  assert.equal(popupIndexAfterKey("4", 0, 3, true), null);
+  assert.equal(popupIndexAfterKey("1", 0, 3, false), null);
+  assert.equal(popupIndexAfterKey("0", 0, 3, true), null);
+});
+
+test("picking entries for a sequence adds them in order and a second pick takes one out", async () => {
+  const { toggleQueued } = await import("../../src/features/clipboard/popupKeys.ts");
+  assert.deepEqual(toggleQueued([], "a"), ["a"]);
+  assert.deepEqual(toggleQueued(["a"], "b"), ["a", "b"]);
+  assert.deepEqual(toggleQueued(["a", "b", "c"], "b"), ["a", "c"]);
+});
+
+test("digits start after the pinned rows", () => {
+  assert.deepEqual(popupIndexAfterKey("1", 0, 5, true, 2), { index: 2, paste: true });
+  assert.deepEqual(popupIndexAfterKey("3", 0, 5, true, 2), { index: 4, paste: true });
+  assert.equal(popupIndexAfterKey("4", 0, 5, true, 2), null);
+});

@@ -1,0 +1,100 @@
+{
+  "name": "@fuyu/todo-digest",
+  "version": "1.1.0",
+  "type": "module",
+  "description": "Writes your unfinished to-dos into today's note in one click or at a set time, a quick wrap-up before you stop for the day.",
+  "keywords": [
+    "待办",
+    "摘要",
+    "日报",
+    "总结",
+    "笔记",
+    "收工",
+    "todo",
+    "to-do",
+    "digest",
+    "summary",
+    "daily note",
+    "journal"
+  ],
+  "author": "TixXin",
+  "license": "MIT",
+  "repository": "https://github.com/TixXin/fuyu",
+  "engines": {
+    "fuyu": ">=0.3.10"
+  },
+  "scripts": {
+    "dev": "fuyu-plugin dev",
+    "build": "fuyu-plugin build",
+    "check": "fuyu-plugin check --market",
+    "package": "fuyu-plugin pack",
+    "typecheck": "tsc"
+  },
+  "fuyu": {
+    "manifest": 1,
+    "displayName": {
+      "zh-CN": "待办摘要",
+      "en": "To-do digest"
+    },
+    "description": {
+      "zh-CN": "一键或定时把还没做完的待办写进今天的笔记，收工前顺手做个记录。",
+      "en": "Writes your unfinished to-dos into today's note in one click or at a set time, a quick wrap-up before you stop for the day."
+    },
+    "icon": "assets/icon.svg",
+    "screenshots": [
+      {
+        "path": "screenshots/preview.png",
+        "caption": {
+          "zh-CN": "预览将要写进今日笔记的内容，点一下就写入",
+          "en": "Preview what goes into today's note, then write it with one click"
+        }
+      },
+      {
+        "path": "screenshots/settings.png",
+        "caption": {
+          "zh-CN": "设置：写入范围、条目格式、定时写入和提示",
+          "en": "Settings: what to write, item style, daily schedule and notification"
+        }
+      },
+      {
+        "path": "screenshots/notice.png",
+        "caption": {
+          "zh-CN": "写完后岛上的提示",
+          "en": "The notice on the island after writing"
+        }
+      }
+    ],
+    "categories": [
+      "todos",
+      "productivity"
+    ],
+    "platforms": [
+      "windows",
+      "macos"
+    ],
+    "host": "dist/host.js",
+    "client": {
+      "settings": "dist/settings.js"
+    },
+    "inject": {
+      "required": [
+        "todos/v1"
+      ],
+      "optional": [
+        "messages/v1"
+      ]
+    },
+    "slots": [
+      "settings.section/v1"
+    ],
+    "commands": [
+      {
+        "id": "write-digest",
+        "title": {
+          "zh-CN": "写入待办摘要",
+          "en": "Write to-do digest"
+        }
+      }
+    ]
+  }
+}

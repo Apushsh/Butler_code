@@ -1,0 +1,136 @@
+:root {
+  --color-white: #ffffff;
+  --color-black: #000;
+  --color-text: #f8f6f0;
+  --color-text-strong: rgba(248, 246, 240, 0.88);
+  --color-text-muted: rgba(248, 246, 240, 0.72);
+  --color-text-subtle: rgba(248, 246, 240, 0.52);
+  --color-page-text: #f7f5ef;
+  --color-surface-dark: #111112;
+
+  --usage-claude: #ffb27a;
+  --usage-codex: #e6e6eb;
+  --usage-antigravity: #5eead4;
+  --usage-glm: #a99bff;
+  --usage-kimi: #6aabff;
+  --usage-workbuddy: #5cd68d;
+  --usage-dsh: #4fc3f7;
+  --usage-cursor: #f4a6d7;
+  --usage-warn: #f5e06e;
+  --usage-danger: #ff7a7a;
+  --usage-stale: #a3a3aa;
+
+  --pie-1: #00e05a;
+  --pie-2: #ff8a00;
+  --pie-3: #2f7bff;
+  --pie-4: #ff2d95;
+
+  --text-1: rgba(248, 246, 240, 0.96);
+  --text-2: rgba(248, 246, 240, 0.68);
+  --text-3: rgba(248, 246, 240, 0.54);
+  --text-placeholder: rgba(248, 246, 240, 0.42);
+
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+
+  --color-white-a04: rgba(255, 255, 255, 0.04);
+  --color-white-a06: rgba(255, 255, 255, 0.06);
+  --color-white-a08: rgba(255, 255, 255, 0.08);
+  --color-white-a09: rgba(255, 255, 255, 0.09);
+  --color-white-a10: rgba(255, 255, 255, 0.1);
+  --color-white-a12: rgba(255, 255, 255, 0.12);
+  --color-white-a16: rgba(255, 255, 255, 0.16);
+  --color-white-a18: rgba(255, 255, 255, 0.18);
+
+  --color-ink: #1f1b16;
+  --color-ink-muted: rgba(31, 27, 22, 0.58);
+
+  --color-accent: #74d6ff;
+  --color-on-accent: #06202c;
+  --color-sky: #a8d8ea;
+  --color-success: #2f8c61;
+  --color-danger: #c75065;
+  --color-warning: #ffd166;
+  --color-agent-idle: #35e985;
+  --color-agent-running: #3d8bff;
+  --color-agent-waiting: #ff9f43;
+  --color-light-needs: #ff453a;
+  --color-light-your-turn: #ffd60a;
+  --color-light-working: #34c759;
+  --color-light-done: #8e8e93;
+  --color-focus-ring: rgba(143, 216, 255, 0.88);
+  --color-focus-ring-soft: rgba(143, 216, 255, 0.72);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 8px;
+  --space-lg: 10px;
+  --space-xl: 12px;
+  --space-2xl: 14px;
+
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --motion-fast: 120ms;
+  --motion-base: 160ms;
+  --motion-medium: 240ms;
+  --motion-slow: 420ms;
+}
+
+.island-light {
+  --usage-claude: #93400f;
+  --usage-codex: #3a3a42;
+  --usage-antigravity: #0f766e;
+  --usage-glm: #5b47e0;
+  --usage-kimi: #1666d6;
+  --usage-workbuddy: #1b7f46;
+  --usage-dsh: #0b6aa2;
+  --usage-cursor: #a3307a;
+  --usage-warn: #8a6400;
+  --usage-danger: #c42b2b;
+  --usage-stale: #6a6a72;
+  --pie-1: #00a346;
+  --pie-2: #f07800;
+  --pie-3: #1a5fe0;
+  --pie-4: #d6006f;
+  --color-text: #18181e;
+  --color-text-strong: rgba(24, 24, 30, 0.88);
+  --color-text-muted: rgba(24, 24, 30, 0.72);
+  --color-text-subtle: rgba(24, 24, 30, 0.56);
+  --color-page-text: #18181e;
+  --text-1: rgba(24, 24, 30, 0.94);
+  --text-2: rgba(24, 24, 30, 0.7);
+  --text-3: rgba(24, 24, 30, 0.56);
+  --text-placeholder: rgba(24, 24, 30, 0.44);
+  --color-white-a04: rgba(0, 0, 0, 0.04);
+  --color-white-a06: rgba(0, 0, 0, 0.05);
+  --color-white-a08: rgba(0, 0, 0, 0.06);
+  --color-white-a09: rgba(0, 0, 0, 0.07);
+  --color-white-a10: rgba(0, 0, 0, 0.08);
+  --color-white-a12: rgba(0, 0, 0, 0.09);
+  --color-white-a16: rgba(0, 0, 0, 0.12);
+  --color-white-a18: rgba(0, 0, 0, 0.14);
+  --color-accent: #0a7fd1;
+  --color-sky: #0a6db3;
+  --color-on-accent: #ffffff;
+  --color-warning: #b7791f;
+  --color-focus-ring: rgba(10, 127, 209, 0.8);
+  --color-focus-ring-soft: rgba(10, 127, 209, 0.6);
+  --overlay-rgb: 24, 24, 30;
+  --error-text: #c0283f;
+  --warning-text: #9a6700;
+  --info-text: #0a6db3;
+  --code-fill: rgba(24, 24, 30, 0.05);
+  --panel-fill: rgba(255, 255, 255, 0.6);
+  --popover-fill: rgba(252, 252, 254, 0.97);
+  --mint: #2fae74;
+  --mint-text: #1f8a5b;
+  --mint-border: rgba(47, 174, 116, 0.45);
+  color: var(--text-1);
+}

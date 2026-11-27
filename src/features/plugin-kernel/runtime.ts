@@ -1,0 +1,155 @@
+import * as React from "react";
+import * as jsxRuntime from "react/jsx-runtime";
+import type { ClientEntry, ClientLoader, HostConnection as Connection, PluginMessage, ServiceEventMessage } from "@fuyu/plugin-base/client";
+import type { ServiceEntry } from "@fuyu/plugin-base/services";
+import { installShared } from "@fuyu/plugin-base/client/react";
+import type { SlotRegistry } from "@fuyu/plugin-base/client/slots";
+import { FALLBACK_LOCALE, getLoadedI18n, loadLocale } from "../../i18n";
+import { islandNoticesV1 } from "../../lib/island-notices/service";
+import { getPluginHostConnection } from "./api";
+import { answerIslandRequest, attachIslandHost, islandControlFor } from "./islandControl.ts";
+import { PLUGIN_BASE } from "./pluginBase.ts";
+import { updatePluginNames, type PluginNameInput } from "./pluginNames.ts";
+import { openPluginSettings } from "./settingsOpener.ts";
+import { windowServices } from "./services.ts";
+import { windowSlots, type SlotWindow } from "./slots";
+import { createWaitingMonitor, type WaitingPluginInput } from "./waitingMonitor.ts";
+
+export interface PluginRuntime {
+  registry: SlotRegistry;
+  loader: ClientLoader;
+  connection: Connection;
+}
+
+const runtimes = new Map<SlotWindow, Promise<PluginRuntime | null>>();
+
+function waitingText() {
+  return (getLoadedI18n(loadLocale()) ?? getLoadedI18n(FALLBACK_LOCALE))?.island.pluginWaiting ?? null;
+}
+
+async function target() {
+  const connection = await getPluginHostConnection();
+  return connection.port !== null && connection.token !== null ? { port: connection.port, token: connection.token } : null;
+}
+
+function openFromHost(data: unknown) {
+  const plugin = (data as { plugin?: unknown } | null)?.plugin;
+  if (typeof plugin !== "string" || plugin === "") return;
+  void openPluginSettings(plugin).catch((error: unknown) => console.error(`Failed to open the settings of ${plugin}`, error));
+}
+
+async function start(window: SlotWindow): Promise<PluginRuntime | null> {
+  const first = await getPluginHostConnection();
+  if (!first.enabled) return null;
+  const { connectHost, createBridge, createLoader, createLocaleStore, createServiceProxy, HostCallError } = await import("@fuyu/plugin-base/client");
+  installShared({ react: React, jsxRuntime });
+  const registry = windowSlots(window);
+  const localeStore = createLocaleStore(loadLocale());
+  let connection: Connection | null = null;
+  const bridge = createBridge((method, params) => connection?.call(method, params) ?? Promise.reject(new Error("the plugin host is not connected")));
+  const callHost = (method: string, params?: unknown) => connection?.call(method, params) ?? Promise.reject(new HostCallError("not-ready", "the plugin host is not connected"));
+  const reportSetup = (plugin: string, state: { needed: boolean; hint?: unknown }) => callHost("settings.setup", { plugin, ...state });
+  const connectPlugin = (entry: ClientEntry) => {
+    if (!entry.token) return null;
+    const token = entry.token;
+    let pluginConnection: Connection | null = null;
+    const pluginBridge = createBridge((method, params) => pluginConnection?.call(method, params) ?? Promise.reject(new HostCallError("peer-gone", "the plugin host is not connected")));
+    const pluginServices = createServiceProxy((method, params, options) => pluginConnection?.call(method, params, options) ?? Promise.reject(new HostCallError("peer-gone", "the plugin host is not connected")));
+    pluginConnection = connectHost<{ services?: ServiceEntry[]; locale?: string }>({
+      resolve: async () => {
+        const info = await getPluginHostConnection();
+        return info.port !== null ? { port: info.port, token } : null;
+      },
+      window,
+      onSnapshot: (snapshot, { fresh }) => {
+        if (typeof snapshot.locale === "string") localeStore.set(snapshot.locale);
+        pluginServices.update(snapshot.services ?? []);
+        if (fresh) void pluginServices.resubscribe();
+      },
+      onEvent: (name, data) => {
+        if (name === "plugin") pluginBridge.deliver(data as PluginMessage);
+        if (name === "service") pluginServices.deliver(data as ServiceEventMessage);
+        if (name === "services") pluginServices.update(data as ServiceEntry[]);
+        if (name === "locale") {
+          const next = (data as { locale?: unknown } | null)?.locale;
+          if (typeof next === "string") localeStore.set(next);
+        }
+      },
+    });
+    return {
+      bridge: pluginBridge,
+      services: pluginServices,
+      close: () => pluginConnection?.close(),
+    };
+  };
+  const loader = createLoader({ registry, base: PLUGIN_BASE, bridge, connectPlugin, openSettings: openPluginSettings, reportSetup, island: islandControlFor(window, callHost), locale: localeStore });
+  if (window === "island") attachIslandHost(callHost);
+  const services = createServiceProxy((method, params, options) => connection?.call(method, params, options) ?? Promise.reject(new HostCallError("peer-gone", "the plugin host is not connected")));
+  windowServices.attach(services);
+  const waitingMonitor = window === "island"
+    ? createWaitingMonitor({
+        onOverdue: ({ id, waitingFor }) => {
+          const text = waitingText();
+          if (!text) return;
+          void windowServices
+            .get(islandNoticesV1)
+            .notify({
+              pluginId: id,
+              pluginName: null,
+              title: text.title(id),
+              body: text.body(waitingFor.join(", ")),
+              durationMs: 6000,
+              actions: [],
+            })
+            .catch(() => undefined);
+        },
+      })
+    : null;
+  let clients: ClientEntry[] = [];
+  const sync = () => {
+    void loader.sync(clients.filter((entry) => entry.window === window));
+  };
+  connection = connectHost<{ clients?: ClientEntry[]; services?: ServiceEntry[]; plugins?: WaitingPluginInput[]; locale?: string }>({
+    resolve: target,
+    window,
+    onSnapshot: (snapshot, { fresh }) => {
+      if (typeof snapshot.locale === "string") localeStore.set(snapshot.locale);
+      clients = snapshot.clients ?? [];
+      services.update(snapshot.services ?? []);
+      if (snapshot.plugins) {
+        waitingMonitor?.update(snapshot.plugins);
+        updatePluginNames(snapshot.plugins);
+      }
+      if (fresh) void services.resubscribe();
+      sync();
+    },
+    onEvent: (name, data) => {
+      if (name === "plugin") bridge.deliver(data as PluginMessage);
+      if (name === "service") services.deliver(data as ServiceEventMessage);
+      if (name === "services") services.update(data as ServiceEntry[]);
+      if (name === "locale") {
+        const next = (data as { locale?: unknown } | null)?.locale;
+        if (typeof next === "string") localeStore.set(next);
+      }
+      if (name === "settings.open" && window === "island") openFromHost(data);
+      if (name === "island.request" && window === "island") void answerIslandRequest(data, callHost).catch((error: unknown) => console.error("Failed to answer an island request from the plugin host", error));
+      if (name === "plugins" && Array.isArray(data)) {
+        waitingMonitor?.update(data as WaitingPluginInput[]);
+        updatePluginNames(data as PluginNameInput[]);
+      }
+      if (name !== "clients") return;
+      clients = data as ClientEntry[];
+      sync();
+    },
+  });
+  return { registry, loader, connection };
+}
+
+export function pluginRuntime(window: SlotWindow): Promise<PluginRuntime | null> {
+  let runtime = runtimes.get(window);
+  if (!runtime) {
+    runtime = start(window).catch(() => null);
+    runtimes.set(window, runtime);
+  }
+  return runtime;
+}
